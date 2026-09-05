@@ -1,0 +1,89 @@
+{
+  "scout_drone": {
+    "name": "Scout Drone", "tier": 1,
+    "hull": 22, "shield": 0, "shield_regen": 0, "evasion": 12,
+    "systems": [
+      {"id": "weapons", "name": "Pulse Gun", "integrity": 6},
+      {"id": "engines", "name": "Thruster Pod", "integrity": 5}
+    ],
+    "intents": [
+      {"id": "pulse", "requires_system": "weapons", "weight": 3.0,
+        "telegraph": "Pulse Gun: 7 damage",
+        "effects": [{"op": "damage_system", "amount": 7}]},
+      {"id": "strafe", "requires_system": "engines", "weight": 1.0,
+        "telegraph": "Strafing run: 4 hull",
+        "effects": [{"op": "damage_hull", "amount": 4}]}
+    ],
+    "reward": {"credits": 35}
+  },
+  "raider": {
+    "name": "Raider", "tier": 1,
+    "hull": 34, "shield": 6, "shield_regen": 3, "evasion": 8,
+    "systems": [
+      {"id": "weapons", "name": "Autocannon", "integrity": 9},
+      {"id": "shields", "name": "Shield Emitter", "integrity": 7},
+      {"id": "engines", "name": "Burners", "integrity": 6}
+    ],
+    "intents": [
+      {"id": "autocannon", "requires_system": "weapons", "weight": 3.0,
+        "telegraph": "Autocannon: 9 damage",
+        "effects": [{"op": "damage_system", "amount": 9}]},
+      {"id": "brace", "requires_system": "shields", "weight": 1.5,
+        "telegraph": "Brace: +8 shield",
+        "effects": [{"op": "shield", "amount": 8}]},
+      {"id": "ram", "requires_system": "engines", "weight": 1.0,
+        "telegraph": "Ramming speed: 6 hull",
+        "effects": [{"op": "damage_hull", "amount": 6, "pierce": true}]}
+    ],
+    "reward": {"credits": 55}
+  },
+  "gunship": {
+    "name": "Gunship", "tier": 2,
+    "hull": 55, "shield": 10, "shield_regen": 4, "evasion": 6,
+    "systems": [
+      {"id": "weapons", "name": "Twin Batteries", "integrity": 12},
+      {"id": "shields", "name": "Shield Array", "integrity": 10},
+      {"id": "sensors", "name": "Fire Control", "integrity": 6},
+      {"id": "engines", "name": "Main Drive", "integrity": 8}
+    ],
+    "intents": [
+      {"id": "barrage", "requires_system": "weapons", "weight": 3.0,
+        "telegraph": "Barrage: 8 damage x2",
+        "effects": [{"op": "damage_system", "amount": 8},
+                    {"op": "damage_system", "amount": 8}]},
+      {"id": "lock_on", "requires_system": "sensors", "weight": 1.5,
+        "telegraph": "Lock on: suppress a system",
+        "effects": [{"op": "suppress_system", "turns": 1}]},
+      {"id": "harden", "requires_system": "shields", "weight": 1.5,
+        "telegraph": "Harden: +12 shield",
+        "effects": [{"op": "shield", "amount": 12}]}
+    ],
+    "reward": {"credits": 90}
+  },
+  "dreadnought": {
+    "name": "Dreadnought \"Gravekeeper\"", "tier": 3,
+    "hull": 120, "shield": 16, "shield_regen": 6, "evasion": 0,
+    "systems": [
+      {"id": "weapons", "name": "Spinal Lance", "integrity": 18},
+      {"id": "shields", "name": "Layered Screens", "integrity": 16},
+      {"id": "sensors", "name": "Targeting Core", "integrity": 10},
+      {"id": "reactor", "name": "Fusion Core", "integrity": 14}
+    ],
+    "intents": [
+      {"id": "lance", "requires_system": "weapons", "weight": 3.0,
+        "telegraph": "Spinal Lance: 18 damage, pierces",
+        "effects": [{"op": "damage_system", "amount": 18, "pierce": true}]},
+      {"id": "scramble", "requires_system": "sensors", "weight": 1.5,
+        "telegraph": "Scramble: suppress 2 turns",
+        "effects": [{"op": "suppress_system", "turns": 2}]},
+      {"id": "recharge", "requires_system": "reactor", "weight": 1.5,
+        "telegraph": "Recharge: +14 shield, repair core",
+        "effects": [{"op": "shield", "amount": 14},
+                    {"op": "repair_system", "amount": 6, "system": "shields"}]},
+      {"id": "flak", "requires_system": "weapons", "weight": 2.0,
+        "telegraph": "Flak spread: 6 hull, unavoidable",
+        "effects": [{"op": "damage_hull", "amount": 6, "unavoidable": true}]}
+    ],
+    "reward": {"credits": 200}
+  }
+}
