@@ -60,6 +60,7 @@ func _run_tests() -> int:
 	_test_combat_fizzle()
 	_test_deck_cycling()
 	_test_damage_pipeline()
+	_test_strip()
 	_test_valuation()
 	_test_meta_progression()
 	_test_map()
@@ -272,6 +273,72 @@ func _test_damage_pipeline() -> void:
 			worn = true
 	_check("destroyed player system wears its part", worn)
 
+func _test_strip() -> void:
+	print("strip (card removal)")
+	Rng.seed_run(31)
+	var run := RunState.new()
+	run.start(StarterShips.salvager(), 31)
+
+	var deck_before: int = run.profile.deck.size()
+	_eq("starter ship is 4 parts x 3 cards", deck_before, 12)
+
+	var opts := SalvageYard.options(run)
+	_eq("every mount on every part is offered", opts.size(), 4 * 3)
+	_check("options carry a value cost", int(opts[0]["value_cost"]) > 0)
+
+	# Strip the dud off the reactor.
+	var target_inst: PartInstance = null
+	var target_index := -1
+	for o in opts:
+		if o["card_id"] == &"coolant_leak":
+			target_inst = o["part"]
+			target_index = o["index"]
+	_check("a dud card is available to cut", target_inst != null)
+
+	var value_before: int = target_inst.sale_value()
+	_eq("strip succeeds", SalvageYard.strip(run, target_inst, target_index), "")
+	_eq("deck is one card lighter", run.profile.deck.size(), deck_before - 1)
+	_check("the stripped card is gone",
+		not run.profile.deck.has(&"coolant_leak"))
+	_check("strip costs sale value", target_inst.sale_value() < value_before)
+
+	# THE regression that matters: the deck is derived, so a strip that is not
+	# stored on the part gets silently undone by the next ship change.
+	run.recompile()
+	_eq("strip survives a bare recompile", run.profile.deck.size(), deck_before - 1)
+	var spare: PartDef = Database.part(&"sensor_array")
+	_check("install an unrelated part", run.install(spare, Vector2i(5, 3)))
+	_check("strip survives installing another part",
+		not run.profile.deck.has(&"coolant_leak"))
+
+	# One strip per part, enforced by the type rather than by price.
+	_check("part reports itself stripped", target_inst.is_stripped())
+	_check("part cannot be stripped twice", not target_inst.can_strip())
+	_check("second strip is refused", SalvageYard.strip(run, target_inst, 0) != "")
+	for o in SalvageYard.options(run):
+		if o["part"] == target_inst:
+			_check("stripped part offers no further mounts", false)
+	_check("stripped part drops out of the options list", true)
+
+	# Thinning has a floor: you can never cut past two thirds.
+	var floor_run := RunState.new()
+	floor_run.start(StarterShips.salvager(), 32)
+	for inst in floor_run.ship.parts:
+		SalvageYard.strip(floor_run, inst, 0)
+	_eq("every part stripped once", floor_run.profile.deck.size(), 8)
+	var still_strippable := 0
+	for inst in floor_run.ship.parts:
+		if inst.can_strip():
+			still_strippable += 1
+	_eq("nothing left to strip", still_strippable, 0)
+
+	var summary := SalvageYard.strip_summary(floor_run)
+	_eq("summary counts strips", summary["stripped"], 4)
+
+	# Strips must survive save/load along with the rest of the ship.
+	var round_trip := HullGrid.from_dict(floor_run.ship.to_dict())
+	_eq("strips survive serialisation", round_trip.compile().deck.size(), 8)
+
 func _test_valuation() -> void:
 	print("valuation")
 	Rng.seed_run(5)
@@ -412,8 +479,10 @@ func _simulate_run(run_seed: int, verbose: bool = false) -> Dictionary:
 			run.boss_killed = true
 		if enemy_id == &"gunship":
 			run.elites_killed += 1
-		# Between fights, spend credits repairing the worst-worn part.
+		# Between fights, spend credits repairing the worst-worn part, and
+		# cut one dud card the way a player passing a salvage node would.
 		_auto_repair(run)
+		_auto_strip(run)
 
 	run.sector = 3 if run.boss_killed else 2
 	var v := Valuation.appraise(run)
@@ -476,6 +545,15 @@ func _worst_own_system(c: CombatController) -> StringName:
 		if s.integrity < s.max_integrity and (worst == null or s.integrity < worst.integrity):
 			worst = s
 	return worst.id if worst != null else &""
+
+## Cut the first status-kind ("dud") card found. A real player would agonise;
+## the sim just needs the mechanic exercised so deck size reflects it.
+func _auto_strip(run: RunState) -> void:
+	for o in SalvageYard.options(run):
+		var card: CardDef = Database.card(o["card_id"])
+		if card != null and card.kind == &"status":
+			SalvageYard.strip(run, o["part"], o["index"])
+			return
 
 func _auto_repair(run: RunState) -> void:
 	for inst in run.ship.parts:

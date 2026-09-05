@@ -31,6 +31,7 @@ signal node_entered(node: Dictionary)
 signal credits_changed(amount: int)
 signal part_installed(part_id: StringName, cell: Vector2i)
 signal part_removed(part_id: StringName, cell: Vector2i)
+signal part_stripped(part_id: StringName, grant_index: int)
 signal run_ended(outcome: StringName, summary: Dictionary)
 
 # --- Meta ---

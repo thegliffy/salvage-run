@@ -14,8 +14,9 @@ What exists, and the order the rest should be built in.
 - [x] Persistent part wear written back from combat
 - [x] Sector map generation (layered DAG, reachability-guaranteed)
 - [x] Ship valuation with itemised receipt
+- [x] Card removal: three-card part packages, one strip per part, paid in sale value
 - [x] Meta state: salvage currency, part unlocks, save/load with migrations
-- [x] Headless test suite (68 tests) and balance simulator
+- [x] Headless test suite (87 tests) and balance simulator
 
 ## Next: make it playable
 
@@ -31,9 +32,12 @@ The systems work but nobody can see them. In order:
 4. **Shipyard screen.** Drag parts onto the hull grid. Show the compiled profile
    live so the player sees stats change as they place. Surface
    `ShipProfile.warnings` (power deficit) prominently.
-5. **Sale screen.** Animate the receipt line by line. This is the run's payoff
+5. **Salvage node screen.** List each part's three mounts and let the player cut
+   one, showing the sale value it costs. `SalvageYard.options()` already returns
+   everything this needs, including per-option cost.
+6. **Sale screen.** Animate the receipt line by line. This is the run's payoff
    moment and deserves more polish than its complexity suggests.
-6. **Meta shop.** Spend salvage on part unlocks.
+7. **Meta shop.** Spend salvage on part unlocks.
 
 ## Then
 
@@ -42,7 +46,7 @@ The systems work but nobody can see them. In order:
   write-on-every-transition with the same atomic temp-then-rename approach.
 - **Content pass.** Target roughly 60–80 cards and 40+ parts before the game has
   enough variety to sustain runs. Use `--sim` between batches.
-- **Balance pass.** See DESIGN.md §Open questions — the sim currently wins 82%
+- **Balance pass.** See DESIGN.md §Open questions — the sim currently wins ~79%
   with a dumb bot, which is far too easy.
 - **Audio, art, juice.**
 - **Steam integration.** Achievements and cloud saves via GodotSteam. See

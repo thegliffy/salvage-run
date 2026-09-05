@@ -107,8 +107,11 @@ func compile() -> ShipProfile:
 			continue  # a destroyed part contributes nothing until repaired
 		var d := inst.def
 
-		# Cards
-		for cid in d.grants:
+		# Cards. Read through the instance, not the def: a stripped mount
+		# contributes one card fewer, and this is the ONLY place that is
+		# honoured. The deck is derived, so anything that edits a deck
+		# directly gets silently undone on the next recompile.
+		for cid in inst.granted_cards():
 			prof.deck.append(cid)
 
 		# Power

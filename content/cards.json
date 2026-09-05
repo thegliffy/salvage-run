@@ -1,109 +1,817 @@
 {
   "laser_burst": {
     "name": "Laser Burst",
-    "kind": "attack", "rarity": "starter", "cost": 1, "target": "enemy_system",
+    "kind": "attack",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "enemy_system",
     "text": "Deal 6 damage to a target system.",
-    "effects": [{"op": "damage_system", "amount": 6}],
-    "upgrade": {"text": "Deal 9 damage to a target system.",
-      "effects": [{"op": "damage_system", "amount": 9}]}
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 6
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 9 damage to a target system.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 9
+        }
+      ]
+    }
   },
   "breach_missile": {
     "name": "Breach Missile",
-    "kind": "attack", "rarity": "common", "cost": 2, "target": "enemy_system",
+    "kind": "attack",
+    "rarity": "common",
+    "cost": 2,
+    "target": "enemy_system",
     "text": "Deal 8 damage to a target system. Ignores shields.",
-    "keywords": ["pierce"],
-    "effects": [{"op": "damage_system", "amount": 8, "pierce": true, "homing": true}],
-    "upgrade": {"text": "Deal 12 damage to a target system. Ignores shields.",
-      "effects": [{"op": "damage_system", "amount": 12, "pierce": true, "homing": true}]}
+    "keywords": [
+      "pierce"
+    ],
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 8,
+        "pierce": true,
+        "homing": true
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 12 damage to a target system. Ignores shields.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 12,
+          "pierce": true,
+          "homing": true
+        }
+      ]
+    }
   },
   "raise_deflector": {
     "name": "Raise Deflector",
-    "kind": "tech", "rarity": "starter", "cost": 1, "target": "none",
+    "kind": "tech",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
     "text": "Gain 8 shield.",
-    "effects": [{"op": "shield", "amount": 8}],
-    "upgrade": {"text": "Gain 12 shield.", "effects": [{"op": "shield", "amount": 12}]}
+    "effects": [
+      {
+        "op": "shield",
+        "amount": 8
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 12 shield.",
+      "effects": [
+        {
+          "op": "shield",
+          "amount": 12
+        }
+      ]
+    }
   },
   "evasive_burn": {
     "name": "Evasive Burn",
-    "kind": "maneuver", "rarity": "starter", "cost": 1, "target": "none",
+    "kind": "maneuver",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
     "text": "Gain 4 shield. Draw 1 card.",
-    "effects": [{"op": "shield", "amount": 4}, {"op": "draw", "amount": 1}],
-    "upgrade": {"text": "Gain 6 shield. Draw 2 cards.",
-      "effects": [{"op": "shield", "amount": 6}, {"op": "draw", "amount": 2}]}
+    "effects": [
+      {
+        "op": "shield",
+        "amount": 4
+      },
+      {
+        "op": "draw",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 6 shield. Draw 2 cards.",
+      "effects": [
+        {
+          "op": "shield",
+          "amount": 6
+        },
+        {
+          "op": "draw",
+          "amount": 2
+        }
+      ]
+    }
   },
   "divert_power": {
     "name": "Divert Power",
-    "kind": "tech", "rarity": "starter", "cost": 0, "target": "none",
+    "kind": "tech",
+    "rarity": "starter",
+    "cost": 0,
+    "target": "none",
     "text": "Gain 2 energy. Exhaust.",
-    "keywords": ["exhaust"],
-    "effects": [{"op": "energy", "amount": 2}],
-    "upgrade": {"text": "Gain 3 energy. Exhaust.",
-      "effects": [{"op": "energy", "amount": 3}]}
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "energy",
+        "amount": 2
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 3 energy. Exhaust.",
+      "effects": [
+        {
+          "op": "energy",
+          "amount": 3
+        }
+      ]
+    }
   },
   "targeting_scan": {
     "name": "Targeting Scan",
-    "kind": "tech", "rarity": "common", "cost": 1, "target": "enemy_system",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "enemy_system",
     "text": "Suppress a target system for 1 turn. Draw 1 card.",
-    "effects": [{"op": "suppress_system", "turns": 1}, {"op": "draw", "amount": 1}],
-    "upgrade": {"text": "Suppress a target system for 2 turns. Draw 1 card.",
-      "effects": [{"op": "suppress_system", "turns": 2}, {"op": "draw", "amount": 1}]}
+    "effects": [
+      {
+        "op": "suppress_system",
+        "turns": 1
+      },
+      {
+        "op": "draw",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "Suppress a target system for 2 turns. Draw 1 card.",
+      "effects": [
+        {
+          "op": "suppress_system",
+          "turns": 2
+        },
+        {
+          "op": "draw",
+          "amount": 1
+        }
+      ]
+    }
   },
   "emp_pulse": {
     "name": "EMP Pulse",
-    "kind": "tech", "rarity": "uncommon", "cost": 2, "target": "enemy_system",
+    "kind": "tech",
+    "rarity": "uncommon",
+    "cost": 2,
+    "target": "enemy_system",
     "text": "Suppress a target system for 2 turns.",
-    "effects": [{"op": "suppress_system", "turns": 2}],
-    "upgrade": {"text": "Suppress a target system for 3 turns.",
-      "effects": [{"op": "suppress_system", "turns": 3}]}
+    "effects": [
+      {
+        "op": "suppress_system",
+        "turns": 2
+      }
+    ],
+    "upgrade": {
+      "text": "Suppress a target system for 3 turns.",
+      "effects": [
+        {
+          "op": "suppress_system",
+          "turns": 3
+        }
+      ]
+    }
   },
   "patch_kit": {
     "name": "Patch Kit",
-    "kind": "tech", "rarity": "common", "cost": 1, "target": "self_system",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "self_system",
     "text": "Repair 6 integrity on one of your systems.",
-    "effects": [{"op": "repair_system", "amount": 6}],
-    "upgrade": {"text": "Repair 10 integrity on one of your systems.",
-      "effects": [{"op": "repair_system", "amount": 10}]}
+    "effects": [
+      {
+        "op": "repair_system",
+        "amount": 6
+      }
+    ],
+    "upgrade": {
+      "text": "Repair 10 integrity on one of your systems.",
+      "effects": [
+        {
+          "op": "repair_system",
+          "amount": 10
+        }
+      ]
+    }
   },
   "overcharge": {
     "name": "Overcharge",
-    "kind": "attack", "rarity": "uncommon", "cost": 2, "target": "enemy_system",
+    "kind": "attack",
+    "rarity": "uncommon",
+    "cost": 2,
+    "target": "enemy_system",
     "text": "Deal 3 damage to a target system for each of your active systems.",
-    "effects": [{"op": "damage_system", "amount": 3, "scale_by": "own_active_systems"}],
-    "upgrade": {"text": "Deal 4 damage to a target system for each of your active systems.",
-      "effects": [{"op": "damage_system", "amount": 4, "scale_by": "own_active_systems"}]}
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 3,
+        "scale_by": "own_active_systems"
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 4 damage to a target system for each of your active systems.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 4,
+          "scale_by": "own_active_systems"
+        }
+      ]
+    }
   },
   "vulture_strike": {
     "name": "Vulture Strike",
-    "kind": "attack", "rarity": "uncommon", "cost": 1, "target": "enemy_ship",
+    "kind": "attack",
+    "rarity": "uncommon",
+    "cost": 1,
+    "target": "enemy_ship",
     "text": "Deal 5 hull damage for each disabled enemy system.",
-    "effects": [{"op": "damage_hull", "amount": 5, "scale_by": "enemy_disabled_systems"}],
-    "upgrade": {"text": "Deal 7 hull damage for each disabled enemy system.",
-      "effects": [{"op": "damage_hull", "amount": 7, "scale_by": "enemy_disabled_systems"}]}
+    "effects": [
+      {
+        "op": "damage_hull",
+        "amount": 5,
+        "scale_by": "enemy_disabled_systems"
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 7 hull damage for each disabled enemy system.",
+      "effects": [
+        {
+          "op": "damage_hull",
+          "amount": 7,
+          "scale_by": "enemy_disabled_systems"
+        }
+      ]
+    }
   },
   "salvage_claw": {
     "name": "Salvage Claw",
-    "kind": "tech", "rarity": "common", "cost": 1, "target": "none",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "none",
     "text": "Gain 20 credits at the end of this fight. Exhaust.",
-    "keywords": ["exhaust"],
-    "effects": [{"op": "credits", "amount": 20}],
-    "upgrade": {"text": "Gain 35 credits at the end of this fight. Exhaust.",
-      "effects": [{"op": "credits", "amount": 35}]}
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "credits",
+        "amount": 20
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 35 credits at the end of this fight. Exhaust.",
+      "effects": [
+        {
+          "op": "credits",
+          "amount": 35
+        }
+      ]
+    }
   },
   "armor_brace": {
     "name": "Armor Brace",
-    "kind": "tech", "rarity": "common", "cost": 1, "target": "none",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "none",
     "text": "Gain 5 shield. Repair 3 hull.",
-    "effects": [{"op": "shield", "amount": 5}, {"op": "repair_hull", "amount": 3}],
-    "upgrade": {"text": "Gain 8 shield. Repair 5 hull.",
-      "effects": [{"op": "shield", "amount": 8}, {"op": "repair_hull", "amount": 5}]}
+    "effects": [
+      {
+        "op": "shield",
+        "amount": 5
+      },
+      {
+        "op": "repair_hull",
+        "amount": 3
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 8 shield. Repair 5 hull.",
+      "effects": [
+        {
+          "op": "shield",
+          "amount": 8
+        },
+        {
+          "op": "repair_hull",
+          "amount": 5
+        }
+      ]
+    }
   },
   "reactor_surge": {
     "name": "Reactor Surge",
-    "kind": "tech", "rarity": "rare", "cost": 0, "target": "none",
+    "kind": "tech",
+    "rarity": "rare",
+    "cost": 0,
+    "target": "none",
     "text": "Gain 3 energy. Take 4 hull damage. Exhaust.",
-    "keywords": ["exhaust"],
-    "effects": [{"op": "energy", "amount": 3}, {"op": "damage_self_hull", "amount": 4}],
-    "upgrade": {"text": "Gain 4 energy. Take 3 hull damage. Exhaust.",
-      "effects": [{"op": "energy", "amount": 4}, {"op": "damage_self_hull", "amount": 3}]}
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "energy",
+        "amount": 3
+      },
+      {
+        "op": "damage_self_hull",
+        "amount": 4
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 4 energy. Take 3 hull damage. Exhaust.",
+      "effects": [
+        {
+          "op": "energy",
+          "amount": 4
+        },
+        {
+          "op": "damage_self_hull",
+          "amount": 3
+        }
+      ]
+    }
+  },
+  "coolant_leak": {
+    "name": "Coolant Leak",
+    "kind": "status",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
+    "text": "Gain 1 energy. Take 3 hull damage.",
+    "effects": [
+      {
+        "op": "energy",
+        "amount": 1
+      },
+      {
+        "op": "damage_self_hull",
+        "amount": 3
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 1 energy. Take 1 hull damage.",
+      "effects": [
+        {
+          "op": "energy",
+          "amount": 1
+        },
+        {
+          "op": "damage_self_hull",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  "sensor_ghost": {
+    "name": "Sensor Ghost",
+    "kind": "status",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
+    "text": "Draw 1 card.",
+    "effects": [
+      {
+        "op": "draw",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "Draw 2 cards.",
+      "effects": [
+        {
+          "op": "draw",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  "dead_weight": {
+    "name": "Dead Weight",
+    "kind": "status",
+    "rarity": "starter",
+    "cost": 2,
+    "target": "none",
+    "text": "Gain 8 shield.",
+    "effects": [
+      {
+        "op": "shield",
+        "amount": 8
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 12 shield.",
+      "effects": [
+        {
+          "op": "shield",
+          "amount": 12
+        }
+      ]
+    }
+  },
+  "magnetic_drag": {
+    "name": "Magnetic Drag",
+    "kind": "status",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
+    "text": "Gain 12 credits at the end of this fight. Take 2 hull damage.",
+    "effects": [
+      {
+        "op": "credits",
+        "amount": 12
+      },
+      {
+        "op": "damage_self_hull",
+        "amount": 2
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 20 credits at the end of this fight. Take 2 hull damage.",
+      "effects": [
+        {
+          "op": "credits",
+          "amount": 20
+        },
+        {
+          "op": "damage_self_hull",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  "overheat": {
+    "name": "Overheat",
+    "kind": "attack",
+    "rarity": "common",
+    "cost": 1,
+    "target": "enemy_system",
+    "text": "Deal 10 damage to a target system. Take 3 hull damage.",
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 10
+      },
+      {
+        "op": "damage_self_hull",
+        "amount": 3
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 14 damage to a target system. Take 3 hull damage.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 14
+        },
+        {
+          "op": "damage_self_hull",
+          "amount": 3
+        }
+      ]
+    }
+  },
+  "static_discharge": {
+    "name": "Static Discharge",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "enemy_system",
+    "text": "Gain 5 shield. Deal 3 damage to a target system.",
+    "effects": [
+      {
+        "op": "shield",
+        "amount": 5
+      },
+      {
+        "op": "damage_system",
+        "amount": 3
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 7 shield. Deal 5 damage to a target system.",
+      "effects": [
+        {
+          "op": "shield",
+          "amount": 7
+        },
+        {
+          "op": "damage_system",
+          "amount": 5
+        }
+      ]
+    }
+  },
+  "afterburner": {
+    "name": "Afterburner",
+    "kind": "maneuver",
+    "rarity": "common",
+    "cost": 0,
+    "target": "none",
+    "text": "Gain 3 shield. Draw 1 card. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "shield",
+        "amount": 3
+      },
+      {
+        "op": "draw",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 5 shield. Draw 1 card. Exhaust.",
+      "effects": [
+        {
+          "op": "shield",
+          "amount": 5
+        },
+        {
+          "op": "draw",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  "weak_point": {
+    "name": "Weak Point",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "enemy_system",
+    "text": "Deal 4 damage to a target system and suppress it for 1 turn.",
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 4
+      },
+      {
+        "op": "suppress_system",
+        "turns": 1
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 7 damage to a target system and suppress it for 1 turn.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 7
+        },
+        {
+          "op": "suppress_system",
+          "turns": 1
+        }
+      ]
+    }
+  },
+  "scrap_grab": {
+    "name": "Scrap Grab",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 0,
+    "target": "none",
+    "text": "Gain 10 credits at the end of this fight. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "credits",
+        "amount": 10
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 18 credits at the end of this fight. Exhaust.",
+      "effects": [
+        {
+          "op": "credits",
+          "amount": 18
+        }
+      ]
+    }
+  },
+  "salvo": {
+    "name": "Salvo",
+    "kind": "attack",
+    "rarity": "uncommon",
+    "cost": 2,
+    "target": "enemy_system",
+    "text": "Deal 5 damage to a target system twice.",
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 5
+      },
+      {
+        "op": "damage_system",
+        "amount": 5
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 7 damage to a target system twice.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 7
+        },
+        {
+          "op": "damage_system",
+          "amount": 7
+        }
+      ]
+    }
+  },
+  "ammo_drum": {
+    "name": "Ammo Drum",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "none",
+    "text": "Draw 2 cards. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "draw",
+        "amount": 2
+      }
+    ],
+    "upgrade": {
+      "text": "Draw 3 cards. Exhaust.",
+      "effects": [
+        {
+          "op": "draw",
+          "amount": 3
+        }
+      ]
+    }
+  },
+  "feedback_spike": {
+    "name": "Feedback Spike",
+    "kind": "attack",
+    "rarity": "uncommon",
+    "cost": 1,
+    "target": "enemy_system",
+    "text": "Deal 6 damage to a target system. Ignores shields.",
+    "keywords": [
+      "pierce"
+    ],
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 6,
+        "pierce": true
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 9 damage to a target system. Ignores shields.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 9,
+          "pierce": true
+        }
+      ]
+    }
+  },
+  "system_scramble": {
+    "name": "System Scramble",
+    "kind": "tech",
+    "rarity": "uncommon",
+    "cost": 2,
+    "target": "enemy_system",
+    "text": "Deal 4 damage to a target system and suppress it for 2 turns.",
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 4
+      },
+      {
+        "op": "suppress_system",
+        "turns": 2
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 6 damage to a target system and suppress it for 3 turns.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 6
+        },
+        {
+          "op": "suppress_system",
+          "turns": 3
+        }
+      ]
+    }
+  },
+  "damage_control": {
+    "name": "Damage Control",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "self_system",
+    "text": "Repair 5 integrity on one of your systems. Gain 4 shield.",
+    "effects": [
+      {
+        "op": "repair_system",
+        "amount": 5
+      },
+      {
+        "op": "shield",
+        "amount": 4
+      }
+    ],
+    "upgrade": {
+      "text": "Repair 8 integrity on one of your systems. Gain 6 shield.",
+      "effects": [
+        {
+          "op": "repair_system",
+          "amount": 8
+        },
+        {
+          "op": "shield",
+          "amount": 6
+        }
+      ]
+    }
+  },
+  "power_spike": {
+    "name": "Power Spike",
+    "kind": "tech",
+    "rarity": "uncommon",
+    "cost": 1,
+    "target": "none",
+    "text": "Gain 1 energy. Draw 1 card.",
+    "effects": [
+      {
+        "op": "energy",
+        "amount": 1
+      },
+      {
+        "op": "draw",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 2 energy. Draw 1 card.",
+      "effects": [
+        {
+          "op": "energy",
+          "amount": 2
+        },
+        {
+          "op": "draw",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  "execute_protocol": {
+    "name": "Execute Protocol",
+    "kind": "attack",
+    "rarity": "rare",
+    "cost": 2,
+    "target": "enemy_ship",
+    "text": "Deal 12 hull damage. Cannot be dodged.",
+    "effects": [
+      {
+        "op": "damage_hull",
+        "amount": 12,
+        "homing": true
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 17 hull damage. Cannot be dodged.",
+      "effects": [
+        {
+          "op": "damage_hull",
+          "amount": 17,
+          "homing": true
+        }
+      ]
+    }
   }
 }

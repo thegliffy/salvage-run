@@ -16,9 +16,10 @@ decision is legible — "do I want these cards?" and "do I want this hardware?" 
 one question. It also makes the run-end sale meaningful, because the thing you
 sell is the thing you built.
 
-**Cost:** you lose fine-grained deck control. There is no card-removal service
-unless one is added as a part or shop service. Expect players to ask for it; the
-answer is probably a *Refit Bay* part that exhausts junk cards, not a menu.
+**Cost:** you lose fine-grained deck control. That is addressed by the strip
+mechanic in §8, which removes one card from a specific part rather than offering
+a generic purge — the narrow tool is the right one here, because swapping parts
+already thins the deck on its own.
 
 ## 2. Hybrid spatial hull, abstract combat
 
@@ -112,13 +113,48 @@ resolve synchronously and emit an ordered event stream; animation replays that
 stream afterward. If you ever need combat logic to wait on an animation, the
 answer is to make the animation wait on the event, not the reverse.
 
+## 8. Card removal: strip a mount
+
+Every part grants **three** cards, and each part can have **exactly one** of them
+stripped, permanently, for the rest of the run. The service lives at salvage
+nodes. It is paid for in the ship's eventual sale value, not credits.
+
+**Why one per part:** thinning is capped by construction. A ship can never fall
+below two thirds of its cards, so there is no escalating price table and no
+degenerate five-card deck. The limit is a rule the player can see rather than a
+curve they discover by running out of money.
+
+**Why it must live on `PartInstance`:** the deck is *derived*. `compile()`
+rebuilds `ShipProfile.deck` from part grants on every ship change, so a removal
+recorded anywhere else is silently undone the next time the player installs
+anything. `PartInstance.stripped_index` is the only sanctioned place, and
+`compile()` reads `granted_cards()` rather than `def.grants` to honour it. There
+is a test for exactly this.
+
+**Why sale value rather than credits:** credits would make removal compete with
+buying parts, which is a duller tension and one the game already has. Paying in
+sale value trades meta-progression for run strength, and the cost surfaces on the
+end-of-run receipt — the one screen where the player is already reading
+consequences.
+
+**Content shape.** The three cards are a designed package, not three copies:
+
+- *Teaching parts* (tier 1) run two core cards plus a clear dud, so the first
+  strip is satisfying rather than agonising. The duds use `kind: "status"`,
+  which gives drawback cards a home without needing a curse system.
+- *Choice parts* (tier 2–3) run three cards pulling in different directions, so
+  stripping declares what the ship is for.
+
+**Consequence:** removal is load-bearing, not optional. Seven parts is a 21-card
+deck, which cycles sluggishly at 5–6 draws a turn. Stripping is what keeps deck
+size honest as a ship grows, which is why it sits on the common node type rather
+than behind shops.
+
 ---
 
 ## Open questions
 
 Genuinely undecided, listed so they do not get decided by accident.
-
-**Card removal.** See §1. Probably a part, not a service.
 
 **How punishing should part wear be?** Currently destroying a subsystem wears its
 parts to zero, which removes their cards for the rest of the run unless repaired.
@@ -135,7 +171,7 @@ multiplicative (raw power). This is the right default, but it means early
 unlocks feel weak. Consider a small number of deliberately-strong starter-ship
 unlocks to give the first few hours a visible power curve.
 
-**Balance is untuned.** The 300-run sim currently wins ~82% with a deliberately
+**Balance is untuned.** The 300-run sim currently wins ~79% with a deliberately
 dumb greedy bot. That is far too easy — a naive policy should be losing most
 runs. Enemy damage and hull values in `content/enemies.json` need a real pass.
 The simulator is the tool for it; the numbers are not sacred.

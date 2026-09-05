@@ -19,7 +19,7 @@ gameplay UI yet — `scenes/main.tscn` is a boot screen that proves content load
 See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ```
-68 tests passing · 300-run balance sim at ~5ms/run
+87 tests passing · 300-run balance sim at ~6ms/run
 ```
 
 ## Quick start
@@ -69,6 +69,15 @@ decision, and it gives EMP and suppression effects a job that raw damage cannot 
 
 Destroyed subsystems stay targetable: shots at the wreckage spill straight into
 the hull, so a fully disabled ship can still be finished off.
+
+### Removing cards
+
+Every part grants **three** cards, and each part can have **one** of them stripped
+permanently at a salvage node. That caps thinning by construction — a ship can
+never fall below two thirds of its cards — so there is no escalating purge price.
+
+Strips are paid for in the ship's eventual **sale value**, not credits: you are
+cutting up the thing you intend to sell, and the cost lands on the receipt below.
 
 ### The sale
 
