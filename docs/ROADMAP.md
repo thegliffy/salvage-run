@@ -16,7 +16,8 @@ What exists, and the order the rest should be built in.
 - [x] Ship valuation with itemised receipt
 - [x] Card removal: three-card part packages, one strip per part, paid in sale value
 - [x] Meta state: salvage currency, part unlocks, save/load with migrations
-- [x] Headless test suite (87 tests) and balance simulator
+- [x] Headless test suite (87 tests) and balance simulator with a content-aware
+      pilot and card-play histogram
 
 ## Next: make it playable
 
@@ -46,8 +47,9 @@ The systems work but nobody can see them. In order:
   write-on-every-transition with the same atomic temp-then-rename approach.
 - **Content pass.** Target roughly 60–80 cards and 40+ parts before the game has
   enough variety to sustain runs. Use `--sim` between batches.
-- **Balance pass.** See DESIGN.md §Open questions — the sim currently wins ~79%
-  with a dumb bot, which is far too easy.
+- **Balance pass.** See DESIGN.md §Open questions — the sim wins ~96%, and names
+  two causes: enemies that do not scale with depth, and an over-generous
+  reward-to-cost ratio. Start by keying enemy stats off sector.
 - **Audio, art, juice.**
 - **Steam integration.** Achievements and cloud saves via GodotSteam. See
   SHIPPING.md.

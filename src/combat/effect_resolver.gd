@@ -29,7 +29,7 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 	var kind: String = op.get("op", "")
 	var source: Combatant = ctx.get("source")
 	var opponent: Combatant = ctx.get("opponent")
-	var amount := _scaled_amount(op, ctx)
+	var amount := scaled_amount(op, ctx)
 
 	match kind:
 		"damage_system":
@@ -86,7 +86,9 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 			push_warning("[EffectResolver] unknown op '%s'" % kind)
 
 ## Supports "amount_per_active_system" style scaling without bespoke ops.
-func _scaled_amount(op: Dictionary, ctx: Dictionary) -> int:
+## Public because anything deciding whether a card is worth playing -- AI,
+## the balance sim, a damage-preview tooltip -- needs the real number.
+func scaled_amount(op: Dictionary, ctx: Dictionary) -> int:
 	var base := int(op.get("amount", 0))
 	var scale: String = op.get("scale_by", "")
 	if scale == "":

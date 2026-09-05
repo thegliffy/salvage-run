@@ -425,14 +425,17 @@ func _run_sim(count: int, base_seed: int) -> void:
 	var totals: Array[int] = []
 	var turn_counts: Array[int] = []
 	var deaths_at: Dictionary = {}
+	var tally: Dictionary = {}
+	var deck_sizes: Array[int] = []
 	var start := Time.get_ticks_msec()
 
 	for i in count:
 		var s: int = (base_seed + i) if base_seed >= 0 else (1000 + i)
-		var result := _simulate_run(s)
+		var result := _simulate_run(s, false, tally)
 		if result["won"]:
 			wins += 1
 		totals.append(result["salvage"])
+		deck_sizes.append(int(result["deck_size"]))
 		turn_counts.append(result["turns"])
 		if not result["won"]:
 			var d: String = result["died_at"]
@@ -444,6 +447,8 @@ func _run_sim(count: int, base_seed: int) -> void:
 	print("combat turns : avg %.1f" % (float(_sum(turn_counts)) / maxi(1, count)))
 	print("deaths by    : %s" % [deaths_at])
 	print("elapsed      : %d ms (%.2f ms/run)" % [elapsed, float(elapsed) / maxi(1, count)])
+	print("final deck   : avg %d cards" % _avg(deck_sizes))
+	_print_histogram(tally, count)
 	print("")
 	print("A healthy target for a scaffold is a NON-trivial win rate: if this")
 	print("reads 0%% or 100%%, the numbers in content/*.json need a pass, not the code.")
@@ -452,7 +457,8 @@ func _run_sim(count: int, base_seed: int) -> void:
 	print("\n--- sample fight (seed 1000) ---")
 	_simulate_run(1000, true)
 
-func _simulate_run(run_seed: int, verbose: bool = false) -> Dictionary:
+func _simulate_run(run_seed: int, verbose: bool = false,
+		tally: Dictionary = {}) -> Dictionary:
 	var run := RunState.new()
 	run.start(StarterShips.salvager(), run_seed)
 	var ladder: Array[StringName] = [&"scout_drone", &"raider", &"scout_drone",
@@ -460,11 +466,13 @@ func _simulate_run(run_seed: int, verbose: bool = false) -> Dictionary:
 	var total_turns := 0
 	var died_at := "survived"
 
+	var first := true
 	for enemy_id in ladder:
 		var c := run.make_combat(enemy_id)
 		if c == null:
 			break
-		var turns := _autoplay(c, verbose)
+		var turns := _autoplay(c, verbose and first, tally)
+		first = false
 		total_turns += turns
 		var stalled := c.phase != CombatController.Phase.DONE
 		run.finish_combat(c)
@@ -482,6 +490,7 @@ func _simulate_run(run_seed: int, verbose: bool = false) -> Dictionary:
 		# Between fights, spend credits repairing the worst-worn part, and
 		# cut one dud card the way a player passing a salvage node would.
 		_auto_repair(run)
+		_auto_install(run)
 		_auto_strip(run)
 
 	run.sector = 3 if run.boss_killed else 2
@@ -489,54 +498,206 @@ func _simulate_run(run_seed: int, verbose: bool = false) -> Dictionary:
 	if verbose:
 		print(Valuation.format_receipt(v))
 	return {"won": run.boss_killed, "salvage": v["total"], "turns": total_turns,
-		"died_at": died_at}
+		"died_at": died_at, "deck_size": run.profile.deck.size()}
 
-## A deliberately simple greedy policy. It is not meant to play well -- it is
-## meant to play CONSISTENTLY, so that a change in the win rate reflects a
-## change in the numbers rather than a change in how cleverly it was piloted.
-func _autoplay(c: CombatController, verbose: bool = false) -> int:
+## The simulator's pilot.
+##
+## It scores every playable card from its EFFECT OPS rather than from a list of
+## card names, so new content is evaluated the moment it is added and dead cards
+## show up in the play histogram instead of hiding behind a bot that never tried
+## them. The weights below encode "a reasonable median player", not an optimal
+## one -- the goal is a stable yardstick, so that a change in the win rate
+## reflects a change in the numbers and not a change in how cleverly it played.
+##
+## It does understand the one rule the design hangs off: disabling the subsystem
+## behind the telegraphed intent cancels the shot. That is worth far more than
+## the raw damage it costs, and FIZZLE_BONUS says so.
+const FIZZLE_BONUS := 25.0
+const W_HULL_DAMAGE := 1.0
+const W_SYSTEM_DAMAGE := 0.8
+const W_SHIELD := 0.55
+const W_WASTED_SHIELD := 0.05
+const W_REPAIR_HULL := 1.0
+const W_REPAIR_SYSTEM := 0.5
+const W_DRAW := 2.0
+const W_ENERGY := 3.0
+const W_SELF_HARM := 1.6
+const W_CREDITS := 0.15
+const W_SUPPRESS := 3.0
+## Damage soaked by shields is not wasted -- stripping the pool is the only way
+## through it. Scoring absorbed damage at zero makes the pilot refuse to attack
+## a shielded ship at all, which deadlocks the fight instead of losing it.
+const W_SHIELD_STRIP := 0.5
+## Shield regen at or above this per turn is treated as a gate to break first.
+const REGEN_PRESSURE := 3
+
+func _autoplay(c: CombatController, verbose: bool = false,
+		tally: Dictionary = {}) -> int:
 	var guard := 0
 	while c.phase != CombatController.Phase.DONE and guard < 60:
 		guard += 1
-		# Target the system feeding the enemy's telegraphed intent: killing it
-		# fizzles the shot. This is the line of play the design wants to reward.
-		var target: StringName = StringName(c.brain.current_intent.get("requires_system", ""))
-		if target == &"" or not c.enemy.has_active_system(target):
-			# Prefer something still intact; otherwise shoot the wreck for hull damage.
-			var intact := c.enemy.intact_systems()
-			var any := c.enemy.targetable_systems()
-			if not intact.is_empty():
-				target = intact[0].id
-			elif not any.is_empty():
-				target = any[0].id
-			else:
-				target = &""
-
-		var acted := true
-		while acted:
-			acted = false
-			for card in c.deck.hand.duplicate():
+		while true:
+			var best: CardInstance = null
+			var best_target: StringName = &""
+			var best_efficiency := 0.0
+			# Hand order is seeded, and ties keep the earlier card, so the
+			# whole policy stays deterministic for a given seed.
+			for card in c.deck.hand:
 				if card.cost() > c.player.energy:
 					continue
-				var t: StringName = &""
-				if card.def.needs_target():
-					t = target if card.def.target == CardDef.Target.ENEMY_SYSTEM else _worst_own_system(c)
-					if t == &"":
-						continue
-				if c.play_card(card, t) == "":
-					acted = true
-					if verbose:
-						print("  T%d  play %-16s -> %s" % [c.turn, card.display_name(), t])
-					break
+				var target := _pick_target(c, card)
+				if card.def.needs_target() and target == &"":
+					continue
+				var score := _score_card(c, card, target)
+				if score <= 0.0:
+					continue
+				var efficiency := score / maxf(0.5, float(card.cost()))
+				if efficiency > best_efficiency:
+					best_efficiency = efficiency
+					best = card
+					best_target = target
+			if best == null:
+				break
+			var name := best.display_name()
+			if c.play_card(best, best_target) != "":
+				break
+			tally[name] = int(tally.get(name, 0)) + 1
+			if verbose:
+				print("  T%d  play %-18s -> %-9s (score %.1f/energy)" % [
+					c.turn, name, String(best_target) if best_target != &"" else "-",
+					best_efficiency])
 			if c.phase == CombatController.Phase.DONE:
 				break
 		if c.phase == CombatController.Phase.DONE:
 			break
 		if verbose:
-			print("  T%d  end turn | enemy intent: %s | you: %d hp / %d shield" % [
+			print("  T%d  end turn | enemy: %s | you: %d hp / %d shield" % [
 				c.turn, c.brain.telegraph(), c.player.hull, c.player.shield])
 		c.end_player_turn()
 	return c.turn
+
+## Damage the player is about to take, or 0 if the intent is already dead.
+## Drives how much a shield card is actually worth this turn.
+func _expected_incoming(c: CombatController) -> int:
+	if c.brain.intent_fizzles():
+		return 0
+	var total := 0
+	for op in c.brain.scaled_effects():
+		match op.get("op", ""):
+			"damage_system", "damage_hull":
+				total += int(op.get("amount", 0))
+	return total
+
+## The subsystem feeding the enemy's telegraphed shot, or &"" if none/fizzled.
+func _intent_system(c: CombatController) -> StringName:
+	if c.brain.intent_fizzles():
+		return &""
+	return StringName(c.brain.current_intent.get("requires_system", ""))
+
+func _pick_target(c: CombatController, card: CardInstance) -> StringName:
+	match card.def.target:
+		CardDef.Target.SELF_SYSTEM:
+			return _worst_own_system(c)
+		CardDef.Target.ENEMY_SYSTEM:
+			# 1. Shield regeneration gates every point of damage that follows,
+			#    so a ship that out-regenerates our output has to be opened up
+			#    before anything else matters. Without this the pilot tunnels
+			#    on the intent system and fights against regen never end.
+			if c.enemy.effective_shield_regen() >= REGEN_PRESSURE \
+					and c.enemy.has_active_system(&"shields"):
+				return &"shields"
+			# 2. Whatever is about to shoot us -- disabling it cancels the shot.
+			var intent := _intent_system(c)
+			if intent != &"" and c.enemy.has_active_system(intent):
+				return intent
+			# 2. Otherwise the softest intact system, to disable more of them.
+			var intact := c.enemy.intact_systems()
+			if not intact.is_empty():
+				var softest: ShipSystem = intact[0]
+				for s in intact:
+					if s.integrity < softest.integrity:
+						softest = s
+				return softest.id
+			# 3. Nothing intact left: shoot the wreck, damage spills to hull.
+			var any := c.enemy.targetable_systems()
+			return any[0].id if not any.is_empty() else &""
+		_:
+			return &""
+
+func _score_card(c: CombatController, card: CardInstance, target: StringName) -> float:
+	var ctx := {"source": c.player, "opponent": c.enemy, "target_system": target}
+	var intent := _intent_system(c)
+	var incoming := _expected_incoming(c)
+	var score := 0.0
+	# Shields absorb in order, so track what is left as ops are considered.
+	var shield_left := c.enemy.shield
+
+	for op in card.effects():
+		var amount: int = c.resolver.scaled_amount(op, ctx)
+		var kind: String = op.get("op", "")
+		var pierce: bool = bool(op.get("pierce", false))
+
+		match kind:
+			"damage_system":
+				var through := amount
+				if not pierce:
+					var absorbed := mini(shield_left, through)
+					shield_left -= absorbed
+					through -= absorbed
+					score += absorbed * W_SHIELD_STRIP
+				if through <= 0:
+					continue
+				var sys: ShipSystem = c.enemy.system(target)
+				if sys != null and sys.integrity > 0:
+					var into_system := mini(through, sys.integrity)
+					var spill := through - into_system
+					score += into_system * W_SYSTEM_DAMAGE + spill * W_HULL_DAMAGE
+					# The payoff: this kills the system that is about to fire.
+					if into_system >= sys.integrity and target == intent:
+						score += FIZZLE_BONUS
+				else:
+					score += through * W_HULL_DAMAGE
+			"damage_hull":
+				var h := amount
+				if not pierce:
+					var absorbed_h := mini(shield_left, h)
+					shield_left -= absorbed_h
+					h -= absorbed_h
+					score += absorbed_h * W_SHIELD_STRIP
+				score += maxi(0, h) * W_HULL_DAMAGE
+			"suppress_system":
+				# Suppression is worth a lot when it cancels the telegraphed
+				# shot and very little otherwise -- exactly the card design.
+				if target == intent and target != &"":
+					score += FIZZLE_BONUS
+				else:
+					score += W_SUPPRESS
+			"shield":
+				# The resolver caps shield gain at max_shield, so scoring the
+				# card's printed number makes every defensive card look far
+				# better than it is. Without this the pilot turtles forever
+				# and fights hit the turn guard instead of ending.
+				var room := 999999 if bool(op.get("overshield", false)) \
+					else maxi(0, c.player.max_shield - c.player.shield)
+				var gained := mini(amount, room)
+				var needed := maxi(0, incoming - c.player.shield)
+				var useful := mini(gained, needed)
+				score += useful * W_SHIELD + (gained - useful) * W_WASTED_SHIELD
+			"repair_hull":
+				score += mini(amount, c.player.max_hull - c.player.hull) * W_REPAIR_HULL
+			"repair_system":
+				var own: ShipSystem = c.player.system(target)
+				if own != null:
+					score += mini(amount, own.max_integrity - own.integrity) * W_REPAIR_SYSTEM
+			"draw":
+				score += amount * W_DRAW
+			"energy":
+				score += amount * W_ENERGY
+			"damage_self_hull":
+				score -= amount * W_SELF_HARM
+			"credits":
+				score += amount * W_CREDITS
+	return score
 
 func _worst_own_system(c: CombatController) -> StringName:
 	var worst: ShipSystem = null
@@ -545,6 +706,28 @@ func _worst_own_system(c: CombatController) -> StringName:
 		if s.integrity < s.max_integrity and (worst == null or s.integrity < worst.integrity):
 			worst = s
 	return worst.id if worst != null else &""
+
+
+## Buy a part the way a shop node would. Growth is gated by the credit economy,
+## not handed out free after every fight -- with free parts the ship outruns the
+## enemy ladder and the win rate stops measuring anything.
+func _auto_install(run: RunState) -> void:
+	var pool: Array = []
+	for pid in Database.parts:
+		pool.append(Database.parts[pid])
+	Rng.shuffle(&"shop", pool)
+	for part in pool:
+		if run.credits < part.base_value:
+			continue
+		for y in run.ship.height:
+			for x in run.ship.width:
+				if not run.ship.can_place(part, Vector2i(x, y)):
+					continue
+				run.install(part, Vector2i(x, y))
+				if run.profile.warnings.is_empty():
+					run.add_credits(-part.base_value)
+					return
+				run.uninstall(run.ship.parts.back())  # power deficit; put it back
 
 ## Cut the first status-kind ("dud") card found. A real player would agonise;
 ## the sim just needs the mechanic exercised so deck size reflects it.
@@ -562,6 +745,38 @@ func _auto_repair(run: RunState) -> void:
 			inst.wear = 0
 			run.recompile()
 			return
+
+## Which cards the pilot actually reached for. A card sitting at the bottom of
+## this list is either badly costed or badly targeted -- it is the fastest way
+## to spot content that exists but does nothing.
+func _print_histogram(tally: Dictionary, runs: int) -> void:
+	var names: Array = tally.keys()
+	names.sort_custom(func(a, b): return int(tally[a]) > int(tally[b]))
+	var total := 0
+	for n in names:
+		total += int(tally[n])
+	print("\ncard plays (per run, %d distinct cards seen):" % names.size())
+	for n in names:
+		var per_run := float(tally[n]) / maxf(1.0, float(runs))
+		var bar := "#".repeat(int(round(per_run * 2.0)))
+		print("  %-20s %5.1f  %s" % [n, per_run, bar])
+
+	# Anything reachable but never played is dead content.
+	var reachable: Dictionary = {}
+	for pid in Database.parts:
+		for cid in Database.parts[pid].grants:
+			var cd: CardDef = Database.card(cid)
+			if cd != null:
+				reachable[cd.name] = true
+	var never: Array = []
+	for n in reachable:
+		if not tally.has(n):
+			never.append(n)
+	never.sort()
+	if never.is_empty():
+		print("  (every reachable card was played at least once)")
+	else:
+		print("  NEVER PLAYED: %s" % ", ".join(never))
 
 func _sum(a: Array[int]) -> int:
 	var t := 0

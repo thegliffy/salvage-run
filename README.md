@@ -19,7 +19,7 @@ gameplay UI yet — `scenes/main.tscn` is a boot screen that proves content load
 See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ```
-87 tests passing · 300-run balance sim at ~6ms/run
+87 tests passing · 300-run balance sim with a content-aware pilot
 ```
 
 ## Quick start

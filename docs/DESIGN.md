@@ -150,6 +150,34 @@ deck, which cycles sluggishly at 5–6 draws a turn. Stripping is what keeps dec
 size honest as a ship grows, which is why it sits on the common node type rather
 than behind shops.
 
+## 9. The simulator's pilot
+
+`tests/headless.gd` scores cards from their **effect ops**, not from a list of
+card names, so new content is evaluated the moment it is added and cards the
+pilot never reaches for show up in the play histogram as dead content.
+
+The weights encode a *reasonable median player*, not an optimal one. The point
+is a stable yardstick: a change in the win rate should mean the numbers moved,
+not that the bot got cleverer. It does understand the one rule the design hangs
+off — `FIZZLE_BONUS` makes disabling the subsystem behind a telegraphed intent
+worth far more than the raw damage it costs.
+
+Three scoring rules were not obvious, and each was found by watching the sim
+deadlock rather than by reasoning about it:
+
+- **Shield gain must be capped by remaining shield room.** The resolver caps
+  gains at `max_shield`, so scoring a card's printed number made every defensive
+  card look far better than it was. The pilot turtled forever.
+- **Damage absorbed by shields still counts.** Scoring it at zero made attacks
+  on a shielded ship worth nothing, so the pilot refused to attack at all, so
+  the shields never came down. A self-fulfilling deadlock.
+- **Cantrip riders must not dominate.** With draw weighted at 3.5, a 1-cost
+  "gain 4 shield, draw 1" outscored every attack in the game.
+
+The simulator also buys parts between fights out of run credits. Handing them
+out free was tried first and pushed the win rate to 98%: the ship outgrew the
+enemy ladder and the number stopped measuring anything.
+
 ---
 
 ## Open questions
@@ -171,7 +199,18 @@ multiplicative (raw power). This is the right default, but it means early
 unlocks feel weak. Consider a small number of deliberately-strong starter-ship
 unlocks to give the first few hours a visible power curve.
 
-**Balance is untuned.** The 300-run sim currently wins ~79% with a deliberately
-dumb greedy bot. That is far too easy — a naive policy should be losing most
-runs. Enemy damage and hull values in `content/enemies.json` need a real pass.
-The simulator is the tool for it; the numbers are not sacred.
+**Balance is untuned, and the sim now says where.** The 300-run sim wins ~96%.
+Two specific causes, both content rather than code:
+
+- *Enemies do not scale.* The same Gunship appears at fight 4 and fight 6 while
+  the player's ship grows to ~10 parts and a 21-card deck. Enemy stats need to
+  key off sector depth.
+- *Reward-to-cost ratio is too generous.* The ladder pays out enough credits to
+  buy roughly four parts before the boss.
+
+**Dead content.** The play histogram flags cards the pilot essentially never
+reaches for: Ammo Drum, Salvo, Dead Weight, and — notably — Breach Missile,
+which is a 150-salvage unlock that loses to a 1-cost Laser Burst at almost every
+board state. Costed content that never gets played is worse than no content.
+(Coolant Leak and Magnetic Drag never being played is the *intended* result:
+they are duds, and the pilot strips them.)
