@@ -12,11 +12,30 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 
 ---
 
-## Status: scaffold
+## Status: playable PC demo
 
-The simulation, rules, and data layers are complete and tested. There is no
-gameplay UI yet — `scenes/main.tscn` is a boot screen that proves content loads.
-See [docs/ROADMAP.md](docs/ROADMAP.md).
+A three-fight demo runs end to end: title → combat → salvage yard → combat →
+boss → ship sale. Combat, subsystem targeting, card removal and the run-end
+appraisal are all playable. Still missing: the sector map, the shipyard grid
+editor, and the meta-progression shop. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+### Play it
+
+```bash
+godot --path .
+```
+
+or run the exported build:
+
+```bash
+./build/salvage-run.x86_64
+```
+
+**How to play.** Click a card, then click the subsystem you want to hit. The
+amber banner is the enemy's next attack and it names the subsystem that fires
+it — destroy or suppress that subsystem before ending your turn and the attack
+is cancelled outright. Between fights you can repair wrecked parts and cut one
+card from any mount.
 
 ```
 87 tests passing · 300-run balance sim with a content-aware pilot

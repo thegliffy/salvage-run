@@ -23,6 +23,7 @@ var target: Target = Target.ENEMY_SYSTEM
 var effects: Array = []               # Array[Dictionary] of effect ops
 var keywords: Array[StringName] = []  # exhaust, pierce, overload, retain
 var source_part: StringName = &""     # which part granted it (for tooltips)
+var icon: String = ""                 # filename under res://assets/icons/
 
 # Upgrade variant: same card, better numbers. Populated from "upgrade" block.
 var upgrade_text: String = ""
@@ -44,6 +45,7 @@ func from_dict(def_id: StringName, d: Dictionary) -> String:
 		return "unknown target '%s'" % t
 	target = TARGET_NAMES[t]
 
+	icon = d.get("icon", "")
 	effects = d.get("effects", [])
 	if typeof(effects) != TYPE_ARRAY:
 		return "'effects' must be an array"

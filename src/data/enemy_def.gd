@@ -16,6 +16,7 @@ var evasion: int = 0
 var systems: Array = []    # [{id, name, integrity, ...}]
 var intents: Array = []    # [{id, requires_system, weight, effects, telegraph}]
 var reward: Dictionary = {}
+var portrait: String = ""   # filename under res://assets/portraits/
 
 func from_dict(def_id: StringName, d: Dictionary) -> String:
 	id = def_id
@@ -34,6 +35,7 @@ func from_dict(def_id: StringName, d: Dictionary) -> String:
 	if intents.is_empty():
 		return "enemy must define at least one intent"
 	reward = d.get("reward", {})
+	portrait = d.get("portrait", "")
 	return ""
 
 func has_system(sid: StringName) -> bool:

@@ -20,7 +20,8 @@
           "amount": 9
         }
       ]
-    }
+    },
+    "icon": "red_gr_01.png"
   },
   "breach_missile": {
     "name": "Breach Missile",
@@ -50,7 +51,8 @@
           "homing": true
         }
       ]
-    }
+    },
+    "icon": "red_gr_03.png"
   },
   "raise_deflector": {
     "name": "Raise Deflector",
@@ -73,7 +75,8 @@
           "amount": 12
         }
       ]
-    }
+    },
+    "icon": "blue_b_01.png"
   },
   "evasive_burn": {
     "name": "Evasive Burn",
@@ -104,7 +107,8 @@
           "amount": 2
         }
       ]
-    }
+    },
+    "icon": "green_g_01.png"
   },
   "divert_power": {
     "name": "Divert Power",
@@ -130,7 +134,8 @@
           "amount": 3
         }
       ]
-    }
+    },
+    "icon": "blue_b_02.png"
   },
   "targeting_scan": {
     "name": "Targeting Scan",
@@ -161,7 +166,8 @@
           "amount": 1
         }
       ]
-    }
+    },
+    "icon": "blue_b_03.png"
   },
   "emp_pulse": {
     "name": "EMP Pulse",
@@ -184,7 +190,8 @@
           "turns": 3
         }
       ]
-    }
+    },
+    "icon": "blue_b_04.png"
   },
   "patch_kit": {
     "name": "Patch Kit",
@@ -207,7 +214,8 @@
           "amount": 10
         }
       ]
-    }
+    },
+    "icon": "blue_b_05.png"
   },
   "overcharge": {
     "name": "Overcharge",
@@ -232,7 +240,8 @@
           "scale_by": "own_active_systems"
         }
       ]
-    }
+    },
+    "icon": "red_gr_04.png"
   },
   "vulture_strike": {
     "name": "Vulture Strike",
@@ -257,7 +266,8 @@
           "scale_by": "enemy_disabled_systems"
         }
       ]
-    }
+    },
+    "icon": "red_gr_06.png"
   },
   "salvage_claw": {
     "name": "Salvage Claw",
@@ -283,7 +293,8 @@
           "amount": 35
         }
       ]
-    }
+    },
+    "icon": "blue_b_06.png"
   },
   "armor_brace": {
     "name": "Armor Brace",
@@ -314,7 +325,8 @@
           "amount": 5
         }
       ]
-    }
+    },
+    "icon": "blue_b_07.png"
   },
   "reactor_surge": {
     "name": "Reactor Surge",
@@ -348,7 +360,8 @@
           "amount": 3
         }
       ]
-    }
+    },
+    "icon": "blue_b_08.png"
   },
   "coolant_leak": {
     "name": "Coolant Leak",
@@ -379,7 +392,8 @@
           "amount": 1
         }
       ]
-    }
+    },
+    "icon": "violet_p_01.png"
   },
   "sensor_ghost": {
     "name": "Sensor Ghost",
@@ -402,7 +416,8 @@
           "amount": 2
         }
       ]
-    }
+    },
+    "icon": "violet_p_02.png"
   },
   "dead_weight": {
     "name": "Dead Weight",
@@ -425,7 +440,8 @@
           "amount": 12
         }
       ]
-    }
+    },
+    "icon": "violet_p_03.png"
   },
   "magnetic_drag": {
     "name": "Magnetic Drag",
@@ -456,7 +472,8 @@
           "amount": 2
         }
       ]
-    }
+    },
+    "icon": "violet_p_04.png"
   },
   "overheat": {
     "name": "Overheat",
@@ -487,7 +504,8 @@
           "amount": 3
         }
       ]
-    }
+    },
+    "icon": "red_gr_07.png"
   },
   "static_discharge": {
     "name": "Static Discharge",
@@ -518,7 +536,8 @@
           "amount": 5
         }
       ]
-    }
+    },
+    "icon": "blue_b_09.png"
   },
   "afterburner": {
     "name": "Afterburner",
@@ -552,7 +571,8 @@
           "amount": 1
         }
       ]
-    }
+    },
+    "icon": "green_g_02.png"
   },
   "weak_point": {
     "name": "Weak Point",
@@ -583,7 +603,8 @@
           "turns": 1
         }
       ]
-    }
+    },
+    "icon": "blue_b_10.png"
   },
   "scrap_grab": {
     "name": "Scrap Grab",
@@ -609,7 +630,8 @@
           "amount": 18
         }
       ]
-    }
+    },
+    "icon": "blue_b_11.png"
   },
   "salvo": {
     "name": "Salvo",
@@ -640,7 +662,8 @@
           "amount": 7
         }
       ]
-    }
+    },
+    "icon": "red_gr_08.png"
   },
   "ammo_drum": {
     "name": "Ammo Drum",
@@ -666,7 +689,8 @@
           "amount": 3
         }
       ]
-    }
+    },
+    "icon": "blue_b_12.png"
   },
   "feedback_spike": {
     "name": "Feedback Spike",
@@ -694,7 +718,8 @@
           "pierce": true
         }
       ]
-    }
+    },
+    "icon": "red_gr_09.png"
   },
   "system_scramble": {
     "name": "System Scramble",
@@ -725,7 +750,8 @@
           "turns": 3
         }
       ]
-    }
+    },
+    "icon": "blue_b_13.png"
   },
   "damage_control": {
     "name": "Damage Control",
@@ -756,7 +782,8 @@
           "amount": 6
         }
       ]
-    }
+    },
+    "icon": "blue_b_14.png"
   },
   "power_spike": {
     "name": "Power Spike",
@@ -787,7 +814,8 @@
           "amount": 1
         }
       ]
-    }
+    },
+    "icon": "blue_b_15.png"
   },
   "execute_protocol": {
     "name": "Execute Protocol",
@@ -812,6 +840,7 @@
           "homing": true
         }
       ]
-    }
+    },
+    "icon": "red_r_01.png"
   }
 }
