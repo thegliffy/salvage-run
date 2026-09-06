@@ -50,11 +50,9 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 
 	var deficit: int = int(bud["deficit"])
 	if deficit > 0:
-		col.add_child(UITheme.callout(
-			"POWER DEFICIT  %d" % deficit,
+		col.add_child(UITheme.deficit_panel(deficit,
 			"Part draw %d exceeds hull output %d, so energy is cut to %d every turn. Jettison a hungry part or find a power improvement." % [
-				bud["draw"], bud["output"], bud["energy"]],
-			&"warn"))
+				bud["draw"], bud["output"], bud["energy"]]))
 
 	# Explicit stats block so the numbers are impossible to miss.
 	var stats := PanelContainer.new()

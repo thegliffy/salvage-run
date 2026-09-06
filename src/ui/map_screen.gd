@@ -15,8 +15,8 @@ const TYPE_COLOUR := {
 	"combat": UITheme.HOSTILE,
 	"elite": UITheme.WARN,
 	"shop": UITheme.ACCENT,
-	"chest": Color("ce93d8"),
-	"boss": Color("ff7043"),
+	"chest": UITheme.GOOD,
+	"boss": UITheme.HOSTILE,
 }
 
 var _scroll: ScrollContainer
@@ -53,7 +53,8 @@ func _build() -> void:
 	var head_row := HBoxContainer.new()
 	head_row.add_theme_constant_override("separation", 14)
 	head_col.add_child(head_row)
-	head_row.add_child(UITheme.label("SECTOR MAP", 26, UITheme.ACCENT, "Black"))
+	head_row.add_child(UITheme.chrome_mark())
+	head_row.add_child(UITheme.label("SECTOR MAP", 18, UITheme.TEXT, "Bold"))
 	_status = UITheme.label("", 13, UITheme.TEXT_DIM, "SemiBold")
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head_row.add_child(_status)
@@ -197,14 +198,18 @@ func _make_node(node: Dictionary, can_enter: bool) -> Control:
 	btn.add_theme_color_override("font_hover_color", UITheme.BG)
 	btn.add_theme_color_override("font_disabled_color", UITheme.TEXT_FAINT)
 
-	var fill := colour if (can_enter or is_here or visited) else colour.darkened(0.55)
-	var border := Color.WHITE if is_here else (colour.lightened(0.35) if can_enter else Color(0, 0, 0, 0))
+	var fill := colour if (can_enter or is_here or visited) else UITheme.PANEL_RAISED
+	var border := UITheme.ACCENT if is_here else (colour.lightened(0.25) if can_enter else Color(0, 0, 0, 0))
 	var bw := 4 if is_here else (2 if can_enter else 0)
+	if not can_enter and not is_here and not visited:
+		fill = UITheme.PANEL
+		btn.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
+		btn.add_theme_color_override("font_disabled_color", UITheme.TEXT_FAINT)
 	btn.add_theme_stylebox_override("normal", UITheme.panel(fill, border, bw, int(NODE_R), 0))
-	btn.add_theme_stylebox_override("hover", UITheme.panel(fill.lightened(0.15), Color.WHITE, 3, int(NODE_R), 0))
-	btn.add_theme_stylebox_override("pressed", UITheme.panel(fill.darkened(0.2), Color.WHITE, 3, int(NODE_R), 0))
+	btn.add_theme_stylebox_override("hover", UITheme.panel(fill.lightened(0.15), UITheme.ACCENT, 3, int(NODE_R), 0))
+	btn.add_theme_stylebox_override("pressed", UITheme.panel(fill.darkened(0.2), UITheme.ACCENT, 3, int(NODE_R), 0))
 	btn.add_theme_stylebox_override("disabled", UITheme.panel(
-		fill.darkened(0.35) if visited else UITheme.PANEL_RAISED,
+		fill if visited else UITheme.PANEL,
 		Color(0, 0, 0, 0), 0, int(NODE_R), 0))
 
 	if can_enter:
@@ -221,7 +226,8 @@ func _make_node(node: Dictionary, can_enter: bool) -> Control:
 		wrap.add_child(here)
 
 	var tag := UITheme.label(MapGenerator.label_for(ntype), 11,
-		colour if (can_enter or is_here or visited) else UITheme.TEXT_FAINT, "Bold")
+		colour if (can_enter or is_here or visited) else UITheme.TEXT_FAINT,
+		"Black" if ntype == "boss" else "Bold")
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tag.position = Vector2(0, NODE_R * 2 + 24)
 	tag.size = Vector2((NODE_R + 10) * 2, 16)

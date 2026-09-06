@@ -33,6 +33,7 @@ func setup(s: ShipSystem, clickable: bool) -> void:
 	system_id = s.id
 	targetable = clickable
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	UITheme.touch(self)
 
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 2)

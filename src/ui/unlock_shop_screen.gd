@@ -25,10 +25,16 @@ func _ready() -> void:
 	col.add_theme_constant_override("separation", 8)
 	margin.add_child(col)
 
+	var chrome := HBoxContainer.new()
+	chrome.add_theme_constant_override("separation", 12)
+	col.add_child(chrome)
+	chrome.add_child(UITheme.chrome_mark())
+	chrome.add_child(UITheme.expand())
+
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 18)
 	col.add_child(head)
-	head.add_child(UITheme.label("SALVAGE YARD", 30, UITheme.ACCENT, "Black"))
+	head.add_child(UITheme.label("SALVAGE YARD", 28, UITheme.ACCENT, "Black"))
 	head.add_child(UITheme.expand())
 	var salvage_box := PanelContainer.new()
 	salvage_box.add_theme_stylebox_override("panel",
@@ -125,10 +131,15 @@ func _row(def: PartDef) -> Control:
 		cards.add_child(chip)
 
 	UITheme.tip(wrap, UITheme.part_tip(def, "Unlock cost %d salvage." % def.unlock_cost))
+	var can_afford := Game.meta.can_afford(def.id)
+	var price := UITheme.label("%d salvage" % def.unlock_cost,
+		13, UITheme.TEXT_FAINT if not can_afford else UITheme.WARN, "SemiBold")
+	info.add_child(price)
 	var buy := UITheme.button("  UNLOCK  %d  " % def.unlock_cost, UITheme.GOOD)
-	buy.disabled = not Game.meta.can_afford(def.id)
-	if buy.disabled and Game.meta.salvage < def.unlock_cost:
+	buy.disabled = not can_afford
+	if not can_afford:
 		buy.text = "  NEED %d  " % def.unlock_cost
+		buy.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
 		UITheme.tip(buy, "Need %d salvage (have %d)." % [def.unlock_cost, Game.meta.salvage])
 	else:
 		UITheme.tip(buy, "Unlock %s\n---\nPuts it in the reward pool. You still have to find and steal it." % def.name)

@@ -31,10 +31,16 @@ func _build() -> void:
 	col.add_theme_constant_override("separation", 8)
 	margin.add_child(col)
 
+	var chrome := HBoxContainer.new()
+	chrome.add_theme_constant_override("separation", 12)
+	col.add_child(chrome)
+	chrome.add_child(UITheme.chrome_mark())
+	chrome.add_child(UITheme.expand())
+
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 20)
 	col.add_child(head)
-	head.add_child(UITheme.label("STORE", 30, UITheme.ACCENT, "Black"))
+	head.add_child(UITheme.label("STORE", 28, UITheme.ACCENT, "Black"))
 	head.add_child(UITheme.expand())
 	var cred_box := UITheme.box(UITheme.INK_WARN, UITheme.WARN, 1, 4, 10)
 	_credits = UITheme.label("", 16, UITheme.WARN, "Black")
@@ -99,37 +105,45 @@ func _refresh() -> void:
 func _offer_row(offer: Dictionary) -> Control:
 	var def: PartDef = offer["def"]
 	var price: int = int(offer["price"])
-	var wrap := UITheme.box(UITheme.PANEL, UITheme.ACCENT_DIM, 1, 4, 12)
+	var can_afford := Game.run.credits >= price
+	var replace_target: PartInstance = null if offer["can_install"] else offer.get("replaces")
+	var after: Dictionary = Game.run.ship.power_budget(def, replace_target)
+	var before: Dictionary = Game.run.ship.power_budget()
+	var creates_deficit := int(before["deficit"]) <= 0 and int(after["deficit"]) > 0
+	var wrap := UITheme.box(UITheme.PANEL,
+		UITheme.WARN if creates_deficit else UITheme.ACCENT_DIM,
+		2 if creates_deficit else 1, 4, 12)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	wrap.add_child(row)
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 4)
+	info.add_theme_constant_override("separation", 6)
 	row.add_child(info)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
 	info.add_child(head)
 	head.add_child(UITheme.label(def.name, 18, UITheme.TEXT, "Bold"))
 	head.add_child(UITheme.badge(String(def.slot).to_upper(), UITheme.ACCENT))
-	head.add_child(UITheme.expand())
+
+	var cost_bits: PackedStringArray = []
 	if def.power_draw > 0:
-		head.add_child(UITheme.chip("−%d power" % def.power_draw, UITheme.TEXT_FAINT))
-	head.add_child(UITheme.chip("%d mass" % def.mass, UITheme.TEXT_FAINT))
-	head.add_child(UITheme.chip("%d credits" % price, UITheme.WARN))
+		cost_bits.append("−%d power" % def.power_draw)
+	cost_bits.append("%d mass" % def.mass)
+	info.add_child(UITheme.label("  ·  ".join(cost_bits), 11, UITheme.TEXT_FAINT))
+	info.add_child(UITheme.label("%d credits" % price,
+		13, UITheme.TEXT_FAINT if not can_afford else UITheme.WARN, "SemiBold"))
 
 	if def.flavor != "":
-		info.add_child(UITheme.label(def.flavor, 12, UITheme.TEXT_FAINT))
+		info.add_child(UITheme.label(def.flavor, 11, UITheme.TEXT_FAINT))
 
-	var replace_target: PartInstance = null if offer["can_install"] else offer.get("replaces")
-	var after: Dictionary = Game.run.ship.power_budget(def, replace_target)
-	var before: Dictionary = Game.run.ship.power_budget()
-	if int(after["deficit"]) > int(before["deficit"]) or int(after["energy"]) < int(before["energy"]):
-		info.add_child(UITheme.callout(
-			"POWER DEFICIT  %d" % after["deficit"] if int(after["deficit"]) > 0 else "ENERGY DROP",
-			"energy %d → %d / turn if you buy this." % [before["energy"], after["energy"]],
-			&"warn"))
+	if int(after["energy"]) != int(before["energy"]) or def.power_draw > 0:
+		info.add_child(UITheme.energy_note(int(before["energy"]), int(after["energy"])))
+	if creates_deficit:
+		info.add_child(UITheme.label(
+			"⚡ DEFICIT %d  —  this buy overdraws the hull." % after["deficit"],
+			13, UITheme.WARN, "SemiBold"))
 
 	var cards := HBoxContainer.new()
 	cards.add_theme_constant_override("separation", 6)
@@ -145,16 +159,17 @@ func _offer_row(offer: Dictionary) -> Control:
 	UITheme.tip(wrap, UITheme.part_tip(def, "%d credits" % price))
 
 	var buy := UITheme.button("  BUY  ", UITheme.GOOD)
-	buy.disabled = Game.run.credits < price
+	buy.disabled = not can_afford
 	if not offer["can_install"] and offer.get("replaces") == null:
 		buy.disabled = true
 		buy.text = "  NO SLOT  "
 		UITheme.tip(buy, "No free %s slot, and nothing to replace." % String(def.slot))
 	elif not offer["can_install"]:
 		var replaces: PartInstance = offer.get("replaces")
-		buy.text = "  REPLACE %s  " % replaces.def.name
+		buy = UITheme.button("  REPLACE %s  " % replaces.def.name, UITheme.WARN)
+		buy.disabled = not can_afford
 		UITheme.tip(buy, "Replace %s\n---\nFrees that slot and its cards, then bolts this on." % replaces.def.name)
-	elif Game.run.credits < price:
+	elif not can_afford:
 		UITheme.tip(buy, "Need %d credits (have %d)." % [price, Game.run.credits])
 	else:
 		UITheme.tip(buy, "Buy %s for %d credits." % [def.name, price])
@@ -190,9 +205,9 @@ func _strip_row(inst: PartInstance) -> Control:
 			continue
 		var stripped_this: bool = inst.stripped_index == i
 		var b := UITheme.button(cd.name,
-			UITheme.PANEL_RAISED if stripped_this else UITheme.ACCENT_DIM)
+			UITheme.PANEL_RAISED if stripped_this else UITheme.HOSTILE)
 		b.add_theme_color_override("font_color",
-			UITheme.TEXT_FAINT if stripped_this else UITheme.TEXT)
+			UITheme.TEXT_FAINT if stripped_this else UITheme.BG)
 		b.disabled = stripped_this or not inst.can_strip()
 		if stripped_this:
 			b.text = "✖ " + cd.name

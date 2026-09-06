@@ -15,12 +15,18 @@ func _ready() -> void:
 	centre.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(centre)
 
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel",
+		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 26))
+	card.custom_minimum_size.x = 540
+	centre.add_child(card)
+
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
-	col.custom_minimum_size.x = 520
-	centre.add_child(col)
+	card.add_child(col)
 
-	col.add_child(UITheme.label("REWARD CHEST", 30, Color("ce93d8"), "Black"))
+	col.add_child(UITheme.chrome_mark())
+	col.add_child(UITheme.label("REWARD CHEST", 28, UITheme.GOOD, "Black"))
 	col.add_child(UITheme.label(
 		"A sealed crate of shipyard leftovers. Whatever is inside bolts straight onto the hull.",
 		14, UITheme.TEXT_DIM))

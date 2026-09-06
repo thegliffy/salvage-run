@@ -18,7 +18,7 @@ func _ready() -> void:
 	centre.add_child(card)
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
+	col.add_theme_constant_override("separation", 10)
 	card.add_child(col)
 
 	var kicker := HBoxContainer.new()
@@ -45,7 +45,7 @@ func _ready() -> void:
 	pitch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	pitch.custom_minimum_size.x = 540
 	col.add_child(pitch)
-	col.add_child(UITheme.spacer(6))
+	col.add_child(UITheme.spacer(4))
 
 	var art := UITheme.art("res://assets/ships/salvager-hull.png")
 	if art != null:
@@ -60,46 +60,40 @@ func _ready() -> void:
 		ship.custom_minimum_size = Vector2(420, 180)
 		ship.modulate = Color(1, 1, 1, 0.95)
 		bay.add_child(ship)
-		col.add_child(UITheme.spacer(8))
+		col.add_child(UITheme.spacer(4))
 	else:
-		col.add_child(UITheme.spacer(12))
+		col.add_child(UITheme.spacer(8))
+
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 8)
+	col.add_child(stack)
 
 	var start := UITheme.button("  STEAL A SHIP  ")
 	UITheme.tip(start, "Steal a ship\n---\nBegin a run. Steal a hull, fight to the boss, sell what you built.")
 	start.pressed.connect(func(): Game.start_run())
-	col.add_child(start)
+	stack.add_child(start)
 
-	var yard := UITheme.ghost_button("  SALVAGE YARD — UNLOCK PARTS  ")
+	var yard := UITheme.ghost_button("  SALVAGE YARD  ")
 	UITheme.tip(yard, "Salvage Yard\n---\nSpend salvage to unlock parts into the next run's reward pool.")
 	yard.pressed.connect(func(): Game.goto_unlock_shop())
-	col.add_child(yard)
+	stack.add_child(yard)
 
 	var quit := UITheme.button("  QUIT  ", UITheme.PANEL_RAISED)
 	quit.add_theme_color_override("font_color", UITheme.TEXT)
 	quit.add_theme_color_override("font_hover_color", UITheme.TEXT)
 	quit.add_theme_color_override("font_pressed_color", UITheme.TEXT)
 	quit.pressed.connect(func(): get_tree().quit())
-	col.add_child(quit)
+	stack.add_child(quit)
 
-	col.add_child(UITheme.spacer(14))
+	col.add_child(UITheme.spacer(8))
 	col.add_child(UITheme.hairline())
 
 	var locked_n := Game.meta.unlockable().size()
-	var stats := HBoxContainer.new()
-	stats.alignment = BoxContainer.ALIGNMENT_CENTER
-	stats.add_theme_constant_override("separation", 10)
-	col.add_child(stats)
-	stats.add_child(UITheme.metric("SALVAGE", str(Game.meta.salvage), UITheme.WARN,
-		"Salvage\n%d\n---\nMeta currency from ship sales. Spent at the yard." % Game.meta.salvage))
-	stats.add_child(UITheme.metric("SHIPS STOLEN", str(Game.meta.runs_started), UITheme.TEXT,
-		"Ships stolen\n%d\n---\nRuns started on this save." % Game.meta.runs_started))
-	stats.add_child(UITheme.metric("BEST HAUL", str(Game.meta.best_total), UITheme.GOOD,
-		"Best haul\n%d salvage\n---\nHighest single-run sale." % Game.meta.best_total))
-	stats.add_child(UITheme.metric("LOCKED PARTS", str(locked_n), UITheme.TEXT_DIM,
-		"Locked parts\n%d\n---\nStill gated. Unlock them at the yard to see them in runs." % locked_n))
-
-	var hint := UITheme.label(
-		"Uncommon and rare weapons only appear after you unlock them at the yard.",
-		12, UITheme.TEXT_FAINT)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(hint)
+	var meta := UITheme.label(
+		"salvage %d  ·  ships stolen %d  ·  best haul %d  ·  %d parts locked" % [
+			Game.meta.salvage, Game.meta.runs_started, Game.meta.best_total, locked_n],
+		11, UITheme.TEXT_FAINT)
+	meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UITheme.tip(meta,
+		"Meta\n---\nSalvage is spent at the yard. Best haul is the highest single-run sale.")
+	col.add_child(meta)

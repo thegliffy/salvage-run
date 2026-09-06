@@ -76,7 +76,67 @@ static func button(text: String, colour: Color = ACCENT) -> Button:
 	b.add_theme_stylebox_override("hover", panel(colour.lightened(0.18), Color(0,0,0,0), 0, 3, 12))
 	b.add_theme_stylebox_override("pressed", panel(colour.darkened(0.25), Color(0,0,0,0), 0, 3, 12))
 	b.add_theme_stylebox_override("disabled", panel(PANEL_RAISED, Color(0,0,0,0), 0, 3, 12))
-	return b
+	return touch(b)
+
+## Secondary / skip action: coloured outline on a raised panel, light text.
+static func outline_button(text: String, colour: Color = GOOD) -> Button:
+	var b := ThemedButton.new()
+	b.text = text
+	b.add_theme_font_override("font", font("SemiBold"))
+	b.add_theme_font_size_override("font_size", 16)
+	b.add_theme_color_override("font_color", colour)
+	b.add_theme_color_override("font_hover_color", colour)
+	b.add_theme_color_override("font_pressed_color", colour)
+	b.add_theme_color_override("font_disabled_color", TEXT_FAINT)
+	b.add_theme_stylebox_override("normal", panel(PANEL_RAISED, colour, 1, 3, 12))
+	b.add_theme_stylebox_override("hover", panel(PANEL, colour, 2, 3, 12))
+	b.add_theme_stylebox_override("pressed", panel(PANEL_DEEP, colour, 1, 3, 12))
+	b.add_theme_stylebox_override("disabled", panel(PANEL_RAISED, TEXT_FAINT, 1, 3, 12))
+	return touch(b)
+
+## Android / touch floor. Buttons and hull/system rows should hit this.
+static func touch(c: Control, min_h: int = 48) -> Control:
+	if c.custom_minimum_size.y < min_h:
+		c.custom_minimum_size.y = min_h
+	return c
+
+static func chrome_mark() -> Label:
+	return label("SALVAGE RUN", 18, ACCENT, "Black")
+
+## Combat intent strip. Live shots are amber; silenced / fizzled shots go dim.
+static func intent_style(offline: bool) -> StyleBoxFlat:
+	if offline:
+		return panel(INK_GOOD, TEXT_DIM, 1, 4, 12)
+	return panel(INK_WARN, WARN, 2, 4, 12)
+
+static func deficit_style(width: int = 2) -> StyleBoxFlat:
+	return panel(INK_WARN, WARN, width, 4, 12)
+
+## Amber callout used wherever draw exceeds hull output.
+static func deficit_panel(n: int, sentence: String = "") -> PanelContainer:
+	var wrap := ThemedPanel.new()
+	wrap.add_theme_stylebox_override("panel", deficit_style(2))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_child(col)
+	col.add_child(label("⚡ DEFICIT %d" % n, 14, WARN, "SemiBold"))
+	if sentence != "":
+		var b := label(sentence, 13, TEXT)
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		col.add_child(b)
+	if sentence != "":
+		tip(wrap, "⚡ DEFICIT %d\n---\n%s" % [n, sentence])
+	else:
+		tip(wrap, "⚡ DEFICIT %d" % n)
+	return wrap
+
+static func energy_note(before: int, after: int) -> Label:
+	if after < before:
+		return label("energy %d → %d / turn" % [before, after], 13, WARN, "SemiBold")
+	if after > before:
+		return label("energy %d → %d / turn" % [before, after], 13, GOOD, "SemiBold")
+	return label("energy stays %d / turn" % after, 12, TEXT_DIM, "SemiBold")
 
 ## A labelled bar. Returns the bar; the caller keeps it to update `value`.
 static func bar(fill: Color, height: int = 14) -> ProgressBar:
@@ -147,7 +207,7 @@ static func ghost_button(text: String) -> Button:
 	return b
 
 static func section(text: String) -> Label:
-	return label(text, 13, TEXT_DIM, "Bold")
+	return label(text, 18, TEXT, "Bold")
 
 ## Amber / green / red callout used for power deficit, payouts, and silenced shots.
 static func callout(title: String, body: String = "",

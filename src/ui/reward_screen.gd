@@ -30,8 +30,14 @@ func _ready() -> void:
 	add_child(margin)
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
+	col.add_theme_constant_override("separation", 12)
 	margin.add_child(col)
+
+	var chrome := HBoxContainer.new()
+	chrome.add_theme_constant_override("separation", 12)
+	col.add_child(chrome)
+	chrome.add_child(UITheme.chrome_mark())
+	chrome.add_child(UITheme.expand())
 
 	_reward = Game.pending_reward
 	var tier := int(_reward.get("tier", 1))
@@ -44,7 +50,7 @@ func _ready() -> void:
 	col.add_child(_heading)
 	col.add_child(UITheme.label(
 		"Take a part — skip to field-repair the hull.",
-		13, UITheme.TEXT_DIM))
+		13, UITheme.TEXT_DIM, "SemiBold"))
 
 	# Credits and the improvement are automatic; only the part is a choice.
 	var imp: ImprovementDef = _reward.get("improvement")
@@ -70,11 +76,11 @@ func _ready() -> void:
 	_list.add_theme_constant_override("separation", 8)
 	col.add_child(_list)
 
-	_skip_btn = UITheme.button("", UITheme.GOOD)
+	_skip_btn = UITheme.outline_button("", UITheme.GOOD)
 	_skip_btn.pressed.connect(_skip_for_repair)
 	col.add_child(_skip_btn)
 
-	var jettison := UITheme.ghost_button("  JETTISON A PART INSTEAD  ")
+	var jettison := UITheme.button("  JETTISON A PART INSTEAD  ", UITheme.HOSTILE)
 	UITheme.tip(jettison, "Jettison\n---\nDump an installed part to free its slot and thin the deck.")
 	jettison.pressed.connect(_toggle_jettison)
 	col.add_child(jettison)
@@ -90,11 +96,18 @@ func _ready() -> void:
 	_refresh()
 
 func _payout_banner(imp: ImprovementDef) -> Control:
-	var wrap := UITheme.callout(
-		"+%d CREDITS" % int(_reward.get("credits", 0)),
-		"" if imp == null else "SHIP IMPROVEMENT — %s (%s): %s" % [
-			imp.name, String(imp.rarity).to_upper(), imp.text],
-		&"good")
+	var wrap := UITheme.box(UITheme.PANEL_RAISED, UITheme.ACCENT_DIM, 1, 4, 12)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	wrap.add_child(col)
+	col.add_child(UITheme.label("+%d CREDITS" % int(_reward.get("credits", 0)),
+		18, UITheme.WARN, "Bold"))
+	if imp != null:
+		var rarity_c := UITheme.rarity_colour(imp.rarity)
+		col.add_child(UITheme.label("SHIP IMPROVEMENT — %s  (%s)" % [
+			imp.name, String(imp.rarity).to_upper()], 14, rarity_c, "SemiBold"))
+		if imp.text != "":
+			col.add_child(UITheme.label(imp.text, 13, UITheme.TEXT, "SemiBold"))
 	return wrap
 
 func _refresh() -> void:
@@ -149,22 +162,21 @@ func _rebuild_power_panel() -> void:
 	var output: int = int(bud["output"])
 
 	if deficit > 0:
-		_power_panel.add_theme_stylebox_override("panel",
-			UITheme.panel_stripe(UITheme.INK_WARN, UITheme.WARN, 10))
+		_power_panel.add_theme_stylebox_override("panel", UITheme.deficit_style(2))
 	else:
 		_power_panel.add_theme_stylebox_override("panel",
-			UITheme.panel(UITheme.PANEL, UITheme.ACCENT_DIM, 1, 4, 10))
+			UITheme.panel(UITheme.PANEL, UITheme.ACCENT_DIM, 1, 4, 12))
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
+	col.add_theme_constant_override("separation", 6)
 	_power_panel.add_child(col)
 
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 16)
 	col.add_child(head)
 	head.add_child(UITheme.label(
-		"POWER DEFICIT  %d" % deficit if deficit > 0 else "POWER BUDGET",
-		13, UITheme.WARN if deficit > 0 else UITheme.TEXT, "Bold"))
+		"⚡ DEFICIT %d" % deficit if deficit > 0 else "POWER BUDGET",
+		14, UITheme.WARN if deficit > 0 else UITheme.TEXT, "SemiBold"))
 	head.add_child(UITheme.expand())
 	head.add_child(UITheme.metric("OUTPUT", str(output),
 		UITheme.WARN if deficit > 0 else UITheme.TEXT))
@@ -175,11 +187,11 @@ func _rebuild_power_panel() -> void:
 
 	if deficit > 0:
 		col.add_child(UITheme.label(
-			"Overdrawn — every point of draw past hull output cuts another energy this run. Jettison a hungry part or find a power improvement.",
-			12, UITheme.WARN))
+			"Overdraw cuts energy every remaining fight. Jettison a hungry part or find a power improvement.",
+			13, UITheme.TEXT, "SemiBold"))
 	else:
 		col.add_child(UITheme.label(
-			"Headroom %d. Parts list their power draw (−N power). Taking more than you generate permanently lowers energy." % (output - draw),
+			"Headroom %d. Taking more draw than output permanently lowers energy." % (output - draw),
 			12, UITheme.TEXT_DIM))
 	UITheme.tip(_power_panel, UITheme.power_tip(bud))
 
@@ -187,7 +199,14 @@ func _offer_row(offer: Dictionary) -> Control:
 	var def: PartDef = offer["def"]
 	var rarity: StringName = offer.get("rarity", &"common")
 	var rarity_c := UITheme.rarity_colour(rarity)
-	var wrap := UITheme.box(UITheme.PANEL, rarity_c, 1, 4, 12)
+	# Preview energy first so a new deficit can recolour the card border.
+	var replace_target: PartInstance = null if offer["can_install"] else offer.get("replaces")
+	var after: Dictionary = Game.run.ship.power_budget(def, replace_target)
+	var before: Dictionary = Game.run.ship.power_budget()
+	var creates_deficit := int(before["deficit"]) <= 0 and int(after["deficit"]) > 0
+	var wrap := UITheme.box(UITheme.PANEL,
+		UITheme.WARN if creates_deficit else rarity_c,
+		2 if creates_deficit else 1, 4, 12)
 	UITheme.tip(wrap, UITheme.part_tip(def))
 
 	var row := HBoxContainer.new()
@@ -196,55 +215,38 @@ func _offer_row(offer: Dictionary) -> Control:
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 5)
+	info.add_theme_constant_override("separation", 6)
 	row.add_child(info)
 
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
 	info.add_child(head)
-	head.add_child(UITheme.label(def.name, 20, UITheme.TEXT, "Black"))
+	head.add_child(UITheme.label(def.name, 18, UITheme.TEXT, "Bold"))
 	head.add_child(UITheme.badge(String(rarity).to_upper(), rarity_c))
 	head.add_child(UITheme.badge(String(def.slot).to_upper(), UITheme.ACCENT))
-	head.add_child(UITheme.expand())
-	for bit in _cost_bits(def):
-		head.add_child(UITheme.chip(bit, UITheme.TEXT_FAINT))
+
+	var costs := _cost_bits(def)
+	if not costs.is_empty():
+		info.add_child(UITheme.label("  ·  ".join(costs), 11, UITheme.TEXT_FAINT))
 
 	if def.flavor != "":
-		info.add_child(UITheme.label(def.flavor, 12, UITheme.TEXT_FAINT))
+		info.add_child(UITheme.label(def.flavor, 11, UITheme.TEXT_FAINT))
 
-	# Preview what this part does to combat energy if taken / swapped in.
-	var replace_target: PartInstance = null if offer["can_install"] else offer.get("replaces")
-	var after: Dictionary = Game.run.ship.power_budget(def, replace_target)
-	var before: Dictionary = Game.run.ship.power_budget()
-	var energy_drop := int(after["energy"]) < int(before["energy"])
-	var after_def := int(after["deficit"])
-	if energy_drop or after_def > 0:
-		var title := "POWER OVERDRAW"
-		if after_def > 0:
-			title = "POWER DEFICIT  %d" % after_def
-		info.add_child(UITheme.callout(title,
-			"energy %d → %d / turn. Taking this cuts energy every remaining fight." % [
-				before["energy"], after["energy"]],
-			&"warn"))
-	elif int(after["energy"]) > int(before["energy"]):
+	if int(after["energy"]) != int(before["energy"]) or def.power_draw > 0:
+		info.add_child(UITheme.energy_note(int(before["energy"]), int(after["energy"])))
+	if creates_deficit:
 		info.add_child(UITheme.label(
-			"energy %d → %d / turn" % [before["energy"], after["energy"]],
-			12, UITheme.GOOD, "SemiBold"))
-	elif def.power_draw > 0:
-		info.add_child(UITheme.label(
-			"uses %d power  ·  energy stays %d" % [def.power_draw, after["energy"]],
-			12, UITheme.TEXT_DIM, "SemiBold"))
+			"⚡ DEFICIT %d  —  this install overdraws the hull." % after["deficit"],
+			13, UITheme.WARN, "SemiBold"))
 
-	info.add_child(UITheme.label("GRANTS — hover a card", 11, UITheme.TEXT_FAINT, "Bold"))
+	info.add_child(UITheme.label("GRANTS — hover a card", 10, UITheme.TEXT_FAINT, "Bold"))
 	info.add_child(_card_chips(def.grants))
 
 	var take := UITheme.button("  TAKE  ", UITheme.GOOD)
 	if not offer["can_install"]:
 		var replaces: PartInstance = offer.get("replaces")
 		if replaces != null:
-			take.text = "  REPLACE %s  " % replaces.def.name
-			take.add_theme_stylebox_override("normal",
-				UITheme.panel(UITheme.WARN, Color(0,0,0,0), 0, 3, 12))
+			take = UITheme.button("  REPLACE %s  " % replaces.def.name, UITheme.WARN)
 			UITheme.tip(take, "Replace %s\n---\nFrees that slot and its cards, then installs %s." % [
 				replaces.def.name, def.name])
 		else:

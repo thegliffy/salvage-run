@@ -14,8 +14,7 @@ var _enemy_hull: ProgressBar
 var _enemy_hull_txt: Label
 var _enemy_shield: Label
 var _intent_panel: PanelContainer
-var _intent_kicker: Label
-var _intent_status: Label
+var _intent_prefix: Label
 var _intent_name: Label
 var _intent_from: Label
 var _intent_amount: Label
@@ -46,6 +45,7 @@ var _fx_layer: Control
 var _pending_draw: int = 0
 var _hand_epoch: int = 0
 var _ship_stats: Label
+var _deficit: Label
 
 func _ready() -> void:
 	_build()
@@ -109,7 +109,7 @@ func _build() -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	root.add_child(head)
-	head.add_child(UITheme.label("SALVAGE RUN", 18, UITheme.ACCENT, "Black"))
+	head.add_child(UITheme.chrome_mark())
 	head.add_child(UITheme.expand())
 	_banner = UITheme.label(_fight_banner(), 13, UITheme.TEXT_DIM, "SemiBold")
 	head.add_child(_banner)
@@ -156,45 +156,40 @@ func _panel(bg: Color = UITheme.PANEL) -> PanelContainer:
 
 func _build_intent_banner() -> Control:
 	_intent_panel = ThemedPanel.new()
-	_intent_panel.add_theme_stylebox_override("panel",
-		UITheme.panel_stripe(UITheme.INK_WARN, UITheme.WARN, 10))
+	_intent_panel.custom_minimum_size.y = 44
+	_intent_panel.add_theme_stylebox_override("panel", UITheme.intent_style(false))
 
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_intent_panel.add_child(col)
-
-	var kicker := HBoxContainer.new()
-	kicker.add_theme_constant_override("separation", 8)
-	col.add_child(kicker)
-	_intent_kicker = UITheme.label("NEXT ATTACK", 11, UITheme.WARN, "Bold")
-	kicker.add_child(_intent_kicker)
-	kicker.add_child(UITheme.expand())
-	_intent_status = UITheme.label("LIVE", 11, UITheme.WARN, "Black")
-	kicker.add_child(_intent_status)
-
-	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 12)
-	col.add_child(body)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_intent_panel.add_child(row)
 
 	var names := VBoxContainer.new()
 	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	names.add_theme_constant_override("separation", 1)
-	body.add_child(names)
-	_intent_name = UITheme.label("", 20, UITheme.TEXT, "Black")
+	names.add_theme_constant_override("separation", 2)
+	row.add_child(names)
+
+	var lead := HBoxContainer.new()
+	lead.add_theme_constant_override("separation", 8)
+	names.add_child(lead)
+	_intent_prefix = UITheme.label("⚠ NEXT:", 16, UITheme.WARN, "SemiBold")
+	lead.add_child(_intent_prefix)
+	_intent_name = UITheme.label("", 16, UITheme.WARN, "SemiBold")
 	_intent_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	names.add_child(_intent_name)
-	_intent_from = UITheme.label("", 12, UITheme.TEXT_DIM, "SemiBold")
+	_intent_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lead.add_child(_intent_name)
+
+	_intent_from = UITheme.label("", 14, UITheme.WARN, "Bold")
 	names.add_child(_intent_from)
 
 	var amt := VBoxContainer.new()
 	amt.add_theme_constant_override("separation", 0)
 	amt.alignment = BoxContainer.ALIGNMENT_CENTER
-	body.add_child(amt)
-	_intent_amount = UITheme.label("", 28, UITheme.WARN, "Black")
+	row.add_child(amt)
+	_intent_amount = UITheme.label("", 22, UITheme.WARN, "Black")
 	_intent_amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	amt.add_child(_intent_amount)
-	_intent_unit = UITheme.label("DAMAGE", 11, UITheme.WARN, "Bold")
+	_intent_unit = UITheme.label("DAMAGE", 10, UITheme.WARN, "Bold")
 	_intent_unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	amt.add_child(_intent_unit)
 	return _intent_panel
@@ -212,14 +207,15 @@ func _build_enemy_panel() -> Control:
 
 	_hull_target = ThemedPanel.new()
 	_hull_target.mouse_filter = Control.MOUSE_FILTER_STOP
+	UITheme.touch(_hull_target)
 	_hull_target.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL, Color(0, 0, 0, 0), 0, 3, 8))
+		UITheme.panel(UITheme.PANEL_RAISED, UITheme.TEXT_FAINT, 1, 3, 8))
 	_hull_target.gui_input.connect(_on_hull_gui_input)
 	col.add_child(_hull_target)
 	var hull_row := HBoxContainer.new()
 	hull_row.add_theme_constant_override("separation", 8)
 	_hull_target.add_child(hull_row)
-	hull_row.add_child(UITheme.label("HULL", 12, UITheme.TEXT_DIM, "Bold"))
+	hull_row.add_child(UITheme.label("HULL — FINISH", 12, UITheme.TEXT, "Bold"))
 	_enemy_hull = UITheme.bar(UITheme.HOSTILE, 18)
 	_enemy_hull.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_enemy_hull.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -232,8 +228,8 @@ func _build_enemy_panel() -> Control:
 	col.add_child(_build_intent_banner())
 
 	col.add_child(UITheme.label(
-		"Click HULL to finish the ship, or a subsystem to silence the shot",
-		11, UITheme.TEXT_FAINT, "SemiBold"))
+		"HULL ends the fight. A subsystem only silences the amber shot.",
+		10, UITheme.TEXT_FAINT))
 	_enemy_systems = VBoxContainer.new()
 	_enemy_systems.add_theme_constant_override("separation", 5)
 	col.add_child(_enemy_systems)
@@ -279,6 +275,9 @@ func _build_side_panel() -> Control:
 	_player_shield = UITheme.label("", 13, UITheme.SHIELD, "SemiBold")
 	hrow.add_child(_player_shield)
 
+	_deficit = UITheme.label("", 13, UITheme.WARN, "SemiBold")
+	_deficit.visible = false
+	pcol.add_child(_deficit)
 	_ship_stats = UITheme.label("", 11, UITheme.TEXT_FAINT)
 	pcol.add_child(_ship_stats)
 
@@ -423,12 +422,16 @@ func _refresh() -> void:
 	# is just clutter, so this line carries the regen rate only.
 	var stats := "evasion %d  ·  shield +%d/t  ·  power %d/%d  ·  deck %d" % [
 		prof.evasion, prof.shield_regen, bud["draw"], bud["output"], prof.deck.size()]
-	if int(bud["deficit"]) > 0:
-		_ship_stats.add_theme_color_override("font_color", UITheme.WARN)
-		_ship_stats.text = "⚠ POWER DEFICIT %d  —  %s" % [bud["deficit"], stats]
+	_ship_stats.text = stats
+	_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
+	var deficit_n := int(bud["deficit"])
+	if deficit_n > 0:
+		_deficit.visible = true
+		_deficit.text = "⚡ DEFICIT %d  —  overdraw cuts energy every remaining fight." % deficit_n
+		UITheme.tip(_deficit, UITheme.power_tip(bud))
 	else:
-		_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
-		_ship_stats.text = stats
+		_deficit.visible = false
+		_deficit.text = ""
 	UITheme.tip(_ship_stats, UITheme.power_tip(bud))
 	_rebuild_hand()
 
@@ -436,48 +439,29 @@ func _refresh_intent() -> void:
 	var info: Dictionary = combat.brain.telegraph_info()
 	var status := String(info.get("status", "live"))
 	var offline: bool = bool(info.get("offline", false))
-	var ink := UITheme.INK_WARN
-	var stripe := UITheme.WARN
-	var accent := UITheme.WARN
-	var kicker := "NEXT ATTACK"
-	var status_txt := "LIVE"
+	var accent := UITheme.TEXT_DIM if offline or status == "idle" else UITheme.WARN
+	var prefix := "⚠ NEXT:"
 	match status:
 		"offline":
-			ink = UITheme.INK_GOOD
-			stripe = UITheme.TEXT_DIM
-			accent = UITheme.TEXT_DIM
-			kicker = "SHOT SILENCED"
-			status_txt = "OFFLINE"
-		"damaged":
-			ink = UITheme.INK_WARN
-			stripe = UITheme.WARN
-			accent = UITheme.WARN
-			kicker = "NEXT ATTACK"
-			status_txt = "WEAKENED"
+			prefix = "SILENCED —"
 		"idle":
-			ink = UITheme.PANEL
-			stripe = UITheme.TEXT_FAINT
-			accent = UITheme.TEXT_DIM
-			kicker = "NO INTENT"
-			status_txt = "IDLE"
-	_intent_panel.add_theme_stylebox_override("panel",
-		UITheme.panel_stripe(ink, stripe, 10))
-	_intent_kicker.text = kicker
-	_intent_kicker.add_theme_color_override("font_color", accent)
-	_intent_status.text = status_txt
-	_intent_status.add_theme_color_override("font_color", accent)
+			prefix = "IDLE —"
+		"damaged":
+			prefix = "⚠ NEXT:"
+	_intent_panel.add_theme_stylebox_override("panel", UITheme.intent_style(offline or status == "idle"))
+	_intent_prefix.text = prefix
+	_intent_prefix.add_theme_color_override("font_color", accent)
 	_intent_name.text = String(info.get("title", "Idle"))
-	_intent_name.add_theme_color_override("font_color",
-		UITheme.TEXT_DIM if offline else UITheme.TEXT)
+	_intent_name.add_theme_color_override("font_color", accent)
 	var sys := String(info.get("system", ""))
 	var sys_name := String(info.get("system_name", ""))
 	if sys != "":
-		# Title is usually the gun name; the useful extra is the subsystem role.
 		_intent_from.text = "from %s" % sys.to_upper()
 		if sys_name != "" and sys_name != String(info.get("title", "")):
 			_intent_from.text += "  ·  %s" % sys_name
 	else:
 		_intent_from.text = ""
+	_intent_from.add_theme_color_override("font_color", accent)
 	var scaled := int(info.get("scaled", 0))
 	var printed := int(info.get("printed", 0))
 	if offline:
@@ -493,7 +477,7 @@ func _refresh_intent() -> void:
 	_intent_unit.text = unit
 	_intent_unit.add_theme_color_override("font_color", accent)
 	var from := String(info.get("system_name", info.get("system", "")))
-	var tip := "%s\n%s" % [kicker, String(info.get("title", "Idle"))]
+	var tip := "%s %s" % [prefix, String(info.get("title", "Idle"))]
 	tip += "\n---\n"
 	if offline:
 		tip += "Source system is offline — this shot cannot fire."
@@ -568,10 +552,11 @@ func _highlight_targets(on: bool) -> void:
 func _set_hull_highlight(on: bool) -> void:
 	if _hull_target == null:
 		return
-	var border := UITheme.WARN if on else Color(0, 0, 0, 0)
+	# Hull stays a raised finish-target; systems stay flat rows. WARN ring
+	# only when a hull-legal card is armed.
+	var border := UITheme.WARN if on else UITheme.TEXT_FAINT
 	_hull_target.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL_RAISED if on else UITheme.PANEL, border,
-			2 if on else 0, 3, 8))
+		UITheme.panel(UITheme.PANEL_RAISED, border, 2 if on else 1, 3, 8))
 
 func _on_hull_gui_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed \
