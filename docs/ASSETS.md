@@ -9,10 +9,18 @@ What `assets/` needs, what ships with this repository, and what does not.
 | Asset | Used for | Licence |
 |---|---|---|
 | `assets/fonts/Exo-*.ttf` | All UI type | SIL Open Font License 1.1 — see [`OFL.txt`](../assets/fonts/OFL.txt) |
+| `assets/frames/*.png` | Card frames, one per card kind | Original work by **thegliffy** |
+| `assets/ships/salvager-hull.png` | Side-view hull behind bolted-on parts (`ShipView`) | Project art — ships with the repo |
 
 Attribution: **Exo** designed by Natanael Gama.
 
+`ShipView` bolts installed modules onto hardpoints on that hull (weapons dorsal,
+hull plating belly, utilities aft). If the PNG is missing, it falls back to a
+procedural chassis — same pattern as `UITheme.art()` elsewhere.
+
 ## What does not ship here
+
+The **card frames** ARE included — they are the project author's own work.
 
 `assets/icons/` and `assets/portraits/` are **not in this repository**. They are
 commercially purchased artwork, licensed for use inside a released game but not
@@ -55,6 +63,13 @@ Square PNGs with transparency, 256×256. Referenced by the `portrait` field in
 enemy's subsystem list leaves, so they should read at roughly 150–300px tall.
 
 Four are needed for the current enemy roster.
+
+### Ship hull — `assets/ships/`
+
+Side-view PNG, landscape. Referenced by `ShipView.HULL_ART`
+(`salvager-hull.png`). Parts are drawn on top in code, so the hull should leave
+clear dorsal / belly / aft regions rather than painting every hardpoint into the
+base art.
 
 ### Free alternatives
 

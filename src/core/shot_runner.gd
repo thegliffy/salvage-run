@@ -26,6 +26,7 @@ static func run(host: Node, out_dir: String) -> void:
 	var shot := 3
 	var seen: Dictionary = {}
 	var guard := 0
+	var _fx_done := false
 	while guard < 120:
 		guard += 1
 		var screen := host.get_tree().current_scene
@@ -53,10 +54,29 @@ static func run(host: Node, out_dir: String) -> void:
 				await _settle(host, 20)
 				continue
 			if not seen.has("combat"):
+				# Let the draw animation land, or the hand is captured
+				# mid-flight and reads as a row of blank cards.
+				await host.get_tree().create_timer(1.0).timeout
 				await _capture(host, "%s/%02d-combat.png" % [out_dir, shot])
+				# Force a hover on the middle card so the fan's raised state
+				# is captured; the shot pass has no real cursor.
+				var hand = screen._hand
+				var cards: Array = hand.cards()
+				if cards.size() >= 3:
+					hand._on_enter(cards[cards.size() / 2])
+					await host.get_tree().create_timer(0.35).timeout
+					await _capture(host, "%s/HOVER.png" % out_dir)
+					hand._on_exit(cards[cards.size() / 2])
+					await host.get_tree().create_timer(0.25).timeout
 				shot += 1
 				seen["combat"] = true
 			screen._debug_autoplay_turn()
+			if not _fx_done:
+				await host.get_tree().create_timer(0.13).timeout
+				await _capture(host, "%s/FX-midplay.png" % out_dir)
+				await host.get_tree().create_timer(0.30).timeout
+				await _capture(host, "%s/FX-drawing.png" % out_dir)
+				_fx_done = true
 			await _settle(host, 6)
 		elif name == "reward_screen.gd":
 			if not seen.has("reward"):

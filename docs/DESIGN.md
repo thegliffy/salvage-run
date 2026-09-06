@@ -46,29 +46,36 @@ clogged.
 
 **The hull generates the power, not a module.** No part has `power_gen`. Reactor
 output is a property of the ship, raised by improvements — so energy is never a
-slot tax, and there is no mandatory part every build has to carry.
+slot tax, and there is no mandatory part every build has to carry. Power
+overdraw is surfaced in UI as a **deficit** so the soft cost is readable before
+the next fight.
 
 Synergy is keyed to whether the ship **has** a system, not to where a part sits.
 Same combo design, discoverable without a layout screen.
 
 `ShipLoadout.compile() → ShipProfile` remains the only bridge to combat.
 
-## 3. Telegraphed intents that can fizzle
+## 3. Soft subsystem control, hull as the primary target
 
-Enemies announce their next move and the subsystem it comes from. Kill the
-subsystem, kill the move.
+Enemies announce their next move and the subsystem it comes from. Knock that
+subsystem offline and the shot cannot fire this turn; chip it and
+`EnemyBrain.scaled_effects()` softens the hit.
 
-**Why:** this is what makes subsystem targeting a decision rather than a damage
-type. Without it, "shoot weapons" vs "shoot hull" is just arithmetic. With it,
-the player is racing a specific threat on a specific timer, and suppression
-effects (EMP, Targeting Scan) become genuinely competitive with raw damage
-despite dealing none.
+**What changed:** an earlier design treated fizzle as the *celebrated* win
+condition — destroy weapons or die trying. That made every fight a mandatory
+hunt and made hull shooting feel wrong. Soft systems now have low HP and
+auto-repair if left alone; they are optional control. **Hull is always a legal
+finish target**, and the combat UI highlights it as such.
 
-Partial damage scales the intent down (`EnemyBrain.scaled_effects()`), so chipping
-is worthwhile even when you cannot finish the job this turn.
+**Why keep soft control at all:** without it, "shoot weapons" vs "shoot hull" is
+just arithmetic. With it, EMP and suppression still have a job raw damage cannot
+do — buying a quiet turn — without forcing that path every fight.
 
-**Tuning lever:** the `0.5 + 0.5 * efficiency` curve in `scaled_effects()`. Flatten
-it to make partial damage weaker, steepen it to make chip damage dominant.
+**Tuning levers:**
+
+- Soft system HP and enemy `system_repair` (auto-repair when undamaged)
+- The `0.5 + 0.5 * efficiency` curve in `scaled_effects()`
+- Player system regen (rare improvement only — Damage Control Nanites)
 
 ## 4. Damage pipeline
 
@@ -83,10 +90,11 @@ evasion roll → shields → subsystem integrity → hull spill
 - `unavoidable` skips evasion and is used for self-damage
 - overflow past a subsystem continues into the hull at full value
 - a destroyed subsystem absorbs nothing, so shots pass straight through
+- explicit `&"hull"` targets skip the subsystem step
 
-That last point is a rule, not an accident. It was added after the balance sim
-found that a fully disabled enemy became unkillable and fights stalled forever.
-There is a regression test for it.
+That last-but-one point is a rule, not an accident. It was added after the
+balance sim found that a fully disabled enemy became unkillable and fights
+stalled forever. There is a regression test for it.
 
 ## 5. Content in JSON, systems in code
 
@@ -130,8 +138,8 @@ answer is to make the animation wait on the event, not the reverse.
 ## 8. Card removal: strip a mount
 
 Every part grants **three** cards, and each part can have **exactly one** of them
-stripped, permanently, for the rest of the run. The service lives at salvage
-nodes. It is paid for in the ship's eventual sale value, not credits.
+stripped, permanently, for the rest of the run. The service lives at salvage /
+store nodes. It is paid for in the ship's eventual sale value, not credits.
 
 **Why one per part:** thinning is capped by construction. A ship can never fall
 below two thirds of its cards, so there is no escalating price table and no
@@ -161,8 +169,7 @@ consequences.
 
 **Consequence:** removal is load-bearing, not optional. Seven parts is a 21-card
 deck, which cycles sluggishly at 5–6 draws a turn. Stripping is what keeps deck
-size honest as a ship grows, which is why it sits on the common node type rather
-than behind shops.
+size honest as a ship grows.
 
 ## 9. The simulator's pilot
 
@@ -172,9 +179,9 @@ pilot never reaches for show up in the play histogram as dead content.
 
 The weights encode a *reasonable median player*, not an optimal one. The point
 is a stable yardstick: a change in the win rate should mean the numbers moved,
-not that the bot got cleverer. It does understand the one rule the design hangs
-off — `FIZZLE_BONUS` makes disabling the subsystem behind a telegraphed intent
-worth far more than the raw damage it costs.
+not that the bot got cleverer. It understands soft control —
+`FIZZLE_BONUS` still values silencing a telegraphed subsystem — but also scores
+direct hull damage, matching the live targeting model.
 
 Three scoring rules were not obvious, and each was found by watching the sim
 deadlock rather than by reasoning about it:
@@ -207,13 +214,33 @@ ship, so a part *is* the card reward.
 cards, and change the ship itself — more power, more hull, another slot. Keeping
 them distinct means the two reward types never compete for the same decision.
 Parts are how the deck grows; improvements are how the ship's capacity to carry
-parts grows. Restricting them to tough fights is what makes an elite worth
-seeking out rather than routing around.
+parts grows. Restricting them to tough fights / chests is what makes an elite
+worth seeking out rather than routing around.
 
-**Declining a part is a real choice.** Skip the offer and you may **jettison** an
-installed part instead: the slot frees up and all three of its cards leave the
-deck. That is the ship-level counterpart to stripping a single card, and it is
-the only way to cut a whole archetype loose mid-run.
+**Skipping a part is a real choice.** Skip the offer and you **field-repair 15%
+of max hull** (or leave with a full hull unchanged). You may also **jettison** an
+installed part: the slot frees up and all three of its cards leave the deck.
+That is the ship-level counterpart to stripping a single card.
+
+## 11. The sector map
+
+One sector: start → ~15 stop layers → boss, as a left-to-right layered DAG
+(`MapGenerator`). Node weights are ~70% combat / 10% shop / 10% elite / 10%
+chest. Edges only go forward one layer; every node is reachable.
+
+**Why StS-shaped:** the fixed three-fight ladder could not express route
+choices (shop vs elite vs safe fights), and the sim's "ladder" was already
+lying about how deep a run felt. The map is the smallest structure that makes
+shops, chests, and elites into decisions rather than scripted beats.
+
+## 12. Meta unlocks are additive
+
+`MetaState` unlocks parts into the *pool* rather than granting them directly.
+The title-screen Salvage Yard is the spend surface. Starter parts begin unlocked;
+gated weapons (Missile Rack, EMP Projector, Carrion Lance, …) cost salvage.
+
+**Why additive:** more variety next run, not a flat power curve. Early unlocks
+can still feel weak — starter-hull unlocks remain an open question (§Open).
 
 ---
 
@@ -226,27 +253,29 @@ parts to zero, which removes their cards for the rest of the run unless repaired
 That may be too swingy — a mid-run weapons loss can be unrecoverable. Options:
 partial wear instead of total, or cheap field repairs between every node.
 
-**Sector count.** The scaffold generates one 8-layer sector and the sim fakes a
-ladder of 7 fights. FTL runs 8 sectors; Slay the Spire runs 3 acts. For a mobile
-session length, 3 short sectors is the likelier answer.
+**Sector count.** The live game is one long sector (~15 stops + boss). FTL runs
+8 sectors; Slay the Spire runs 3 acts. For a mobile session length, 3 shorter
+sectors may still be better — the map generator already takes a `sector` index.
 
-**Meta-progression shape.** `MetaState` unlocks parts into the *pool* rather than
-granting them directly, keeping the meta additive (more variety) rather than
-multiplicative (raw power). This is the right default, but it means early
-unlocks feel weak. Consider a small number of deliberately-strong starter-ship
-unlocks to give the first few hours a visible power curve.
+**Starter-ship unlocks.** Pool unlocks alone make the first hours feel samey.
+A small set of deliberately-strong starter hulls to steal would give a visible
+power curve without breaking the additive meta.
 
-**Balance.** The 200-run sim now wins **50%**, with deaths spread across the
-mini-boss and the boss rather than piling on one enemy. That is a usable
-yardstick at last — a tuning change will actually move the number.
+**Balance.** The 200-run sim currently wins around **37%**, with a large share of
+losses as **stalls** against shield-regenerating enemies (gunship / dreadnought).
+That is intentionally tougher than the old ~50% ladder figure — the map is
+longer and soft combat rewards hull shooting — but stalls remain the defect to
+fix first. Either enemy `shield_regen` is too high relative to card damage, or
+the player lacks enough shield-stripping tools.
 
-The remaining defect is **stalls**: ~15% of runs hit the turn guard, all against
-shield-regenerating enemies. Either enemy `shield_regen` is too high relative to
-card damage, or the player lacks enough shield-stripping tools.
+**Dead content.** The play histogram still flags cards the pilot rarely reaches
+for (Ammo Drum, and several burst-energy / status cards). Coolant Leak and
+Magnetic Drag never being played is the *intended* result: they are duds, and
+the pilot strips them. Costed unlocks that never get played after unlock are
+worse than no unlock.
 
-**Dead content.** The play histogram flags cards the pilot essentially never
-reaches for: Ammo Drum, Salvo, Dead Weight, and — notably — Breach Missile,
-which is a 150-salvage unlock that loses to a 1-cost Laser Burst at almost every
-board state. Costed content that never gets played is worse than no content.
-(Coolant Leak and Magnetic Drag never being played is the *intended* result:
-they are duds, and the pilot strips them.)
+**Engine disconnect spam.** Release builds sometimes log
+`Attempt to disconnect a nonexistent connection … Signal: 'tree_exited',
+callable: ''` on scene exit. Mitigations are in place (no await-on-frame in the
+combat log, hand detach before free, guarded scene exits); remaining noise may
+be a Godot 4 Window/focus quirk. Track, do not chase blindly.

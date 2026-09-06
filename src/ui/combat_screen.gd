@@ -23,7 +23,7 @@ var _player_hull_txt: Label
 var _player_shield: Label
 var _energy: Label
 var _piles: Label
-var _hand_row: HBoxContainer
+var _hand: HandView
 var _log: VBoxContainer
 var _log_scroll: ScrollContainer
 var _end_turn: Button
@@ -33,9 +33,17 @@ var _enemy_views: Dictionary = {}
 var _player_views: Dictionary = {}
 var _hull_target: PanelContainer
 var _hull_highlight := false
+var _overlay_host: Control
+var _preview_layer: Control
+var _fx_layer: Control
+var _pending_draw: int = 0
+var _hand_epoch: int = 0
+var _ship_stats: Label
 
 func _ready() -> void:
 	_build()
+	EventBus.cards_drawn.connect(_on_cards_drawn)
+	EventBus.deck_reshuffled.connect(_on_deck_reshuffled)
 	combat = Game.run.make_combat(Game.current_enemy())
 	EventBus.effect_resolved.connect(_on_effect)
 	EventBus.combat_ended.connect(_on_combat_ended)
@@ -62,6 +70,11 @@ func _fight_banner() -> String:
 			return "FIGHT  ·  stop %d / %d" % [layer, stops]
 
 func _exit_tree() -> void:
+	_close_ship_status()
+	if EventBus.cards_drawn.is_connected(_on_cards_drawn):
+		EventBus.cards_drawn.disconnect(_on_cards_drawn)
+	if EventBus.deck_reshuffled.is_connected(_on_deck_reshuffled):
+		EventBus.deck_reshuffled.disconnect(_on_deck_reshuffled)
 	if EventBus.effect_resolved.is_connected(_on_effect):
 		EventBus.effect_resolved.disconnect(_on_effect)
 	if EventBus.combat_ended.is_connected(_on_combat_ended):
@@ -94,6 +107,10 @@ func _build() -> void:
 	head.add_child(sp)
 	_banner = UITheme.label(_fight_banner(), 14, UITheme.TEXT_DIM, "SemiBold")
 	head.add_child(_banner)
+	var ship_btn := UITheme.button("  SHIP  ", UITheme.ACCENT_DIM)
+	ship_btn.add_theme_color_override("font_color", UITheme.TEXT)
+	ship_btn.pressed.connect(_open_ship_status)
+	head.add_child(ship_btn)
 
 	# Main split
 	var main := HBoxContainer.new()
@@ -106,6 +123,25 @@ func _build() -> void:
 
 	# Hand
 	root.add_child(_build_hand_row())
+
+	_overlay_host = Control.new()
+	_overlay_host.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_overlay_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_overlay_host.z_index = 10
+	add_child(_overlay_host)
+
+	_preview_layer = Control.new()
+	_preview_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_preview_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_preview_layer.z_index = 30
+	add_child(_preview_layer)
+
+	# Card animation ghosts live above the board but under the ship overlay.
+	_fx_layer = Control.new()
+	_fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fx_layer.z_index = 20
+	add_child(_fx_layer)
 
 func _panel(bg: Color = UITheme.PANEL) -> PanelContainer:
 	var p := PanelContainer.new()
@@ -200,6 +236,9 @@ func _build_side_panel() -> Control:
 	_player_shield = UITheme.label("", 13, UITheme.SHIELD, "SemiBold")
 	hrow.add_child(_player_shield)
 
+	_ship_stats = UITheme.label("", 11, UITheme.TEXT_FAINT)
+	pcol.add_child(_ship_stats)
+
 	_player_systems = VBoxContainer.new()
 	_player_systems.add_theme_constant_override("separation", 4)
 	pcol.add_child(_player_systems)
@@ -221,14 +260,19 @@ func _build_side_panel() -> Control:
 
 func _build_hand_row() -> Control:
 	var wrap := _panel(Color("0d141c"))
+	wrap.clip_contents = false
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	wrap.add_child(row)
 
-	_hand_row = HBoxContainer.new()
-	_hand_row.add_theme_constant_override("separation", 8)
-	_hand_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(_hand_row)
+	_hand = HandView.new()
+	_hand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_hand.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# The fan's raised middle deliberately overhangs this row; the wrapping
+	# panel has clip_contents off so it is never cut.
+	_hand.custom_minimum_size.y = CardView.CARD_SIZE.y + 8
+	_hand.card_clicked.connect(_on_card_clicked)
+	row.add_child(_hand)
 
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 6)
@@ -263,7 +307,7 @@ func _refresh() -> void:
 	_enemy_hull.max_value = maxi(1, e.max_hull)
 	_enemy_hull.value = e.hull
 	_enemy_hull_txt.text = "%d/%d" % [e.hull, e.max_hull]
-	_enemy_shield.text = ("◆ %d" % e.shield) if e.shield > 0 else ""
+	_set_shield_label(_enemy_shield, e)
 
 	_intent.text = combat.brain.telegraph()
 	var offline := combat.brain.intent_offline()
@@ -284,31 +328,72 @@ func _refresh() -> void:
 	_player_hull.max_value = maxi(1, p.max_hull)
 	_player_hull.value = p.hull
 	_player_hull_txt.text = "%d/%d" % [p.hull, p.max_hull]
-	_player_shield.text = ("◆ %d" % p.shield) if p.shield > 0 else ""
+	_set_shield_label(_player_shield, p)
 	_energy.text = "⚡ %d/%d" % [p.energy, p.max_energy]
 	_piles.text = "draw %d\ndiscard %d" % [combat.deck.draw_pile.size(), combat.deck.discard_pile.size()]
+	var bud: Dictionary = Game.run.ship.power_budget()
+	var prof := Game.run.profile
+	# Max shield lives on the ◆ readout beside the hull bar; repeating it here
+	# is just clutter, so this line carries the regen rate only.
+	_ship_stats.text = "evasion %d · shield +%d/t · power %d/%d · deck %d" % [
+		prof.evasion, prof.shield_regen, bud["draw"], bud["output"], prof.deck.size()]
+	if int(bud["deficit"]) > 0:
+		_ship_stats.add_theme_color_override("font_color", UITheme.WARN)
+		_ship_stats.text += " · DEFICIT %d" % bud["deficit"]
+	else:
+		_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
 	_rebuild_hand()
 
+## Shield as current/max, shown even at zero whenever the ship has any shield
+## capacity at all. A depleted shield and no shield system rendered identically
+## before, and they play very differently -- one of them comes back next turn.
+func _set_shield_label(label: Label, c: Combatant) -> void:
+	if c.max_shield <= 0 and c.shield <= 0:
+		label.text = ""
+		return
+	label.text = "◆ %d/%d" % [c.shield, c.max_shield]
+	# Dimmed while down, so a live shield still stands out at a glance.
+	label.add_theme_color_override("font_color",
+		UITheme.SHIELD if c.shield > 0 else UITheme.TEXT_FAINT)
+
 func _rebuild_hand() -> void:
-	for c in _hand_row.get_children():
-		c.queue_free()
+	# Playing a card refreshes the screen, so this can re-enter while an
+	# earlier call is still parked on its await. Stamp each pass and let the
+	# stale one bail rather than animating views it no longer owns.
+	_hand_epoch += 1
+	var epoch := _hand_epoch
 	selected = null
-	for card in combat.deck.hand:
-		var v := CardView.new()
-		v.setup(card)
-		v.set_playable(card.cost() <= combat.player.energy)
-		v.clicked.connect(_on_card_clicked)
-		_hand_row.add_child(v)
+	var fresh: Array = _hand.set_cards(combat.deck.hand, combat.player.energy)
 	_highlight_targets(false)
+	if _pending_draw > 0:
+		var start := maxi(0, fresh.size() - _pending_draw)
+		_pending_draw = 0
+		# HandView positions on the next layout pass; the ghosts need final
+		# rects, so wait a frame before flying anything.
+		await get_tree().process_frame
+		if is_inside_tree() and epoch == _hand_epoch:
+			CardFx.draw_to(_fx_layer, _draw_pile_pos(), fresh.slice(start))
+
+func _open_ship_status() -> void:
+	ShipStatusOverlay.open(_overlay_host, _preview_layer, _close_ship_status)
+
+func _close_ship_status() -> void:
+	if _overlay_host == null:
+		return
+	ShipStatusOverlay.close(_overlay_host, _preview_layer)
 
 func _highlight_targets(on: bool) -> void:
 	var want_enemy := false
 	var want_self := false
+	var want_hull := false
 	if on and selected != null:
 		want_enemy = selected.card.def.target == CardDef.Target.ENEMY_SYSTEM
 		want_self = selected.card.def.target == CardDef.Target.SELF_SYSTEM
-	_hull_highlight = want_enemy
-	_set_hull_highlight(want_enemy)
+		# A suppression-only card has nothing to do to a bare hull, so do not
+		# invite the click.
+		want_hull = want_enemy and selected.card.def.can_target_hull()
+	_hull_highlight = want_hull
+	_set_hull_highlight(want_hull)
 	for sid in _enemy_views:
 		_enemy_views[sid].set_highlight(want_enemy)
 	for sid in _player_views:
@@ -328,6 +413,10 @@ func _on_hull_gui_input(event: InputEvent) -> void:
 		return
 	if selected == null or selected.card.def.target != CardDef.Target.ENEMY_SYSTEM:
 		return
+	if not selected.card.def.can_target_hull():
+		_log_line("%s needs a subsystem, not the hull." % selected.card.display_name(),
+			UITheme.TEXT_FAINT)
+		return
 	_play(selected.card, &"hull")
 
 # --- Interaction -------------------------------------------------------------
@@ -337,14 +426,12 @@ func _on_card_clicked(view: CardView) -> void:
 		return
 	if view.card.def.needs_target():
 		if selected == view:
-			selected.set_selected(false)
 			selected = null
+			_hand.clear_selection()
 			_highlight_targets(false)
 		else:
-			if selected != null:
-				selected.set_selected(false)
 			selected = view
-			view.set_selected(true)
+			_hand.set_selected(view)
 			_highlight_targets(true)
 		return
 	_play(view.card, &"")
@@ -361,13 +448,61 @@ func _on_player_system_clicked(sid: StringName) -> void:
 
 func _play(card: CardInstance, target: StringName) -> void:
 	var name := card.display_name()
+	# Capture the card's on-screen rect before play_card mutates the hand.
+	var from := Rect2()
+	var view := _view_for(card)
+	if view != null:
+		from = view.get_global_rect()
+
 	var err := combat.play_card(card, target)
 	if err != "":
 		_log_line("Can't play %s: %s" % [name, err], UITheme.TEXT_FAINT)
 		return
+	if view != null:
+		CardFx.play(_fx_layer, from, _target_pos(target), _discard_pile_pos(), card)
 	var suffix := (" → %s" % String(target)) if target != &"" else ""
 	_log_line("You play %s%s" % [name, suffix], UITheme.ACCENT)
 	_refresh()
+
+func _view_for(card: CardInstance) -> CardView:
+	for c in _hand.cards():
+		if c.card == card:
+			return c
+	return null
+
+## Where a played card should fly. Falls back to the enemy panel so that
+## untargeted cards still read as "something happened over there".
+func _target_pos(target: StringName) -> Vector2:
+	if target == &"hull" and _hull_target != null:
+		return _hull_target.get_global_rect().get_center()
+	if _enemy_views.has(target):
+		return (_enemy_views[target] as Control).get_global_rect().get_center()
+	if _player_views.has(target):
+		return (_player_views[target] as Control).get_global_rect().get_center()
+	if _enemy_systems != null:
+		return _enemy_systems.get_global_rect().get_center()
+	return get_global_rect().get_center()
+
+## The pile counters double as the piles themselves: two lines, draw over
+## discard, so the top and bottom halves of that label are the anchors.
+func _draw_pile_pos() -> Vector2:
+	if _piles == null:
+		return get_global_rect().get_center()
+	var r := _piles.get_global_rect()
+	return r.position + Vector2(r.size.x * 0.35, r.size.y * 0.25)
+
+func _discard_pile_pos() -> Vector2:
+	if _piles == null:
+		return get_global_rect().get_center()
+	var r := _piles.get_global_rect()
+	return r.position + Vector2(r.size.x * 0.35, r.size.y * 0.75)
+
+func _on_cards_drawn(cards: Array) -> void:
+	_pending_draw += cards.size()
+
+func _on_deck_reshuffled() -> void:
+	_log_line("— discard pile shuffled back in —", UITheme.TEXT_FAINT)
+	CardFx.shuffle(_fx_layer, _discard_pile_pos(), _draw_pile_pos())
 
 func _on_end_turn() -> void:
 	if combat.phase != CombatController.Phase.PLAYER:

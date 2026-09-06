@@ -294,7 +294,7 @@ enough shield-stripping tools. Content, not code.
 
 ---
 
-## Where it stands
+## Where it stands *(superseded — see entries below)*
 
 ```
 112 tests passing
@@ -317,3 +317,75 @@ The systems work, are tested, and are playable end to end.
 
 Not built: the sector map, the ship screen, the meta unlock shop, audio, and run
 save/resume — which is a launch blocker for Android. See ROADMAP.md.
+
+---
+
+## 2026-09-05 — Sector map, soft combat, ship fantasy
+
+Replaced the fixed three-fight ladder with a Slay-the-Spire sector map:
+start → ~15 stop layers → boss, weighted ~70% combat / 10% shop / 10% elite /
+10% chest. `MapGenerator` guarantees forward-only edges and full reachability.
+
+**Combat redesign.** Hull is the primary target (`&"hull"`). Enemy soft systems
+have low HP and auto-repair (+2) if left undamaged — temporary control, not a
+mandatory fizzle hunt. The celebrated "cancel their shot or die" loop made every
+fight feel the same; soft control keeps EMP useful without forcing it.
+
+**Rewards.** Skipping a part offer field-repairs 15% of max hull (was
+jettison-only as the interesting skip). Jettison remains available separately.
+
+**Ship fantasy.** Painted hull art (`assets/ships/salvager-hull.png`) with
+`ShipView` bolting modules onto hardpoints. Ship status overlay on the map
+(slots, deck, power, ship view). Subsystem blurbs in combat. Power deficit when
+part draw exceeds hull output, cut into energy/turn for the whole run.
+
+Narrative framing on title and sale screens: steal a ship, sell what survives.
+
+Balance after the longer map + soft combat landed around **~31%** win rate
+initially (accepted as intentionally tougher than the old 50% ladder figure).
+
+---
+
+## 2026-09-05 — Unlock shop, power UI, hull art
+
+Title → **Salvage Yard** meta unlock shop. Unlocks put parts into the reward
+pool; they do not grant the part. Starter weapon is Burst Laser; Missile Rack /
+EMP Projector / Carrion Lance (and other gated parts) cost salvage.
+
+Power budget panel on the reward screen with per-offer energy preview so overdraw
+is visible before you bolt something on.
+
+---
+
+## 2026-09-06 — Ship stats in combat + disconnect mitigations
+
+Ship status extracted to `ShipStatusOverlay` and wired into **combat** as well as
+the map (SHIP button + compact evasion / shield / power / deck strip on the
+player panel).
+
+Release builds were spamming
+`Attempt to disconnect a nonexistent connection … tree_exited, callable: ''`.
+Mitigations: combat log no longer awaits frames to scroll; hand cards are
+`remove_child`'d and set to ignore mouse before `queue_free`; card hover lift
+removed (it fought HBox layout); scene-exit awaits check `is_inside_tree`.
+Residual empty-callable disconnects may still be a Godot 4 Window/focus quirk in
+release exports — track, do not thrash.
+
+### Result
+
+```
+215 tests passing
+200-run sim: ~37% win rate
+Playable PC demo: title → unlock shop → map → combat/shop/chest → rewards → sale
+```
+
+**Open defects (mostly content):**
+
+- **Stalls.** Still a large share of sim losses against shield-regenerating
+  gunship / dreadnought. Highest-priority balance fix.
+- **Dead content.** Histogram still names rarely-played cards; dud status cards
+  remaining unplayed is intended.
+- **Run save/resume** still missing — Android launch blocker.
+- **Audio / Steam / enemy depth scaling** not started.
+
+See ROADMAP.md.

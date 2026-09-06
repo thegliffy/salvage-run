@@ -1,50 +1,70 @@
 # Salvage Run
 
-A roguelike deckbuilder where **your ship is your deck**. Fight across a sector
-to a final boss, then sell the ship you built for meta-currency that unlocks new
-parts.
+**v0.05** · by **thegliffy**
 
-FTL's subsystem targeting, Slay the Spire's card economy, and a run-end sale that
-turns "how good was this ship" into a number you spend.
+A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
+across a sector map to the boss, then sell what you built for salvage that
+unlocks new parts to steal next time.
+
+FTL's subsystem targeting, Slay the Spire's card economy and map, and a run-end
+sale that turns "how good was this ship" into a number you spend.
 
 Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-112 tests passing · 200-run balance sim at ~50% win rate
+215 tests passing · 200-run balance sim at ~37% win rate
 ```
 
 ---
 
 ## Play it
 
+**Windows:** download `SalvageRun-v0.05-win64.zip` from
+[Releases](https://github.com/thegliffy/salvage-run/releases), unzip, run
+`SalvageRun.exe`. Single self-contained executable — no installer, no separate
+data files.
+
+**From source:**
+
 ```bash
 godot --path .
 ```
 
-> **Note on art.** The card icons and enemy portraits are commercially licensed
-> and are not redistributed here, so a fresh clone renders cards as flat
-> kind-coloured blocks. Everything is playable; see
-> [docs/ASSETS.md](docs/ASSETS.md) to supply your own.
+Or the exported Linux build:
 
-**How to play.** Click a card, then click the enemy subsystem you want to hit.
-The amber banner is the enemy's next attack and it *names the subsystem that
-fires it* — destroy or suppress that subsystem before ending your turn and the
-attack is cancelled outright. Cards that need no target play on a single click.
+```bash
+./build/salvage-run.x86_64
+```
 
-The demo runs three fights — scout drone, gunship, dreadnought — deliberately one
-of each reward tier, then appraises your ship.
+> **Note on art.** Card icons and enemy portraits are commercially licensed and
+> are not redistributed here, so a fresh clone renders cards as flat
+> kind-coloured blocks. The painted hull in `assets/ships/` *does* ship with the
+> repo. Everything is playable either way; see [docs/ASSETS.md](docs/ASSETS.md).
+
+**How to play.** Click a card. Hull-targeting attacks want the enemy **HULL**
+bar; system cards want a subsystem. Soft systems are optional control —
+knocking weapons offline silences that shot for a turn, then they auto-repair if
+left alone. You can always just shoot the hull.
+
+The amber banner is the enemy's next attack and names the subsystem that fires
+it. Cards that need no target play on a single click.
+
+**SHIP** (combat) / **SHIP STATUS** (map) opens the full loadout: slots, power
+budget, deck, and the painted ship view.
 
 ## Status: playable PC demo
 
-Title → combat → reward → salvage yard → … → ship sale, end to end.
+Title → salvage unlock shop → sector map → combat / shop / chest → rewards →
+… → boss → ship sale, end to end.
 
-**Working:** combat with subsystem targeting, typed-slot ship loadout, tiered
-battle rewards, ship improvements, jettison, card stripping, run-end appraisal,
-meta-progression saves.
+**Working:** StS-style sector map (~15 stops), combat with hull as the primary
+target and soft subsystem control, typed-slot ship loadout, power-budget UI,
+tiered rewards (skip = field repair), ship status overlay, ship improvements,
+jettison, card stripping, run-end appraisal, meta unlock shop, meta saves.
 
-**Not built yet:** the sector map (the demo uses a fixed three-fight ladder), the
-ship screen, the meta unlock shop, and audio. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Not built yet:** audio, run save/resume (Android launch blocker), Steam
+integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
@@ -67,9 +87,10 @@ is three soft costs:
 | Deck | every part adds three cards, so a big ship draws badly |
 
 The hull generates the power — no module does — so energy is a property of the
-ship rather than a mandatory part every build has to carry.
+ship rather than a mandatory part every build has to carry. Overdraw shows as a
+**power deficit** on the ship status panel and on reward offers.
 
-### Why subsystem targeting matters
+### Why soft subsystem targeting matters
 
 Enemies telegraph an intent one turn ahead, and every intent names the subsystem
 it fires from:
@@ -78,13 +99,19 @@ it fires from:
 Raider — Autocannon: 9 damage   [requires: weapons]
 ```
 
-Destroy or suppress that subsystem before their turn and **the intent fizzles**.
-Damage it partially and the shot lands weaker. That single rule is the combat
-design: it makes "which system do I shoot" the central decision, and it gives EMP
-and suppression effects a job that raw damage cannot do.
+Knock that subsystem offline and **the shot cannot fire this turn**. Damage it
+partially and the shot lands weaker. Soft systems (low HP, auto-repair if
+undamaged) are temporary control — not a mandatory first gate. Hull is always a
+legal finish target.
 
 Destroyed subsystems stay targetable — shots at the wreckage spill into the hull
 — so a fully disabled ship can still be finished off.
+
+### The sector map
+
+Start on the left, boss on the right, ~15 stop layers between. Node mix is
+roughly **70% combat / 10% shop / 10% elite / 10% chest**. You only enter nodes
+linked from your current position — same reachability rules as Slay the Spire.
 
 ### Rewards scale with the fight
 
@@ -98,15 +125,24 @@ Destroyed subsystems stay targetable — shots at the wreckage spill into the hu
 (more power, more hull, another slot). Keeping them separate from parts means the
 two reward types never compete for the same decision.
 
-Declining a part offer lets you **jettison** an installed one instead: the slot
-frees up and all three of its cards leave the deck.
+Skipping a part offer **field-repairs 15% of max hull**. You can also **jettison**
+an installed part: the slot frees up and all three of its cards leave the deck.
 
 ### Trimming the deck
 
 Each part can have exactly **one** of its three cards stripped, permanently, at a
-salvage yard. Because the cap is one per part, a ship can never fall below two
-thirds of its cards — so there is no escalating purge price. Strips are paid for
-in the ship's **sale value**: you are cutting up the thing you intend to sell.
+salvage yard / store. Because the cap is one per part, a ship can never fall
+below two thirds of its cards — so there is no escalating purge price. Strips are
+paid for in the ship's **sale value**: you are cutting up the thing you intend
+to sell.
+
+### Meta unlocks
+
+Between runs, the title screen's **Salvage Yard** spends salvage to unlock parts
+into the reward pool. Unlocks do not hand you the part — they make it eligible
+to appear on the next theft. Starter weapons begin unlocked (Burst Laser);
+uncommon/rare weapons cost salvage (Missile Rack 150, EMP Projector 200,
+Carrion Lance 400, …).
 
 ### The sale
 
@@ -165,6 +201,7 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 | `src/run/` | Run state, map generation, rewards, salvage yard |
 | `src/meta/` | Persistent unlocks and the ship valuation |
 | `src/ui/` | Screens, built programmatically against the event bus |
+| `assets/ships/` | Painted hull art used by `ShipView` |
 | `tests/` | Headless test suite and balance simulator |
 
 ## Docs
@@ -174,3 +211,4 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 - [docs/SHIPPING.md](docs/SHIPPING.md) — Steam and Android specifics, toolchain setup
 - [docs/DEVLOG.md](docs/DEVLOG.md) — how it was built and what broke on the way
 - [docs/ASSETS.md](docs/ASSETS.md) — third-party asset provenance and licensing
+- [CREDITS.md](CREDITS.md) — who made what

@@ -37,10 +37,10 @@ To remove entirely: delete the paths in the table above.
 ### Verified working
 
 A Linux release export has been run end to end on this machine, and the resulting
-binary was driven through a full playthrough under `xvfb` — title, combat,
-rewards, salvage yard — rendering every screen. `export_presets.cfg` exists
-locally with a Linux preset (it stays gitignored, per the note below) and
-excludes `tests/*` from release builds.
+binary was driven through a full playthrough under `xvfb` — title, unlock shop,
+sector map, combat, rewards, store, sale — rendering every screen.
+`export_presets.cfg` exists locally with a Linux preset (it stays gitignored,
+per the note below) and excludes `tests/*` from release builds.
 
 ```bash
 godot --headless --path . --export-release "Linux" build/salvage-run.x86_64
@@ -186,7 +186,8 @@ This affects *source* distribution only. Shipping the compiled game with the art
 baked into the `.pck` is exactly what those licences are for.
 
 The Exo typeface is SIL OFL and travels with its licence at
-`assets/fonts/OFL.txt`.
+`assets/fonts/OFL.txt`. The painted hull at `assets/ships/salvager-hull.png`
+ships with the repository; see [ASSETS.md](ASSETS.md).
 
 ## Prior art worth knowing
 
