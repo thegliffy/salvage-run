@@ -63,14 +63,22 @@ func _row(left: String, right: String, colour: Color, size: int = 14,
 
 func _animate(v: Dictionary) -> void:
 	for line in v.get("lines", []):
+		if not is_inside_tree():
+			return
 		_row(line["label"], str(line["amount"]),
 			UITheme.TEXT if line["kind"] == "part" else UITheme.SHIELD)
 		await get_tree().create_timer(0.09).timeout
 
+	if not is_inside_tree():
+		return
 	var sep := HSeparator.new()
 	_lines.add_child(sep)
 	_row("subtotal", str(v.get("subtotal", 0)), UITheme.TEXT_DIM)
 	await get_tree().create_timer(0.14).timeout
+	if not is_inside_tree():
+		return
 	_row(v.get("multiplier_label", ""), "x%.2f" % v.get("multiplier", 1.0), UITheme.WARN)
 	await get_tree().create_timer(0.22).timeout
+	if not is_inside_tree():
+		return
 	_row("TOTAL", "%d salvage" % v.get("total", 0), UITheme.GOOD, 20, "Black")

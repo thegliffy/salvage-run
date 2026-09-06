@@ -252,7 +252,8 @@ func _offer_row(offer: Dictionary) -> Control:
 			_ship_view.refresh(Game.run.ship, new_uid)
 			_status.text = "Bolted on %s." % def.name
 			await get_tree().create_timer(0.55).timeout
-			_continue()
+			if is_inside_tree():
+				_continue()
 		else:
 			_status.text = err)
 	row.add_child(take)

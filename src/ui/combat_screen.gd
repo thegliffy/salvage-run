@@ -415,13 +415,25 @@ func _on_effect(event: Dictionary) -> void:
 		_log_line(line, colour)
 
 func _log_line(text: String, colour: Color) -> void:
+	if not is_inside_tree() or _log == null:
+		return
 	var l := UITheme.label(text, 12, colour)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_log.add_child(l)
 	while _log.get_child_count() > 120:
-		_log.get_child(0).free()
-	await get_tree().process_frame
-	_log_scroll.scroll_vertical = int(_log_scroll.get_v_scroll_bar().max_value)
+		var old: Node = _log.get_child(0)
+		_log.remove_child(old)
+		old.queue_free()
+	# Defer scroll — awaiting a frame here races scene changes and triggers
+	# a bogus Window.tree_exited disconnect in Godot 4.
+	_scroll_log_to_end.call_deferred()
+
+func _scroll_log_to_end() -> void:
+	if not is_inside_tree() or _log_scroll == null:
+		return
+	var bar := _log_scroll.get_v_scroll_bar()
+	if bar != null:
+		_log_scroll.scroll_vertical = int(bar.max_value)
 
 func _on_combat_ended(victory: bool, _rewards: Dictionary) -> void:
 	_end_turn.disabled = true
@@ -429,7 +441,9 @@ func _on_combat_ended(victory: bool, _rewards: Dictionary) -> void:
 	_log_line("VICTORY" if victory else "YOUR SHIP IS DESTROYED",
 		UITheme.GOOD if victory else UITheme.HOSTILE)
 	var btn := UITheme.button("CONTINUE", UITheme.ACCENT if victory else UITheme.HOSTILE)
-	btn.pressed.connect(func(): Game.finish_combat(combat))
+	btn.pressed.connect(func():
+		if is_inside_tree():
+			Game.finish_combat(combat))
 	_end_turn.get_parent().add_child(btn)
 
 

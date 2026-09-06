@@ -8,12 +8,24 @@ extends PanelContainer
 
 signal clicked(system_id: StringName)
 
+## Short player-facing jobs for each subsystem id.
+const BLURB := {
+	&"weapons": "fires attacks",
+	&"shields": "holds & regenerates shields",
+	&"engines": "drives evasion",
+	&"sensors": "targeting & scans",
+	&"reactor": "powers their systems",
+	&"support": "repairs & utility",
+	&"armor": "soaks hull damage",
+}
+
 var system_id: StringName
 var targetable := false
 var is_intent_source := false
 
 var _bar: ProgressBar
 var _name: Label
+var _blurb: Label
 var _value: Label
 var _flag: Label
 
@@ -27,10 +39,14 @@ func setup(s: ShipSystem, clickable: bool) -> void:
 	add_child(root)
 
 	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
 	root.add_child(head)
 	_name = UITheme.label(s.display_name, 13, UITheme.TEXT, "SemiBold")
-	_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_name)
+	_blurb = UITheme.label(_blurb_for(s.id), 11, UITheme.TEXT_FAINT)
+	_blurb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_blurb.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	head.add_child(_blurb)
 	_flag = UITheme.label("", 11, UITheme.WARN, "Bold")
 	head.add_child(_flag)
 	_value = UITheme.label("", 12, UITheme.TEXT_DIM)
@@ -40,6 +56,10 @@ func setup(s: ShipSystem, clickable: bool) -> void:
 	root.add_child(_bar)
 	refresh(s, false)
 
+static func _blurb_for(sid: StringName) -> String:
+	var text: String = BLURB.get(sid, "")
+	return ("— " + text) if text != "" else ""
+
 func refresh(s: ShipSystem, intent_source: bool) -> void:
 	is_intent_source = intent_source
 	_bar.max_value = maxi(1, s.max_integrity)
@@ -48,9 +68,11 @@ func refresh(s: ShipSystem, intent_source: bool) -> void:
 
 	var fill := UITheme.ACCENT
 	var label_colour := UITheme.TEXT
+	var blurb_colour := UITheme.TEXT_FAINT
 	if s.integrity <= 0:
 		fill = UITheme.TEXT_FAINT
 		label_colour = UITheme.TEXT_FAINT
+		blurb_colour = UITheme.TEXT_FAINT
 		_flag.text = "DESTROYED"
 		_flag.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
 	elif s.offline_turns > 0:
@@ -65,6 +87,7 @@ func refresh(s: ShipSystem, intent_source: bool) -> void:
 		_flag.text = ""
 	_bar.add_theme_stylebox_override("fill", UITheme.panel(fill, Color(0,0,0,0), 0, 2, 0))
 	_name.add_theme_color_override("font_color", label_colour)
+	_blurb.add_theme_color_override("font_color", blurb_colour)
 
 	var border := Color(0, 0, 0, 0)
 	if is_intent_source and s.integrity > 0:

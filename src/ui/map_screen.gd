@@ -138,6 +138,8 @@ func _rebuild() -> void:
 
 	# Keep the current column in view.
 	await get_tree().process_frame
+	if not is_inside_tree():
+		return
 	var cur_pos: Vector2 = _positions.get(run.current_node, Vector2.ZERO)
 	_scroll.scroll_horizontal = int(maxi(0, int(cur_pos.x - _scroll.size.x * 0.35)))
 

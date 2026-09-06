@@ -104,7 +104,9 @@ func _gui_input(event: InputEvent) -> void:
 
 func _notification(what: int) -> void:
 	# Lift the card slightly on hover so the hand feels alive.
+	if not is_inside_tree():
+		return
 	if what == NOTIFICATION_MOUSE_ENTER and playable:
 		position.y -= 6
 	elif what == NOTIFICATION_MOUSE_EXIT and playable:
-		position.y += 6
+		position.y = mini(position.y + 6, 0.0)
