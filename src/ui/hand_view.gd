@@ -49,7 +49,7 @@ func set_cards(instances: Array, energy: int) -> Array[CardView]:
 	for inst in instances:
 		var v := CardView.new()
 		v.setup(inst)
-		v.set_playable(inst.cost() <= energy)
+		v.set_playable(inst.cost() <= energy, energy)
 		v.pivot_offset = CardView.CARD_SIZE * 0.5
 		v.clicked.connect(_on_clicked)
 		v.mouse_entered.connect(_on_enter.bind(v))

@@ -69,6 +69,72 @@ func telegraph() -> String:
 		return "%s (damaged)" % base
 	return base
 
+## Structured telegraph for the combat banner. `telegraph()` stays the compact
+## log/sim string; the UI wants the subsystem, the number, and live/damaged/
+## offline as separate fields so they can be sized independently.
+func telegraph_info() -> Dictionary:
+	var req := StringName(current_intent.get("requires_system", ""))
+	var sys: ShipSystem = combatant.system(req) if combatant != null else null
+	var sys_name := ""
+	if sys != null:
+		sys_name = sys.display_name
+	elif req != &"":
+		sys_name = String(req).capitalize()
+
+	var raw: String = current_intent.get("telegraph", current_intent.get("id", "Idle"))
+	var title := raw
+	var colon := raw.find(":")
+	if colon >= 0:
+		title = raw.substr(0, colon).strip_edges()
+
+	var printed := 0
+	var op := ""
+	for e in current_intent.get("effects", []):
+		if e is Dictionary and (e as Dictionary).has("amount"):
+			printed = int(e["amount"])
+			op = String(e.get("op", ""))
+			break
+
+	var scaled := printed
+	for e2 in scaled_effects():
+		if e2 is Dictionary and (e2 as Dictionary).has("amount"):
+			scaled = int(e2["amount"])
+			break
+
+	var action := "EFFECT"
+	match op:
+		"damage_hull":
+			action = "HULL"
+		"damage_system":
+			action = "DAMAGE"
+		"shield":
+			action = "SHIELD"
+		"repair", "repair_hull":
+			action = "REPAIR"
+		"suppress":
+			action = "SUPPRESS"
+
+	var offline := intent_offline()
+	var status := "live"
+	if current_intent.is_empty():
+		status = "idle"
+	elif offline:
+		status = "offline"
+	elif sys != null and sys.efficiency() < 1.0:
+		status = "damaged"
+
+	return {
+		"title": title,
+		"action": action,
+		"printed": printed,
+		"scaled": scaled,
+		"system": req,
+		"system_name": sys_name,
+		"status": status,
+		"offline": offline,
+		"text": telegraph(),
+	}
+
 ## Damaged weapons hit softer. Offline systems produce no effects.
 func scaled_effects() -> Array:
 	if intent_offline():

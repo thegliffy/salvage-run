@@ -32,7 +32,8 @@ var _flag: Label
 func setup(s: ShipSystem, clickable: bool) -> void:
 	system_id = s.id
 	targetable = clickable
-	mouse_filter = Control.MOUSE_FILTER_STOP if clickable else Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	UITheme.touch(self)
 
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 2)
@@ -94,6 +95,10 @@ func refresh(s: ShipSystem, intent_source: bool) -> void:
 		border = UITheme.HOSTILE
 	add_theme_stylebox_override("panel",
 		UITheme.panel(UITheme.PANEL, border, 1, 3, 7))
+	tooltip_text = UITheme.system_tip(s, intent_source)
+
+func _make_custom_tooltip(for_text: String) -> Object:
+	return UITheme.make_tooltip(for_text)
 
 func set_highlight(on: bool) -> void:
 	if not targetable:
