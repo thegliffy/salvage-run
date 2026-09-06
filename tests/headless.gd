@@ -625,7 +625,10 @@ func _test_ui_copy() -> void:
 	var card := CardInstance.create(Database.card(prof.deck[0]))
 	var tip := UITheme.card_tip(card, 0)
 	_check("card tip names the card", tip.contains(card.display_name()))
-	_check("card tip mentions cost", tip.contains("cost"))
+	_check("card tip has a COST section", tip.contains("COST"))
+	_check("card tip has a RULES section", tip.contains("RULES"))
+	var pierce := CardInstance.create(Database.card(&"breach_missile"))
+	_check("card tip defines pierce", UITheme.card_tip(pierce).contains("Ignores shields"))
 	var bud := ship.power_budget()
 	_check("power tip mentions energy", UITheme.power_tip(bud).contains("energy"))
 	var part: PartDef = ship.parts[0].def
@@ -633,6 +636,10 @@ func _test_ui_copy() -> void:
 	var popup := UITheme.make_tooltip("Title\n---\nBody line")
 	_check("themed tooltip builds a control", popup is Control)
 	popup.free()
+	var warn_tip := UITheme.make_tooltip("@warn\n⚡ DEFICIT 2\n---\ncuts energy every turn.")
+	_check("deficit tooltip uses warn border",
+		(warn_tip.get_theme_stylebox("panel") as StyleBoxFlat).border_color == UITheme.WARN)
+	warn_tip.free()
 	var live := UITheme.intent_style(false)
 	_check("live intent uses warn border", live.border_color == UITheme.WARN)
 	_eq("live intent border width", live.border_width_top, 2)

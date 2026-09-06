@@ -126,9 +126,9 @@ static func deficit_panel(n: int, sentence: String = "") -> PanelContainer:
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(b)
 	if sentence != "":
-		tip(wrap, "⚡ DEFICIT %d\n---\n%s" % [n, sentence])
+		tip(wrap, "⚡ DEFICIT %d\n---\n%s" % [n, sentence], &"warn")
 	else:
-		tip(wrap, "⚡ DEFICIT %d" % n)
+		tip(wrap, "⚡ DEFICIT %d" % n, &"warn")
 	return wrap
 
 static func energy_note(before: int, after: int) -> Label:
@@ -273,73 +273,126 @@ static func spacer(h: int = 8) -> Control:
 	c.custom_minimum_size.y = h
 	return c
 
+const KEYWORD_BLURB := {
+	&"pierce": "Ignores shields. Hits the system or hull directly.",
+	&"exhaust": "Leaves the run after you play it — not discarded.",
+	&"retain": "Stays in hand when you end the turn.",
+	&"overload": "Pays a bigger effect if you can afford the extra energy.",
+}
+
 ## Attach a themed tooltip. First line is the title; a `---` line becomes a rule.
-static func tip(node: Control, text: String) -> void:
+## Pass kind `&"warn"` for amber deficit bubbles (mock C).
+static func tip(node: Control, text: String, kind: StringName = &"") -> void:
 	if node == null or text == "":
 		return
-	node.tooltip_text = text
+	if kind != &"" and not text.begins_with("@"):
+		node.tooltip_text = "@%s\n%s" % [kind, text]
+	else:
+		node.tooltip_text = text
 	if node.mouse_filter == Control.MOUSE_FILTER_IGNORE:
 		node.mouse_filter = Control.MOUSE_FILTER_STOP
 
 static func make_tooltip(for_text: String) -> Control:
+	var lines := PackedStringArray(for_text.split("\n"))
+	var kind := &"accent"
+	if not lines.is_empty() and lines[0].begins_with("@"):
+		kind = StringName(lines[0].substr(1))
+		lines = lines.slice(1)
+	elif not lines.is_empty() and (lines[0].begins_with("⚡") or lines[0].contains("DEFICIT")):
+		kind = &"warn"
+	var warn := kind == &"warn"
+	var border := WARN if warn else ACCENT
+	var ink := INK_WARN if warn else PANEL
+	var title_c := WARN if warn else ACCENT
+	var rule_c := WARN if warn else ACCENT_DIM
 	var wrap := PanelContainer.new()
-	wrap.add_theme_stylebox_override("panel", panel(PANEL, ACCENT, 1, 4, 12))
-	wrap.custom_minimum_size.x = 248
+	wrap.add_theme_stylebox_override("panel", panel(ink, border, 2 if warn else 1, 4, 12))
+	wrap.custom_minimum_size.x = 268
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 4)
 	wrap.add_child(col)
-	var lines := for_text.split("\n")
 	if lines.is_empty():
 		return wrap
-	var title := label(lines[0], 14, ACCENT, "Bold")
+	var title := label(lines[0], 14, title_c, "Bold")
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	title.custom_minimum_size.x = 224
+	title.custom_minimum_size.x = 244
 	col.add_child(title)
 	for i in range(1, lines.size()):
 		var line := lines[i]
 		if line == "":
 			continue
 		if line == "---":
-			col.add_child(hairline(ACCENT_DIM))
+			col.add_child(hairline(rule_c))
+			continue
+		if _tooltip_section(line):
+			col.add_child(label(line, 11, title_c, "Bold"))
 			continue
 		var body := label(line, 12, TEXT)
 		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		body.custom_minimum_size.x = 224
+		body.custom_minimum_size.x = 244
 		col.add_child(body)
 	return wrap
+
+static func _tooltip_section(line: String) -> bool:
+	if line.length() == 0 or line.length() > 14:
+		return false
+	return line == line.to_upper() and line.is_valid_identifier()
 
 static func card_tip(card: CardInstance, energy: int = -1) -> String:
 	if card == null or card.def == null:
 		return ""
 	var bits: PackedStringArray = []
 	bits.append(card.display_name())
-	var meta := "%s · cost %d" % [String(card.def.kind), card.cost()]
+	bits.append(String(card.def.kind).to_upper())
+	bits.append("---")
+	bits.append("COST")
+	bits.append("%d energy" % card.cost())
+	var where := ""
 	match card.def.target:
 		CardDef.Target.NONE:
-			meta += " · plays immediately"
+			where = "plays immediately"
 		CardDef.Target.ENEMY_SYSTEM:
-			meta += " · enemy system"
+			where = "enemy system"
 			if card.def.can_target_hull():
-				meta += " or hull"
+				where += " or hull"
 		CardDef.Target.ENEMY_SHIP:
-			meta += " · enemy ship"
+			where = "enemy ship"
 		CardDef.Target.SELF_SYSTEM:
-			meta += " · your system"
+			where = "your system"
 		CardDef.Target.SELF_SHIP:
-			meta += " · your ship"
-	bits.append(meta)
+			where = "your ship"
+	if where != "":
+		bits.append(where)
 	bits.append("---")
+	bits.append("RULES")
 	var body := card.text()
 	if body != "":
 		bits.append(body)
-	if not card.def.keywords.is_empty():
-		var kw: PackedStringArray = []
-		for k in card.def.keywords:
-			kw.append(String(k))
-		bits.append("keywords: %s" % ", ".join(kw))
+	var kws := _card_keywords(card)
+	if not kws.is_empty():
+		bits.append("---")
+		bits.append("KEYWORDS")
+		for k in kws:
+			var blurb: String = KEYWORD_BLURB.get(k, "")
+			if blurb != "":
+				bits.append("%s — %s" % [String(k).capitalize(), blurb])
+			else:
+				bits.append(String(k))
 	if energy >= 0 and card.cost() > energy:
+		bits.append("---")
 		bits.append("not enough energy (%d needed)" % card.cost())
 	return "\n".join(bits)
+
+static func _card_keywords(card: CardInstance) -> Array[StringName]:
+	var out: Array[StringName] = []
+	for k in card.def.keywords:
+		if not out.has(k):
+			out.append(k)
+	var hay := card.text().to_lower()
+	for k in KEYWORD_BLURB.keys():
+		if hay.contains(String(k)) and not out.has(k):
+			out.append(k)
+	return out
 
 static func part_tip(def: PartDef, extra: String = "") -> String:
 	if def == null:
@@ -373,10 +426,11 @@ static func power_tip(bud: Dictionary) -> String:
 	var body := "Hull output %d · part draw %d · energy %d / turn." % [
 		bud.get("output", 0), bud.get("draw", 0), bud.get("energy", 0)]
 	if deficit > 0:
-		body += " Every point of draw past output cuts energy for the rest of the run."
+		body += " Part draw exceeds hull output — cuts energy every turn."
 	else:
 		body += " Taking more draw than output permanently lowers energy."
-	return "%s\n---\n%s" % [title, body]
+	var text := "%s\n---\n%s" % [title, body]
+	return ("@warn\n" + text) if deficit > 0 else text
 
 static func system_tip(s: ShipSystem, intent_source: bool = false) -> String:
 	if s == null:
