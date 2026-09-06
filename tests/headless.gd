@@ -54,13 +54,14 @@ func _eq(name: String, got, want) -> void:
 func _run_tests() -> int:
 	print("\n=== SALVAGE RUN :: tests ===\n")
 	_test_content()
-	_test_hull_grid()
+	_test_loadout()
 	_test_compile()
 	_test_rng_determinism()
 	_test_combat_fizzle()
 	_test_deck_cycling()
 	_test_damage_pipeline()
 	_test_strip()
+	_test_rewards()
 	_test_valuation()
 	_test_meta_progression()
 	_test_map()
@@ -79,55 +80,81 @@ func _test_content() -> void:
 	_eq("upgraded laser hits harder",
 		int(laser.effects_for(true)[0]["amount"]) > int(laser.effects_for(false)[0]["amount"]), true)
 
-func _test_hull_grid() -> void:
-	print("hull grid")
-	var g := HullGrid.new(4, 3)
-	var laser: PartDef = Database.part(&"burst_laser")     # 2x1
-	var reactor: PartDef = Database.part(&"reactor_mk1")   # 1x2
+func _test_loadout() -> void:
+	print("loadout (typed slots)")
+	var g := ShipLoadout.new("Test")
+	g.capacity = {ShipLoadout.SLOT_WEAPON: 4, ShipLoadout.SLOT_HULL: 3,
+		ShipLoadout.SLOT_UTILITY: 4}
 
-	_check("places in bounds", g.place(laser, Vector2i(0, 0)) != null)
-	_check("rejects overlap", g.place(reactor, Vector2i(0, 0)) == null)
-	_check("rejects out of bounds", g.place(laser, Vector2i(3, 0)) == null)
-	_check("overlap reason is readable",
-		g.placement_error(reactor, Vector2i(0, 0)).contains("overlaps"))
-	_check("places beside", g.place(reactor, Vector2i(0, 1)) != null)
-	_eq("free cells accounted", g.free_cells(), 4 * 3 - 2 - 2)
+	var laser: PartDef = Database.part(&"burst_laser")        # weapon
+	var deflector: PartDef = Database.part(&"deflector_mk1")  # hull
+	var thrusters: PartDef = Database.part(&"ion_thrusters")  # utility
 
-	var a: PartInstance = g.parts[0]
-	var b: PartInstance = g.parts[1]
-	_check("detects orthogonal adjacency", g.neighbors_of(a).has(b))
-	_check("removal works", g.remove(b))
-	_eq("removal frees cells", g.free_cells(), 4 * 3 - 2)
+	_eq("weapon slots start empty", g.free_slots(ShipLoadout.SLOT_WEAPON), 4)
+	_check("installs into a free slot", g.install(laser) != null)
+	_eq("slot consumed", g.free_slots(ShipLoadout.SLOT_WEAPON), 3)
+	_eq("other slots untouched", g.free_slots(ShipLoadout.SLOT_HULL), 3)
+
+	# Fill the weapon slots and confirm the hard limit holds.
+	for i in 3:
+		g.install(laser)
+	_eq("weapon slots full", g.free_slots(ShipLoadout.SLOT_WEAPON), 0)
+	_check("refuses a fifth weapon", g.install(laser) == null)
+	_check("refusal is readable", g.install_error(laser).contains("weapon"))
+	_check("a full weapon slot does not block hull", g.install(deflector) != null)
+
+	# Swapping is how a full slot stays an upgrade path.
+	var old: PartInstance = g.installed_in(ShipLoadout.SLOT_WEAPON)[0]
+	var lance: PartDef = Database.part(&"carrion_lance")
+	_check("swaps within the same slot type", g.replace(old, lance) != null)
+	_eq("swap does not change slot usage", g.free_slots(ShipLoadout.SLOT_WEAPON), 0)
+	_check("refuses a cross-slot swap",
+		g.replace(g.installed_in(ShipLoadout.SLOT_HULL)[0], thrusters) == null)
 
 func _test_compile() -> void:
-	print("compile (grid -> combat profile)")
+	print("compile (loadout -> combat profile)")
 	Rng.seed_run(1)
 	var ship := StarterShips.salvager()
 	var prof := ship.compile()
+
+	_eq("starter fills one of each slot type", ship.parts.size(), 3)
+	_eq("weapon slot", ship.free_slots(ShipLoadout.SLOT_WEAPON), 3)
+	_eq("hull slot", ship.free_slots(ShipLoadout.SLOT_HULL), 2)
+	_eq("utility slot", ship.free_slots(ShipLoadout.SLOT_UTILITY), 3)
+
 	_check("has weapons system", prof.has_system(&"weapons"))
 	_check("has shields system", prof.has_system(&"shields"))
-	_check("deck built from parts", prof.deck.size() >= 4)
-	_check("laser granted twice by burst laser",
-		prof.deck.count(&"laser_burst") == 2)
+	_eq("starter deck is 3 parts x 3 cards", prof.deck.size(), 9)
+	_eq("laser granted twice by burst laser", prof.deck.count(&"laser_burst"), 2)
 	_check("hull includes base", prof.max_hull >= 30)
-	_check("power is positive", prof.power > 0, "power=%d" % prof.power)
+	_check("ship is self-powered without a reactor", prof.power > 0)
+	_check("starter is within its power budget", prof.warnings.is_empty(),
+		str(prof.warnings))
 
 	# Wrecked parts contribute nothing.
-	var wrecked_before := prof.deck.size()
-	ship.parts[1].wear = ship.parts[1].def.integrity
-	var prof2 := ship.compile()
-	_check("wrecked part drops its cards", prof2.deck.size() < wrecked_before)
+	var before := prof.deck.size()
+	ship.parts[0].wear = ship.parts[0].def.integrity
+	_check("wrecked part drops its cards", ship.compile().deck.size() < before)
 
-	# Adjacency synergy.
-	var g := HullGrid.new(6, 4)
-	var emp: PartDef = Database.part(&"emp_projector")   # synergy: adjacent reactor -> +1 power
-	var reactor: PartDef = Database.part(&"reactor_mk1")
-	g.place(emp, Vector2i(0, 0))
-	var without := g.compile().power
-	g.place(reactor, Vector2i(0, 1))
-	var with_adj := g.compile().power
-	_check("adjacency synergy applies", with_adj > without + reactor.power_gen - 1,
-		"without=%d with=%d" % [without, with_adj])
+	# Overdrawing the reactor is a price, not a wall.
+	var hog := ShipLoadout.new("Hog")
+	hog.base_power = 2
+	hog.install(Database.part(&"carrion_lance"))   # draw 3
+	var hp := hog.compile()
+	_check("power deficit is reported", not hp.warnings.is_empty())
+	_check("deficit reduces energy", hp.power < 2)
+	_check("but the part still installed", hog.parts.size() == 1)
+
+	# Synergy keys off having a system anywhere on the ship, not off where a
+	# part sits. EMP Projector wants sensors aboard.
+	var syn := ShipLoadout.new("Syn")
+	syn.install(Database.part(&"emp_projector"))
+	var without := syn.compile().draw_per_turn
+	syn.install(Database.part(&"sensor_array"))    # sensors present -> synergy fires
+	var with_sensors := syn.compile().draw_per_turn
+	_check("synergy applies when the system is present",
+		with_sensors > without + int(Database.part(&"sensor_array").stats.get("draw", 0)) - 1,
+		"without=%d with=%d" % [without, with_sensors])
 
 func _test_rng_determinism() -> void:
 	print("rng")
@@ -280,26 +307,27 @@ func _test_strip() -> void:
 	run.start(StarterShips.salvager(), 31)
 
 	var deck_before: int = run.profile.deck.size()
-	_eq("starter ship is 4 parts x 3 cards", deck_before, 12)
+	_eq("starter ship is 3 parts x 3 cards", deck_before, 9)
 
 	var opts := SalvageYard.options(run)
-	_eq("every mount on every part is offered", opts.size(), 4 * 3)
+	_eq("every mount on every part is offered", opts.size(), 3 * 3)
 	_check("options carry a value cost", int(opts[0]["value_cost"]) > 0)
 
-	# Strip the dud off the reactor.
+	# Cut the weapon's third mount. The starter carries no status-kind dud any
+	# more (its reactor is gone), so the interesting strip is a real tradeoff
+	# card rather than obvious chaff.
 	var target_inst: PartInstance = null
 	var target_index := -1
 	for o in opts:
-		if o["card_id"] == &"coolant_leak":
+		if o["card_id"] == &"overheat":
 			target_inst = o["part"]
 			target_index = o["index"]
-	_check("a dud card is available to cut", target_inst != null)
+	_check("the weapon's third mount is available to cut", target_inst != null)
 
 	var value_before: int = target_inst.sale_value()
 	_eq("strip succeeds", SalvageYard.strip(run, target_inst, target_index), "")
 	_eq("deck is one card lighter", run.profile.deck.size(), deck_before - 1)
-	_check("the stripped card is gone",
-		not run.profile.deck.has(&"coolant_leak"))
+	_check("the stripped card is gone", not run.profile.deck.has(&"overheat"))
 	_check("strip costs sale value", target_inst.sale_value() < value_before)
 
 	# THE regression that matters: the deck is derived, so a strip that is not
@@ -307,9 +335,9 @@ func _test_strip() -> void:
 	run.recompile()
 	_eq("strip survives a bare recompile", run.profile.deck.size(), deck_before - 1)
 	var spare: PartDef = Database.part(&"sensor_array")
-	_check("install an unrelated part", run.install(spare, Vector2i(5, 3)))
+	_check("install an unrelated part", run.install(spare) != null)
 	_check("strip survives installing another part",
-		not run.profile.deck.has(&"coolant_leak"))
+		not run.profile.deck.has(&"overheat"))
 
 	# One strip per part, enforced by the type rather than by price.
 	_check("part reports itself stripped", target_inst.is_stripped())
@@ -325,7 +353,7 @@ func _test_strip() -> void:
 	floor_run.start(StarterShips.salvager(), 32)
 	for inst in floor_run.ship.parts:
 		SalvageYard.strip(floor_run, inst, 0)
-	_eq("every part stripped once", floor_run.profile.deck.size(), 8)
+	_eq("every part stripped once", floor_run.profile.deck.size(), 6)
 	var still_strippable := 0
 	for inst in floor_run.ship.parts:
 		if inst.can_strip():
@@ -333,11 +361,70 @@ func _test_strip() -> void:
 	_eq("nothing left to strip", still_strippable, 0)
 
 	var summary := SalvageYard.strip_summary(floor_run)
-	_eq("summary counts strips", summary["stripped"], 4)
+	_eq("summary counts strips", summary["stripped"], 3)
 
 	# Strips must survive save/load along with the rest of the ship.
-	var round_trip := HullGrid.from_dict(floor_run.ship.to_dict())
-	_eq("strips survive serialisation", round_trip.compile().deck.size(), 8)
+	var round_trip := ShipLoadout.from_dict(floor_run.ship.to_dict())
+	_eq("strips survive serialisation", round_trip.compile().deck.size(), 6)
+
+func _test_rewards() -> void:
+	print("rewards")
+	Rng.seed_run(77)
+	var meta := MetaState.new()
+	for pid in Database.parts:
+		meta.unlocked[pid] = true
+	var run := RunState.new()
+	run.start(StarterShips.salvager(), 77)
+
+	# Tier scaling: only tougher fights pay out improvements.
+	_check("regular enemies drop no improvement",
+		RewardPool.build(run, meta, Database.enemy(&"scout_drone"))["improvement"] == null)
+	var elite: ImprovementDef = RewardPool.build(run, meta, Database.enemy(&"gunship"))["improvement"]
+	_check("mini-boss drops an improvement", elite != null)
+	_check("mini-boss improvement is common or uncommon",
+		elite != null and [&"common", &"uncommon"].has(elite.rarity),
+		"got %s" % (elite.rarity if elite else "null"))
+	var boss: ImprovementDef = RewardPool.build(run, meta, Database.enemy(&"dreadnought"))["improvement"]
+	_check("boss improvement is rare", boss != null and boss.rarity == &"rare",
+		"got %s" % (boss.rarity if boss else "null"))
+	var boss_parts: Array = RewardPool.build(run, meta, Database.enemy(&"dreadnought"))["parts"]
+	_check("boss offers a rare part", boss_parts.any(func(o): return o["rarity"] == &"rare"))
+
+	# Improvements change the ship, not the deck.
+	var deck_before: int = run.profile.deck.size()
+	var hull_before: int = run.profile.max_hull
+	run.ship.add_improvement(&"reinforced_frame")   # +16 hull
+	run.recompile()
+	_eq("improvement adds no cards", run.profile.deck.size(), deck_before)
+	_eq("improvement raises hull", run.profile.max_hull, hull_before + 16)
+
+	# Slot improvements really add slots.
+	var weapons_before: int = run.ship.slot_capacity(ShipLoadout.SLOT_WEAPON)
+	run.ship.add_improvement(&"weapon_hardpoint")
+	_eq("weapon hardpoint adds a slot",
+		run.ship.slot_capacity(ShipLoadout.SLOT_WEAPON), weapons_before + 1)
+
+	var round_trip := ShipLoadout.from_dict(run.ship.to_dict())
+	_eq("improvements survive serialisation",
+		round_trip.slot_capacity(ShipLoadout.SLOT_WEAPON), weapons_before + 1)
+
+	# The hull generates power; no part may.
+	for pid in Database.parts:
+		if Database.parts[pid].power_gen != 0:
+			_check("no part generates power (%s)" % pid, false)
+	_check("no part generates power", true)
+	_check("ship is powered with no reactor part", run.profile.power > 0)
+
+	# Jettison: declining a part cuts an installed one, cards and all.
+	var victim: PartInstance = run.ship.parts[0]
+	var cards_before: int = run.profile.deck.size()
+	var slot := victim.def.slot
+	var free_before: int = run.ship.free_slots(slot)
+	_eq("jettison succeeds", RewardPool.jettison(run, victim), "")
+	_eq("jettison frees the slot", run.ship.free_slots(slot), free_before + 1)
+	_check("jettison removes its cards too",
+		run.profile.deck.size() < cards_before)
+	_check("jettisoning it twice fails", RewardPool.jettison(run, victim) != "")
 
 func _test_valuation() -> void:
 	print("valuation")
@@ -492,7 +579,7 @@ func _simulate_run(run_seed: int, verbose: bool = false,
 		# Between fights, spend credits repairing the worst-worn part, and
 		# cut one dud card the way a player passing a salvage node would.
 		_auto_repair(run)
-		_auto_install(run)
+		_auto_reward(run, enemy_id)
 		_auto_strip(run)
 
 	run.sector = 3 if run.boss_killed else 2
@@ -710,26 +797,35 @@ func _worst_own_system(c: CombatController) -> StringName:
 	return worst.id if worst != null else &""
 
 
-## Buy a part the way a shop node would. Growth is gated by the credit economy,
-## not handed out free after every fight -- with free parts the ship outruns the
-## enemy ladder and the win rate stops measuring anything.
-func _auto_install(run: RunState) -> void:
-	var pool: Array = []
-	for pid in Database.parts:
-		pool.append(Database.parts[pid])
-	Rng.shuffle(&"shop", pool)
-	for part in pool:
-		if run.credits < part.base_value:
-			continue
-		for y in run.ship.height:
-			for x in run.ship.width:
-				if not run.ship.can_place(part, Vector2i(x, y)):
-					continue
-				run.install(part, Vector2i(x, y))
-				if run.profile.warnings.is_empty():
-					run.add_credits(-part.base_value)
-					return
-				run.uninstall(run.ship.parts.back())  # power deficit; put it back
+## Take a battle reward the way the reward screen does, scaled by enemy tier:
+## a part from every win, plus an improvement from mini-bosses and bosses.
+func _auto_reward(run: RunState, enemy_id: StringName) -> void:
+	var enemy: EnemyDef = Database.enemy(enemy_id)
+	if enemy == null:
+		return
+	var pack := RewardPool.build(run, _sim_meta_state(), enemy)
+	var imp: ImprovementDef = pack["improvement"]
+	if imp != null:
+		run.ship.add_improvement(imp.id)
+		run.recompile()
+	var offers: Array = pack["parts"]
+	for o in offers:
+		if o["can_install"]:
+			RewardPool.claim(run, o)
+			return
+	if not offers.is_empty():
+		RewardPool.claim(run, offers[0])
+
+## The simulator has no Game autoload state; build a meta with everything
+## unlocked so reward offers cover the whole part list.
+func _sim_meta_state() -> MetaState:
+	if _sim_meta == null:
+		_sim_meta = MetaState.new()
+		for pid in Database.parts:
+			_sim_meta.unlocked[pid] = true
+	return _sim_meta
+
+var _sim_meta: MetaState = null
 
 ## Cut the first status-kind ("dud") card found. A real player would agonise;
 ## the sim just needs the mechanic exercised so deck size reflects it.

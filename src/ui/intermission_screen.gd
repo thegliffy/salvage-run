@@ -59,8 +59,12 @@ func _ready() -> void:
 func _refresh() -> void:
 	var run: RunState = Game.run
 	_credits.text = "credits %d" % run.credits
-	_deck.text = "deck %d cards   hull %d/%d" % [
-		run.profile.deck.size(), run.hull_carryover, run.profile.max_hull]
+	_deck.text = "deck %d   hull %d/%d   power %d/%d   weapon %d/%d  hull-slot %d/%d  utility %d/%d" % [
+		run.profile.deck.size(), run.hull_carryover, run.profile.max_hull,
+		run.profile.power_draw, run.profile.power,
+		run.ship.installed_in(ShipLoadout.SLOT_WEAPON).size(), run.ship.slot_capacity(ShipLoadout.SLOT_WEAPON),
+		run.ship.installed_in(ShipLoadout.SLOT_HULL).size(), run.ship.slot_capacity(ShipLoadout.SLOT_HULL),
+		run.ship.installed_in(ShipLoadout.SLOT_UTILITY).size(), run.ship.slot_capacity(ShipLoadout.SLOT_UTILITY)]
 	for c in _list.get_children():
 		c.queue_free()
 
@@ -72,7 +76,7 @@ func _refresh() -> void:
 		h.add_theme_constant_override("separation", 10)
 		row.add_child(h)
 
-		var label := "%s  (%s)" % [inst.def.name,
+		var label := "%s  [%s]  (%s)" % [inst.def.name, String(inst.def.slot).left(3).to_upper(),
 			"wrecked" if inst.is_wrecked() else ("stripped" if inst.is_stripped() else "ok")]
 		var nm := UITheme.label(label, 15, 
 			UITheme.HOSTILE if inst.is_wrecked() else UITheme.TEXT, "SemiBold")

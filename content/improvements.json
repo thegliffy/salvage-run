@@ -1,0 +1,55 @@
+{
+  "reinforced_bulkheads": {
+    "name": "Reinforced Bulkheads", "rarity": "common",
+    "text": "+8 hull", "stats": {"hull": 8}
+  },
+  "power_conduits": {
+    "name": "Power Conduits", "rarity": "common",
+    "text": "+1 power", "stats": {"power": 1}
+  },
+  "streamlined_plating": {
+    "name": "Streamlined Plating", "rarity": "common",
+    "text": "+8 evasion", "stats": {"evasion": 8}
+  },
+  "backup_cells": {
+    "name": "Backup Cells", "rarity": "common",
+    "text": "+4 shield, +1 shield regen", "stats": {"shield": 4, "shield_regen": 1}
+  },
+  "auxiliary_bay": {
+    "name": "Auxiliary Bay", "rarity": "uncommon",
+    "text": "+1 utility slot", "slots": {"utility": 1}
+  },
+  "reinforced_frame": {
+    "name": "Reinforced Frame", "rarity": "uncommon",
+    "text": "+16 hull", "stats": {"hull": 16}
+  },
+  "capacitor_bank": {
+    "name": "Capacitor Bank", "rarity": "uncommon",
+    "text": "+2 power", "stats": {"power": 2}
+  },
+  "targeting_uplink": {
+    "name": "Targeting Uplink", "rarity": "uncommon",
+    "text": "Draw 1 more card each turn", "stats": {"draw": 1}
+  },
+  "armour_bay": {
+    "name": "Armour Bay", "rarity": "uncommon",
+    "text": "+1 hull slot", "slots": {"hull": 1}
+  },
+  "weapon_hardpoint": {
+    "name": "Weapon Hardpoint", "rarity": "rare",
+    "text": "+1 weapon slot", "slots": {"weapon": 1}
+  },
+  "overcharged_core": {
+    "name": "Overcharged Core", "rarity": "rare",
+    "text": "+3 power", "stats": {"power": 3}
+  },
+  "armoured_keel": {
+    "name": "Armoured Keel", "rarity": "rare",
+    "text": "+28 hull, +1 hull slot", "stats": {"hull": 28}, "slots": {"hull": 1}
+  },
+  "combat_uplink": {
+    "name": "Combat Uplink", "rarity": "rare",
+    "text": "Draw 1 more card each turn, +12 hull",
+    "stats": {"draw": 1, "hull": 12}
+  }
+}

@@ -40,6 +40,23 @@ static func run(host: Node, out_dir: String) -> void:
 				shot += 1
 			screen._debug_autoplay_turn()
 			await _settle(host, 6)
+		elif name == "reward_screen.gd":
+			await _settle(host, 12)
+			await _capture(host, "%s/%02d-reward.png" % [out_dir, shot])
+			shot += 1
+			# Take the first offer that fits, so the ship actually grows.
+			var offers: Array = screen._reward.get("parts", [])
+			if offers.is_empty():
+				Game.after_reward()
+			else:
+				var picked: Dictionary = offers[0]
+				for o in offers:
+					if o["can_install"]:
+						picked = o
+						break
+				RewardPool.claim(Game.run, picked)
+				Game.after_reward()
+			await _settle(host, 25)
 		elif name == "intermission_screen.gd":
 			await _settle(host, 12)
 			await _capture(host, "%s/%02d-salvage-yard.png" % [out_dir, shot])

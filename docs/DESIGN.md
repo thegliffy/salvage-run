@@ -21,23 +21,37 @@ mechanic in §8, which removes one card from a specific part rather than offerin
 a generic purge — the narrow tool is the right one here, because swapping parts
 already thins the deck on its own.
 
-## 2. Hybrid spatial hull, abstract combat
+## 2. Typed slots, not a spatial hull
 
-Ship building is spatial (parts are shapes on a grid, adjacency grants synergy
-bonuses). Combat is not — it reads a flat stat block.
+The ship is a set of typed slots — **4 weapon, 3 hull, 4 utility**. Pick up a
+laser and it attaches. There is no layout to arrange.
 
-`HullGrid.compile() → ShipProfile` is the only bridge. Combat never sees the
-grid.
+This replaced a spatial hull grid, and the sim is why: at a typical endgame ship
+the grid sat **61% empty**, so space never bound, and only three of twelve parts
+used the adjacency rule that was the grid's one non-accounting job. It was
+costing a whole drag-and-drop shipyard screen and buying nothing.
 
-**Why:** a spatial puzzle is great between fights, where the player has time and
-the screen is quiet. During combat on a 6" phone screen it would be a disaster.
-Keeping the seam narrow also means the two halves can be balanced and tested
-independently — and the balance sim can build profiles directly, skipping the
-grid entirely.
+**What limits a ship instead** — three soft costs, none spatial:
 
-**Watch for:** any temptation to let combat reach into `HullGrid`. The one
-sanctioned exception is `CombatController.mark_parts_wrecked()`, which writes
-subsystem destruction back onto the parts so damage persists past the fight.
+| Cost | Effect |
+|---|---|
+| Power | draw beyond hull output cuts energy every turn |
+| Mass | heavier ships dodge worse |
+| Deck | every part adds three cards, so a big ship draws badly |
+
+None of them ever *refuse* a part. Slots are the only hard limit, and their job
+is to shape **what** you carry, not how much. Deck dilution is the real
+governor, and it is the deckbuilder-native one: a big ship isn't blocked, it's
+clogged.
+
+**The hull generates the power, not a module.** No part has `power_gen`. Reactor
+output is a property of the ship, raised by improvements — so energy is never a
+slot tax, and there is no mandatory part every build has to carry.
+
+Synergy is keyed to whether the ship **has** a system, not to where a part sits.
+Same combo design, discoverable without a layout screen.
+
+`ShipLoadout.compile() → ShipProfile` remains the only bridge to combat.
 
 ## 3. Telegraphed intents that can fizzle
 
@@ -178,6 +192,29 @@ The simulator also buys parts between fights out of run credits. Handing them
 out free was tried first and pushed the win rate to 98%: the ship outgrew the
 enemy ladder and the number stopped measuring anything.
 
+## 10. Rewards scale with the fight
+
+Victory pays out hardware, never cards directly — the deck is downstream of the
+ship, so a part *is* the card reward.
+
+| Enemy | Payout |
+|---|---|
+| Regular | credits + a part offer |
+| Mini-boss | credits + a part offer + a common/uncommon **improvement** |
+| Sector boss | credits + a **rare** part offer + a rare improvement |
+
+**Improvements** are a separate class from parts: they fill no slot, grant no
+cards, and change the ship itself — more power, more hull, another slot. Keeping
+them distinct means the two reward types never compete for the same decision.
+Parts are how the deck grows; improvements are how the ship's capacity to carry
+parts grows. Restricting them to tough fights is what makes an elite worth
+seeking out rather than routing around.
+
+**Declining a part is a real choice.** Skip the offer and you may **jettison** an
+installed part instead: the slot frees up and all three of its cards leave the
+deck. That is the ship-level counterpart to stripping a single card, and it is
+the only way to cut a whole archetype loose mid-run.
+
 ---
 
 ## Open questions
@@ -199,14 +236,13 @@ multiplicative (raw power). This is the right default, but it means early
 unlocks feel weak. Consider a small number of deliberately-strong starter-ship
 unlocks to give the first few hours a visible power curve.
 
-**Balance is untuned, and the sim now says where.** The 300-run sim wins ~96%.
-Two specific causes, both content rather than code:
+**Balance.** The 200-run sim now wins **50%**, with deaths spread across the
+mini-boss and the boss rather than piling on one enemy. That is a usable
+yardstick at last — a tuning change will actually move the number.
 
-- *Enemies do not scale.* The same Gunship appears at fight 4 and fight 6 while
-  the player's ship grows to ~10 parts and a 21-card deck. Enemy stats need to
-  key off sector depth.
-- *Reward-to-cost ratio is too generous.* The ladder pays out enough credits to
-  buy roughly four parts before the boss.
+The remaining defect is **stalls**: ~15% of runs hit the turn guard, all against
+shield-regenerating enemies. Either enemy `shield_regen` is too high relative to
+card damage, or the player lacks enough shield-stripping tools.
 
 **Dead content.** The play histogram flags cards the pilot essentially never
 reaches for: Ammo Drum, Salvo, Dead Weight, and — notably — Breach Missile,

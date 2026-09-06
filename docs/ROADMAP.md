@@ -6,8 +6,10 @@ What exists, and the order the rest should be built in.
 
 - [x] Seeded RNG with independent streams
 - [x] JSON content pipeline with load-time reference validation
-- [x] Hull grid: placement, overlap/bounds rules, adjacency synergy
-- [x] `compile()` bridge from spatial layout to combat profile
+- [x] Typed slot loadout (4 weapon / 3 hull / 4 utility) with swap support
+- [x] `compile()` bridge from loadout to combat profile
+- [x] Ship improvements: slot and stat upgrades, separate from parts
+- [x] Tiered battle rewards with jettison as the skip option
 - [x] Combat: turn loop, energy, draw/discard/exhaust, reshuffle
 - [x] Subsystem targeting with telegraphed intents and the fizzle rule
 - [x] Damage pipeline: evasion → shields → subsystem → hull
@@ -16,7 +18,7 @@ What exists, and the order the rest should be built in.
 - [x] Ship valuation with itemised receipt
 - [x] Card removal: three-card part packages, one strip per part, paid in sale value
 - [x] Meta state: salvage currency, part unlocks, save/load with migrations
-- [x] Headless test suite (87 tests) and balance simulator with a content-aware
+- [x] Headless test suite (112 tests) and balance simulator with a content-aware
       pilot and card-play histogram
 
 ## Next: make it playable
@@ -30,8 +32,8 @@ The systems work but nobody can see them. In order:
 2. **Targeting interaction.** Tap a card, tap a subsystem. Needs to work with a
    thumb; subsystem hitboxes should be at least 48dp.
 3. **Map screen.** The layered DAG, showing node types and the path taken.
-4. **Shipyard screen.** Drag parts onto the hull grid. Show the compiled profile
-   live so the player sees stats change as they place. Surface
+4. **Ship screen.** List installed parts by slot with the compiled profile
+   beside them. No drag-and-drop needed now that the grid is gone. Surface
    `ShipProfile.warnings` (power deficit) prominently.
 5. **Salvage node screen.** List each part's three mounts and let the player cut
    one, showing the sale value it costs. `SalvageYard.options()` already returns

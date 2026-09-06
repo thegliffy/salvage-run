@@ -12,6 +12,7 @@ const CONTENT_DIR := "res://content/"
 var cards: Dictionary = {}    # StringName -> CardDef
 var parts: Dictionary = {}    # StringName -> PartDef
 var enemies: Dictionary = {}  # StringName -> EnemyDef
+var improvements: Dictionary = {}  # StringName -> ImprovementDef
 
 var _errors: Array[String] = []
 
@@ -23,6 +24,7 @@ func load_all() -> void:
 	cards = _load_defs("cards.json", CardDef)
 	parts = _load_defs("parts.json", PartDef)
 	enemies = _load_defs("enemies.json", EnemyDef)
+	improvements = _load_defs("improvements.json", ImprovementDef)
 	_validate_references()
 	if not _errors.is_empty():
 		for e in _errors:
@@ -73,6 +75,16 @@ func part(id: StringName) -> PartDef:
 
 func enemy(id: StringName) -> EnemyDef:
 	return enemies.get(id)
+
+func improvement(id: StringName) -> ImprovementDef:
+	return improvements.get(id)
+
+func improvements_of_rarity(rarities: Array) -> Array:
+	var out: Array = []
+	for iid in improvements:
+		if rarities.has(improvements[iid].rarity):
+			out.append(improvements[iid])
+	return out
 
 func parts_matching(filter: Callable) -> Array:
 	var out: Array = []

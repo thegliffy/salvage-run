@@ -38,7 +38,7 @@ is cancelled outright. Between fights you can repair wrecked parts and cut one
 card from any mount.
 
 ```
-87 tests passing · 300-run balance sim with a content-aware pilot
+112 tests passing · 200-run balance sim at ~50% win rate
 ```
 
 ## Quick start

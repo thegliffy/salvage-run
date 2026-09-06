@@ -842,5 +842,61 @@
       ]
     },
     "icon": "red_r_01.png"
+  },
+  "reflective_field": {
+    "name": "Reflective Field",
+    "kind": "tech",
+    "rarity": "uncommon",
+    "cost": 2,
+    "target": "enemy_system",
+    "text": "Gain 10 shield. Deal 4 damage to a target system.",
+    "effects": [
+      {
+        "op": "shield",
+        "amount": 10
+      },
+      {
+        "op": "damage_system",
+        "amount": 4
+      }
+    ],
+    "upgrade": {
+      "text": "Gain 14 shield. Deal 6 damage to a target system.",
+      "effects": [
+        {
+          "op": "shield",
+          "amount": 14
+        },
+        {
+          "op": "damage_system",
+          "amount": 6
+        }
+      ]
+    },
+    "icon": "blue_b_16.png"
+  },
+  "seal_breach": {
+    "name": "Seal Breach",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "none",
+    "text": "Repair 7 hull.",
+    "effects": [
+      {
+        "op": "repair_hull",
+        "amount": 7
+      }
+    ],
+    "upgrade": {
+      "text": "Repair 11 hull.",
+      "effects": [
+        {
+          "op": "repair_hull",
+          "amount": 11
+        }
+      ]
+    },
+    "icon": "blue_b_17.png"
   }
 }

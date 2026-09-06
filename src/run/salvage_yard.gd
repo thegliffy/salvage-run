@@ -35,7 +35,7 @@ static func options(run: RunState) -> Array:
 
 static func _value_after_strip(inst: PartInstance) -> int:
 	# Cheap and exact: strip a throwaway copy rather than reimplement the maths.
-	var probe := PartInstance.create(inst.def, inst.origin)
+	var probe := PartInstance.create(inst.def)
 	probe.upgraded = inst.upgraded
 	probe.wear = inst.wear
 	probe.stripped_index = 0

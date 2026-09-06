@@ -2,9 +2,9 @@ class_name ShipProfile
 extends RefCounted
 ## The flat, combat-ready view of a ship.
 ##
-## Combat never sees the grid. HullGrid.compile() collapses spatial layout into
-## this stat block + system list + deck list, and combat reads only this.
-## That is the hybrid: spatial building out of combat, clean math inside it.
+## Combat never sees the loadout. ShipLoadout.compile() collapses installed
+## parts into this stat block + system list + deck list, and combat reads only
+## this. One seam, so there is exactly one place where parts become numbers.
 
 var display_name: String = "Salvager"
 var max_hull: int = 40
@@ -12,6 +12,8 @@ var max_shield: int = 0
 var shield_regen: int = 0
 var evasion: int = 0
 var power: int = 3                  # energy per turn
+var power_draw: int = 0             # total draw, for the loadout readout
+var mass: int = 0
 var draw_per_turn: int = 5
 var systems: Array = []             # [{id, name, integrity, part_uids}]
 var deck: Array[StringName] = []    # card ids

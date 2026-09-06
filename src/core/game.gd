@@ -8,10 +8,13 @@ extends Node
 
 signal run_changed()
 
-const LADDER: Array[StringName] = [&"scout_drone", &"raider", &"dreadnought"]
+## One of each reward tier so a demo run shows the whole payout ladder:
+## a regular enemy, a mini-boss, then the sector boss.
+const LADDER: Array[StringName] = [&"scout_drone", &"gunship", &"dreadnought"]
 
 const SCENE_TITLE := "res://scenes/title.tscn"
 const SCENE_COMBAT := "res://scenes/combat.tscn"
+const SCENE_REWARD := "res://scenes/reward.tscn"
 const SCENE_INTERMISSION := "res://scenes/intermission.tscn"
 const SCENE_SALE := "res://scenes/sale.tscn"
 
@@ -20,6 +23,7 @@ var meta: MetaState
 var fight_index: int = 0
 var last_combat: CombatController
 var last_valuation: Dictionary = {}
+var pending_reward: Dictionary = {}
 
 func _ready() -> void:
 	meta = SaveSystem.load_meta()
@@ -55,8 +59,15 @@ func finish_combat(c: CombatController) -> void:
 	if not run.alive or (c.victory and is_final_fight()):
 		_end_run()
 		return
+	# Build the payout before advancing, so it reflects the enemy just beaten.
+	pending_reward = RewardPool.build(run, meta, Database.enemy(current_enemy()))
 	fight_index += 1
 	run_changed.emit()
+	# Winning gives hardware; the salvage yard afterwards is where cards get cut.
+	get_tree().change_scene_to_file(SCENE_REWARD)
+
+## Called by the reward screen once a part is taken or skipped.
+func after_reward() -> void:
 	get_tree().change_scene_to_file(SCENE_INTERMISSION)
 
 func _end_run() -> void:

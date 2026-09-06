@@ -2,7 +2,7 @@ class_name RunState
 extends RefCounted
 ## Everything that exists for the duration of one run and dies with it.
 ##
-## The ship (HullGrid) is the run's centre of gravity: the deck is derived from
+## The ship (ShipLoadout) is the run's centre of gravity: the deck is derived from
 ## it, damage is recorded on it, and at the end it is sold. There is no separate
 ## "deck" the player edits.
 
@@ -11,7 +11,7 @@ var sector: int = 1
 var map: Dictionary = {}
 var current_node: int = -1
 var credits: int = 0
-var ship: HullGrid
+var ship: ShipLoadout
 var profile: ShipProfile
 var cleared_nodes: int = 0
 var elites_killed: int = 0
@@ -19,7 +19,7 @@ var boss_killed: bool = false
 var alive: bool = true
 var hull_carryover: int = -1   # hull persists between fights; -1 = full
 
-func start(starting_ship: HullGrid, run_seed: int = -1) -> void:
+func start(starting_ship: ShipLoadout, run_seed: int = -1) -> void:
 	seed_value = run_seed if run_seed >= 0 else Rng.new_seed()
 	Rng.seed_run(seed_value)
 	ship = starting_ship
@@ -45,12 +45,21 @@ func add_credits(amount: int) -> void:
 	credits = maxi(0, credits + amount)
 	EventBus.credits_changed.emit(credits)
 
-func install(part: PartDef, at: Vector2i) -> bool:
-	var inst := ship.place(part, at)
+func install(part: PartDef) -> PartInstance:
+	var inst := ship.install(part)
 	if inst == null:
-		return false
+		return null
 	recompile()
-	return true
+	return inst
+
+## Swap a new part into an occupied slot -- a full slot must still be an
+## upgrade opportunity or rewards stop mattering once the ship is fitted out.
+func swap(old: PartInstance, part: PartDef) -> PartInstance:
+	var inst := ship.replace(old, part)
+	if inst == null:
+		return null
+	recompile()
+	return inst
 
 func uninstall(inst: PartInstance) -> bool:
 	if not ship.remove(inst):

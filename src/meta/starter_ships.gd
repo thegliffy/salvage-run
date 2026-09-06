@@ -1,24 +1,31 @@
 class_name StarterShips
 extends RefCounted
-## Hull layouts the player can begin a run with.
-## Kept in code rather than JSON because a layout is structural, not balance
-## data -- adding one is a design act, not a tuning pass.
+## Ships the player can begin a run with.
+##
+## The hull is self-powered (base_power 5) so a reactor is an upgrade that buys
+## headroom rather than a part you are forced to carry. The Salvager starts one
+## part into each of its three slot types, leaving eight slots to fill from
+## battle rewards.
 
-static func salvager() -> HullGrid:
-	var g := HullGrid.new(6, 4)
-	g.display_name = "Salvager"
+static func salvager() -> ShipLoadout:
+	var g := ShipLoadout.new("Salvager")
+	g.capacity = {
+		ShipLoadout.SLOT_WEAPON: 4,
+		ShipLoadout.SLOT_HULL: 3,
+		ShipLoadout.SLOT_UTILITY: 4,
+	}
 	g.base_hull = 30
-	g.base_power = 1
-	_install(g, &"reactor_mk1", Vector2i(0, 1))
-	_install(g, &"burst_laser", Vector2i(2, 0))
-	_install(g, &"deflector_mk1", Vector2i(2, 2))
-	_install(g, &"ion_thrusters", Vector2i(4, 1))
+	g.base_power = 5
+	g.base_draw = 5
+	_install(g, &"burst_laser")      # weapon
+	_install(g, &"deflector_mk1")    # hull
+	_install(g, &"ion_thrusters")    # utility
 	return g
 
-static func _install(g: HullGrid, part_id: StringName, at: Vector2i) -> void:
+static func _install(g: ShipLoadout, part_id: StringName) -> void:
 	var p: PartDef = Database.part(part_id)
 	if p == null:
 		push_error("[StarterShips] missing part '%s'" % part_id)
 		return
-	if g.place(p, at) == null:
-		push_error("[StarterShips] could not place '%s' at %s" % [part_id, at])
+	if g.install(p) == null:
+		push_error("[StarterShips] no free %s slot for '%s'" % [p.slot, part_id])

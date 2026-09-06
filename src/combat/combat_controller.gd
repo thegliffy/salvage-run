@@ -21,15 +21,15 @@ var pending_credits: int = 0
 var events: Array[Dictionary] = []
 
 # Link back to the run so subsystem destruction can wear down real parts.
-var hull_grid: HullGrid = null
+var loadout: ShipLoadout = null
 
 func _init() -> void:
 	resolver = EffectResolver.new(self)
 
-func setup(profile: ShipProfile, enemy_def: EnemyDef, grid: HullGrid = null) -> void:
+func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) -> void:
 	player = Combatant.from_profile(profile)
 	enemy = Combatant.from_enemy(enemy_def)
-	hull_grid = grid
+	loadout = ship
 	deck = Deck.new()
 	deck.build(profile.deck)
 	brain = EnemyBrain.new(enemy_def, enemy)
@@ -133,9 +133,9 @@ func _finish(won: bool) -> void:
 ## follows you out of the fight. This is what gives repair its value and what
 ## makes a battered ship sell for less at the end of the run.
 func mark_parts_wrecked(target: Combatant, s: ShipSystem) -> void:
-	if not target.is_player or hull_grid == null:
+	if not target.is_player or loadout == null:
 		return
-	for inst in hull_grid.parts:
+	for inst in loadout.parts:
 		if s.part_uids.has(inst.uid):
 			inst.wear = inst.def.integrity
 

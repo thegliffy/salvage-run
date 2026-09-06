@@ -1,46 +1,9 @@
 {
-  "reactor_mk1": {
-    "name": "Reactor Mk I",
-    "system": "reactor",
-    "tier": 1,
-    "flavor": "Barely enough to keep the lights on and the guns warm.",
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        0,
-        1
-      ]
-    ],
-    "integrity": 10,
-    "power_draw": 0,
-    "power_gen": 3,
-    "mass": 2,
-    "grants": [
-      "divert_power",
-      "divert_power",
-      "coolant_leak"
-    ],
-    "base_value": 50,
-    "unlock_cost": 0
-  },
   "burst_laser": {
     "name": "Burst Laser",
     "system": "weapons",
     "tier": 1,
     "flavor": "Two barrels, no cooldown discipline.",
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ]
-    ],
     "integrity": 8,
     "power_draw": 2,
     "mass": 2,
@@ -50,22 +13,14 @@
       "overheat"
     ],
     "base_value": 60,
-    "unlock_cost": 0
+    "unlock_cost": 0,
+    "slot": "weapon",
+    "power_gen": 0
   },
   "deflector_mk1": {
     "name": "Deflector Mk I",
     "system": "shields",
     "tier": 1,
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ]
-    ],
     "integrity": 9,
     "power_draw": 1,
     "mass": 2,
@@ -79,22 +34,14 @@
       "static_discharge"
     ],
     "base_value": 55,
-    "unlock_cost": 0
+    "unlock_cost": 0,
+    "slot": "hull",
+    "power_gen": 0
   },
   "ion_thrusters": {
     "name": "Ion Thrusters",
     "system": "engines",
     "tier": 1,
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        0,
-        1
-      ]
-    ],
     "integrity": 7,
     "power_draw": 1,
     "mass": 2,
@@ -107,19 +54,15 @@
       "afterburner"
     ],
     "base_value": 55,
-    "unlock_cost": 0
+    "unlock_cost": 0,
+    "slot": "utility",
+    "power_gen": 0
   },
   "sensor_array": {
     "name": "Sensor Array",
     "system": "sensors",
     "tier": 1,
     "flavor": "Finds the seams in a hull. Also good for gossip.",
-    "shape": [
-      [
-        0,
-        0
-      ]
-    ],
     "integrity": 5,
     "power_draw": 1,
     "mass": 1,
@@ -132,26 +75,14 @@
       "sensor_ghost"
     ],
     "base_value": 70,
-    "unlock_cost": 0
+    "unlock_cost": 0,
+    "slot": "utility",
+    "power_gen": 0
   },
   "missile_rack": {
     "name": "Missile Rack",
     "system": "weapons",
     "tier": 2,
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ],
-      [
-        0,
-        1
-      ]
-    ],
     "integrity": 10,
     "power_draw": 2,
     "mass": 3,
@@ -163,27 +94,19 @@
     "base_value": 110,
     "unlock_cost": 150,
     "synergy": {
-      "adjacent_system": "sensors",
       "bonus": {
         "draw": 1
-      }
-    }
+      },
+      "requires_system": "sensors"
+    },
+    "slot": "weapon",
+    "power_gen": 0
   },
   "emp_projector": {
     "name": "EMP Projector",
     "system": "weapons",
     "tier": 2,
     "flavor": "Does no damage. Wins fights anyway.",
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ]
-    ],
     "integrity": 7,
     "power_draw": 2,
     "mass": 2,
@@ -195,26 +118,18 @@
     "base_value": 120,
     "unlock_cost": 200,
     "synergy": {
-      "adjacent_system": "reactor",
       "bonus": {
         "power": 1
-      }
-    }
+      },
+      "requires_system": "sensors"
+    },
+    "slot": "weapon",
+    "power_gen": 0
   },
   "repair_bay": {
     "name": "Repair Bay",
     "system": "support",
     "tier": 2,
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ]
-    ],
     "integrity": 8,
     "power_draw": 1,
     "mass": 2,
@@ -224,22 +139,14 @@
       "damage_control"
     ],
     "base_value": 100,
-    "unlock_cost": 175
+    "unlock_cost": 175,
+    "slot": "utility",
+    "power_gen": 0
   },
   "armor_plating": {
     "name": "Armor Plating",
     "system": "armor",
     "tier": 1,
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ]
-    ],
     "integrity": 14,
     "power_draw": 0,
     "mass": 4,
@@ -252,19 +159,15 @@
       "dead_weight"
     ],
     "base_value": 80,
-    "unlock_cost": 120
+    "unlock_cost": 120,
+    "slot": "hull",
+    "power_gen": 0
   },
   "salvage_arm": {
     "name": "Salvage Arm",
     "system": "support",
     "tier": 1,
     "flavor": "Pays for itself, eventually, probably.",
-    "shape": [
-      [
-        0,
-        0
-      ]
-    ],
     "integrity": 6,
     "power_draw": 1,
     "mass": 1,
@@ -274,63 +177,15 @@
       "magnetic_drag"
     ],
     "base_value": 90,
-    "unlock_cost": 100
-  },
-  "overcharger": {
-    "name": "Overcharger",
-    "system": "reactor",
-    "tier": 3,
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        0,
-        1
-      ],
-      [
-        1,
-        1
-      ]
-    ],
-    "integrity": 9,
-    "power_draw": 0,
-    "power_gen": 4,
-    "mass": 3,
-    "grants": [
-      "reactor_surge",
-      "overcharge",
-      "power_spike"
-    ],
-    "base_value": 190,
-    "unlock_cost": 320,
-    "synergy": {
-      "adjacent_system": "weapons",
-      "bonus": {
-        "power": 1
-      }
-    }
+    "unlock_cost": 100,
+    "slot": "utility",
+    "power_gen": 0
   },
   "carrion_lance": {
     "name": "Carrion Lance",
     "system": "weapons",
     "tier": 3,
     "flavor": "Built to finish what someone else started.",
-    "shape": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ],
-      [
-        2,
-        0
-      ]
-    ],
     "integrity": 11,
     "power_draw": 3,
     "mass": 3,
@@ -340,6 +195,118 @@
       "execute_protocol"
     ],
     "base_value": 200,
-    "unlock_cost": 400
+    "unlock_cost": 400,
+    "slot": "weapon",
+    "power_gen": 0
+  },
+  "ablative_plating": {
+    "name": "Ablative Plating",
+    "system": "armor",
+    "slot": "hull",
+    "tier": 1,
+    "flavor": "Designed to be destroyed, slowly.",
+    "integrity": 12,
+    "power_draw": 0,
+    "mass": 3,
+    "stats": {
+      "hull": 12
+    },
+    "grants": [
+      "armor_brace",
+      "patch_kit",
+      "dead_weight"
+    ],
+    "base_value": 70,
+    "unlock_cost": 0,
+    "power_gen": 0
+  },
+  "shield_capacitor": {
+    "name": "Shield Capacitor",
+    "system": "shields",
+    "slot": "hull",
+    "tier": 2,
+    "integrity": 9,
+    "power_draw": 2,
+    "mass": 2,
+    "stats": {
+      "shield": 10,
+      "shield_regen": 2
+    },
+    "grants": [
+      "raise_deflector",
+      "reflective_field",
+      "static_discharge"
+    ],
+    "base_value": 130,
+    "unlock_cost": 180,
+    "synergy": {
+      "requires_system": "engines",
+      "bonus": {
+        "shield_regen": 2
+      }
+    },
+    "power_gen": 0
+  },
+  "blast_doors": {
+    "name": "Blast Doors",
+    "system": "armor",
+    "slot": "hull",
+    "tier": 2,
+    "flavor": "Heavy. Worth it.",
+    "integrity": 18,
+    "power_draw": 0,
+    "mass": 6,
+    "stats": {
+      "hull": 22
+    },
+    "grants": [
+      "seal_breach",
+      "armor_brace",
+      "dead_weight"
+    ],
+    "base_value": 120,
+    "unlock_cost": 160,
+    "power_gen": 0
+  },
+  "power_relay": {
+    "name": "Power Relay",
+    "system": "support",
+    "slot": "utility",
+    "tier": 1,
+    "flavor": "Steals from the lights to feed the guns.",
+    "integrity": 7,
+    "power_draw": 0,
+    "power_gen": 0,
+    "mass": 1,
+    "grants": [
+      "divert_power",
+      "divert_power",
+      "coolant_leak"
+    ],
+    "base_value": 55,
+    "unlock_cost": 0
+  },
+  "overcharge_rig": {
+    "name": "Overcharge Rig",
+    "system": "support",
+    "tier": 3,
+    "integrity": 9,
+    "power_draw": 1,
+    "power_gen": 0,
+    "mass": 3,
+    "grants": [
+      "reactor_surge",
+      "overcharge",
+      "power_spike"
+    ],
+    "base_value": 190,
+    "unlock_cost": 320,
+    "synergy": {
+      "requires_system": "weapons",
+      "bonus": {
+        "draw": 1
+      }
+    },
+    "slot": "utility"
   }
 }
