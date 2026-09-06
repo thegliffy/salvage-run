@@ -16,6 +16,12 @@ static func run(host: Node, out_dir: String) -> void:
 	await _settle(host, 25)
 	await _capture(host, out_dir + "/01-title.png")
 
+	Game.goto_unlock_shop()
+	await _settle(host, 20)
+	await _capture(host, out_dir + "/01b-unlock.png")
+	Game.goto_title()
+	await _settle(host, 12)
+
 	Game.start_run(7)
 	await _settle(host, 30)
 	await _capture(host, out_dir + "/02-map.png")
@@ -37,6 +43,13 @@ static func run(host: Node, out_dir: String) -> void:
 				await _settle(host, 12)
 				await _capture(host, "%s/%02d-map-path.png" % [out_dir, shot])
 				shot += 1
+				if screen.has_method("_open_ship_status"):
+					screen._open_ship_status()
+					await _settle(host, 14)
+					await _capture(host, "%s/02b-ship-status.png" % out_dir)
+					if screen.has_method("_close_ship_status"):
+						screen._close_ship_status()
+					await _settle(host, 8)
 				seen["map"] = true
 			var opts: Array = Game.run.options()
 			if opts.is_empty():

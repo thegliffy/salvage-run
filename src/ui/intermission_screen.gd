@@ -105,7 +105,7 @@ func _refresh() -> void:
 			b.disabled = stripped_this or not inst.can_strip()
 			if stripped_this:
 				b.text = "✖ " + cd.name
-			b.tooltip_text = cd.text_for(inst.upgraded)
+			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd)))
 			var idx := i
 			b.pressed.connect(func():
 				SalvageYard.strip(run, inst, idx)

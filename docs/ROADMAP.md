@@ -38,7 +38,8 @@ What exists, and the order the rest should be built in.
    sits around 31 cards / 15 parts / 4 enemies / 14 improvements.
 4. **Starter-hull unlocks.** Give early meta a visible power curve without
    abandoning additive pool unlocks.
-5. **Audio, art, juice.** Card icons / portraits still local-only (see ASSETS.md).
+5. **Audio, art, juice.** Redistributable card icons / portraits now ship
+   (see ASSETS.md); remaining polish is audio and juice.
 6. **Steam integration.** Achievements and cloud saves via GodotSteam. See
    SHIPPING.md.
 7. **Android input and layout pass.** Safe areas, notches, back-button handling.

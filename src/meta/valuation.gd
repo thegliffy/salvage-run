@@ -36,8 +36,13 @@ static func appraise(run: RunState) -> Dictionary:
 			condition = "wrecked"
 		elif inst.wear > 0:
 			condition = "worn"
-		lines.append({"label": "%s (%s)" % [inst.def.name, condition],
-			"amount": v, "kind": "part"})
+		lines.append({
+			"label": "%s (%s)" % [inst.def.name, condition],
+			"name": inst.def.name,
+			"condition": condition,
+			"amount": v,
+			"kind": "part",
+		})
 	base += part_total
 
 	# --- Hull condition ---
@@ -46,21 +51,37 @@ static func appraise(run: RunState) -> Dictionary:
 		hull_frac = clampf(float(run.hull_carryover) / float(run.profile.max_hull), 0.0, 1.0)
 	var hull_bonus := int(round(HULL_CONDITION_BONUS * hull_frac))
 	if hull_bonus > 0:
-		lines.append({"label": "Hull integrity (%d%%)" % int(hull_frac * 100.0),
-			"amount": hull_bonus, "kind": "bonus"})
+		var hull_pct := int(hull_frac * 100.0)
+		lines.append({
+			"label": "Hull integrity (%d%%)" % hull_pct,
+			"name": "Hull integrity",
+			"detail": "%d%%" % hull_pct,
+			"amount": hull_bonus,
+			"kind": "bonus",
+		})
 	base += hull_bonus
 
 	# --- Combat record ---
 	if run.elites_killed > 0:
 		var eb := run.elites_killed * ELITE_BONUS
-		lines.append({"label": "Elite kills x%d" % run.elites_killed,
-			"amount": eb, "kind": "bonus"})
+		lines.append({
+			"label": "Elite kills x%d" % run.elites_killed,
+			"name": "Elite kills",
+			"detail": "x%d" % run.elites_killed,
+			"amount": eb,
+			"kind": "bonus",
+		})
 		base += eb
 
 	# --- Leftover credits convert 1:1 ---
 	if run.credits > 0:
-		lines.append({"label": "Unspent credits", "amount": run.credits,
-			"kind": "bonus"})
+		lines.append({
+			"label": "Unspent credits",
+			"name": "Unspent credits",
+			"detail": "",
+			"amount": run.credits,
+			"kind": "bonus",
+		})
 		base += run.credits
 
 	# --- Multipliers ---

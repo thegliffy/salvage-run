@@ -37,10 +37,11 @@ Or the exported Linux build:
 ./build/salvage-run.x86_64
 ```
 
-> **Note on art.** Card icons and enemy portraits are commercially licensed and
-> are not redistributed here, so a fresh clone renders cards as flat
-> kind-coloured blocks. The painted hull in `assets/ships/` *does* ship with the
-> repo. Everything is playable either way; see [docs/ASSETS.md](docs/ASSETS.md).
+> **Note on art.** Redistributable card icons (`assets/icons/`, Game-icons
+> tinted by kind) and painted enemy portraits (`assets/portraits/`) ship with
+> the repo. Optional commercially licensed packs must not be redistributed —
+> see [docs/ASSETS.md](docs/ASSETS.md). Cards still fall back to flat
+> kind-coloured blocks if a file is missing.
 
 **How to play.** Click a card. Hull-targeting attacks want the enemy **HULL**
 bar; system cards want a subsystem. Soft systems are optional control —
@@ -202,6 +203,8 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 | `src/meta/` | Persistent unlocks and the ship valuation |
 | `src/ui/` | Screens, built programmatically against the event bus |
 | `assets/ships/` | Painted hull art used by `ShipView` |
+| `assets/icons/` | Redistributable tinted card icons (`cards.json` `icon`) |
+| `assets/portraits/` | Redistributable enemy portraits (`enemies.json` `portrait`) |
 | `tests/` | Headless test suite and balance simulator |
 
 ## Docs
