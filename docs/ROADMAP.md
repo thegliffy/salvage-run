@@ -49,9 +49,10 @@ The systems work but nobody can see them. In order:
   write-on-every-transition with the same atomic temp-then-rename approach.
 - **Content pass.** Target roughly 60–80 cards and 40+ parts before the game has
   enough variety to sustain runs. Use `--sim` between batches.
-- **Balance pass.** See DESIGN.md §Open questions — the sim wins ~96%, and names
-  two causes: enemies that do not scale with depth, and an over-generous
-  reward-to-cost ratio. Start by keying enemy stats off sector.
+- **Balance pass.** The sim wins ~50%, which is a usable yardstick. The live
+  defect is **stalls**: ~15% of runs hit the turn guard against
+  shield-regenerating enemies. Fix that first, then the dead content the play
+  histogram names (Ammo Drum, Salvo, Dead Weight, Breach Missile).
 - **Audio, art, juice.**
 - **Steam integration.** Achievements and cloud saves via GodotSteam. See
   SHIPPING.md.

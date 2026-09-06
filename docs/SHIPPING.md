@@ -36,12 +36,20 @@ To remove entirely: delete the paths in the table above.
 
 ### Verified working
 
-A Linux release export has been run end to end on this machine and the resulting
-binary boots. `export_presets.cfg` exists locally with a Linux preset (it stays
-gitignored, per the note below) and excludes `tests/*` from release builds.
+A Linux release export has been run end to end on this machine, and the resulting
+binary was driven through a full playthrough under `xvfb` — title, combat,
+rewards, salvage yard — rendering every screen. `export_presets.cfg` exists
+locally with a Linux preset (it stays gitignored, per the note below) and
+excludes `tests/*` from release builds.
 
 ```bash
 godot --headless --path . --export-release "Linux" build/salvage-run.x86_64
+```
+
+Verify a build renders rather than merely launching:
+
+```bash
+xvfb-run -a ./build/salvage-run.x86_64 --rendering-driver opengl3 -- --shots /tmp/shots
 ```
 
 ### Still needed before Android will export
@@ -166,6 +174,17 @@ godot --headless --path . --export-release "Windows Desktop" build/salvage-run.e
 ```bash
 godot --headless --path . --export-release "Android" build/salvage-run.aab
 ```
+
+## Asset licensing affects distribution
+
+`assets/icons/` and `assets/portraits/` are commercially purchased art that ships
+with no licence file. Using them in a released game is almost certainly fine;
+redistributing the source art in a public repository is almost certainly not.
+See [ASSETS.md](ASSETS.md) before making this repository public or shipping the
+project files anywhere.
+
+The Exo typeface is SIL OFL and travels with its licence at
+`assets/fonts/OFL.txt`.
 
 ## Prior art worth knowing
 

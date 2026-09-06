@@ -202,25 +202,118 @@ hang above. Verify insertions landed rather than trusting that the script ran.
 
 ---
 
+## 2026-09-05 — Playable PC demo
+
+Built the UI against the existing EventBus / CombatController seam, so no
+gameplay code changed. Screens are constructed programmatically rather than in
+`.tscn` files: hand-authoring complex scene files is error-prone, and code-built
+containers are far easier to iterate on.
+
+**Assets.** Of 79 purchased packs, four were right for a space deckbuilder:
+sci-fi skill icons for card art (colour keyed to card kind, so a hand reads as
+shapes before words), character icons as enemy portraits, and the Exo typeface.
+Provenance and the licensing problem are recorded in ASSETS.md.
+
+The purchased cyberpunk HUD panels were **rejected**: they are fixed-shape with
+an asymmetric notch, so stretching them to arbitrary sizes mangles the art and
+9-slicing cannot preserve the notch. Panels are Godot styleboxes matched to the
+same palette instead.
+
+**Verification.** Headless cannot render, so `ShotRunner` drives a whole run
+under `xvfb` and captures each screen. It doubles as an integration test for the
+flow: if any screen deadlocks it never reaches the sale. It also proved the
+*exported* build works, not just the editor run.
+
+### Findings
+
+**7. `pkill -f "godot --path"` killed the shell running it.** The pattern matched
+the calling bash process's own command line, which contained that text later in
+the script. Presented as mysterious exit-code-144 failures. Use `pkill -x godot`.
+
+**8. A screenshot raced the process that was writing it.** `ls` on the output
+directory ran while the capture was still in flight and reported the directory
+missing. The files were fine.
+
+**9. The receipt captured mid-animation.** The sale screen tallies on wall-clock
+timers, so waiting a fixed number of *frames* under llvmpipe was not equivalent.
+Wait on time, not frames, when the thing you are waiting for uses a timer.
+
+---
+
+## 2026-09-05 — Slots replace the grid
+
+The spatial hull grid is gone. Parts go into typed slots — 4 weapon, 3 hull,
+4 utility — and picking up a laser attaches a laser.
+
+**Why.** The sim made the case: at a typical endgame ship the grid sat **61%
+empty**, so space never bound, and only 3 of 12 parts used the adjacency rule
+that was the grid's one non-accounting job. It was costing a whole drag-and-drop
+shipyard screen and buying nothing. Cutting it *deleted* work — that screen came
+off the roadmap entirely.
+
+This reversed the hybrid grid/abstract model chosen at the start. That was a
+reasonable call on the information available then; the simulator is what showed
+the spatial half was not earning its place.
+
+**The hull generates the power now, not a module.** No part has `power_gen`, and
+there is a test asserting it stays that way. The reactor parts' energy cards
+moved onto a Power Relay, so the burst-energy playstyle survives without every
+build being taxed a slot for a mandatory reactor. Synergy re-keyed from "adjacent
+to system X" to "ship has system X" — same combo design, discoverable without a
+layout screen.
+
+**Rewards were rebuilt** around enemy tier: regular enemies drop credits and a
+part offer, mini-bosses add a common/uncommon improvement, sector bosses drop a
+rare part and a rare improvement. Improvements are a new class that fills no slot
+and grants no cards — they change the ship itself. Declining a part offer lets
+you jettison an installed one, which is the ship-level counterpart to stripping a
+card.
+
+### Findings
+
+**10. Splicing functions by text anchor ate the next function's doc comment.**
+A range replacement ran from one marker to the next and swallowed the comment
+directly above the following function — which a *later* replacement used as its
+anchor, so that edit silently did nothing and the function was never inserted.
+Surfaced as the parse-hang from finding 7's era. Verify insertions landed.
+
+**11. Trailing `func ` from a splice is a parse error, not a merge.** Ending a
+replacement block with `func ` to join the following line does not work when the
+text is split on newlines: it becomes its own line and Godot reports "Expected
+function name after func".
+
+### Result
+
+Balance moved from a meaningless 96% to **50%**, with deaths spread across the
+mini-boss and boss rather than piling on one enemy. The simulator is finally a
+sensitive instrument.
+
+Remaining defect: ~15% of runs stall against shield-regenerating enemies. Either
+enemy `shield_regen` is too high relative to card damage, or the player lacks
+enough shield-stripping tools. Content, not code.
+
+---
+
 ## Where it stands
 
 ```
-87 tests passing
-300-run sim: ~96% win rate, 27 distinct cards played, 6 stalls
+112 tests passing
+200-run sim: ~50% win rate, 27 distinct cards played
+Playable PC demo: title -> combat -> reward -> salvage yard -> sale
 ```
 
-The systems work and are tested. Balance is not tuned, and the simulator now
-names the reasons rather than just reporting a number:
+The systems work, are tested, and are playable end to end.
 
-- **Enemies do not scale with depth.** The same Gunship appears at fight 4 and
-  fight 6 while the player's ship reaches ~10 parts. Highest-leverage fix.
-- **Reward-to-cost ratio is too generous** — the ladder funds roughly four parts
-  before the boss.
-- **Dead content:** Ammo Drum, Salvo, Dead Weight, and notably Breach Missile —
-  a 150-salvage unlock that loses to a 1-cost Laser Burst at nearly every board
-  state.
+**Open defects, all content rather than code:**
 
-At 96% the simulator is not yet a sensitive instrument. It will sharpen once the
-win rate lands mid-range, where a tuning change actually moves the number.
+- **Stalls.** ~15% of runs hit the turn guard against shield-regenerating
+  enemies. Highest-priority fix.
+- **Dead content.** The play histogram flags Ammo Drum, Salvo and Dead Weight as
+  near-unplayed, and notably Breach Missile — a 150-salvage unlock that loses to
+  a 1-cost Laser Burst at almost every board state. A costed unlock nobody plays
+  is worse than no unlock.
+- **Enemies do not scale with depth,** which will matter once the sector map
+  replaces the fixed three-fight ladder.
 
-No gameplay UI exists. See ROADMAP.md for the order it should be built in.
+Not built: the sector map, the ship screen, the meta unlock shop, audio, and run
+save/resume — which is a launch blocker for Android. See ROADMAP.md.
