@@ -1,6 +1,6 @@
 # Salvage Run
 
-**v0.10** · by **thegliffy**
+**v0.11** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
 across a sector map to the boss, then sell what you built for salvage that
@@ -13,14 +13,14 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-215 tests passing · 200-run balance sim at ~37% win rate
+253 tests passing · 200-run balance sim at ~37% win rate
 ```
 
 ---
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.10-win64.zip` from
+**Windows:** download `SalvageRun-v0.11-win64.zip` from
 [Releases](https://github.com/thegliffy/salvage-run/releases), unzip, run
 `SalvageRun.exe`. Single self-contained executable — no installer, no separate
 data files.

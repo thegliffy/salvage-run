@@ -7,7 +7,7 @@ extends Control
 ## installed part to free its slot. Hover a card chip to see the full card.
 
 var _reward: Dictionary = {}
-var _list: VBoxContainer
+var _list: GridContainer
 var _status: Label
 var _heading: Label
 var _skip_btn: Button
@@ -26,11 +26,11 @@ func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 28)
+		margin.add_theme_constant_override("margin_" + side, 16)
 	add_child(margin)
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
+	col.add_theme_constant_override("separation", 6)
 	margin.add_child(col)
 
 	var chrome := HBoxContainer.new()
@@ -46,11 +46,11 @@ func _ready() -> void:
 		title = "MINI-BOSS DOWN"
 	elif tier >= 3:
 		title = "SECTOR BOSS DOWN"
-	_heading = UITheme.label(title, 28, UITheme.GOOD, "Black")
+	_heading = UITheme.label(title, 24, UITheme.GOOD, "Black")
 	col.add_child(_heading)
 	col.add_child(UITheme.label(
 		"Take a part — skip to field-repair the hull.",
-		13, UITheme.TEXT_DIM, "SemiBold"))
+		12, UITheme.TEXT_DIM, "SemiBold"))
 
 	# Credits and the improvement are automatic; only the part is a choice.
 	var imp: ImprovementDef = _reward.get("improvement")
@@ -60,25 +60,28 @@ func _ready() -> void:
 	col.add_child(_payout_banner(imp))
 
 	_ship_view = ShipView.new()
-	_ship_view.custom_minimum_size = Vector2(0, 120)
+	_ship_view.custom_minimum_size = Vector2(0, 72)
 	_ship_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ship_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_ship_view.size_flags_stretch_ratio = 0.45
 	col.add_child(_ship_view)
 	_ship_view.refresh(Game.run.ship)
 
 	_power_panel = ThemedPanel.new()
 	col.add_child(_power_panel)
 
-	_status = UITheme.label("", 14, UITheme.TEXT, "SemiBold")
+	_status = UITheme.label("", 12, UITheme.TEXT, "SemiBold")
 	col.add_child(_status)
 
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	col.add_child(scroll)
-	_list = VBoxContainer.new()
+	# Three tiles across; they share leftover height so footer buttons stay on screen.
+	_list = GridContainer.new()
+	_list.columns = 3
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_list.add_theme_constant_override("separation", 8)
-	scroll.add_child(_list)
+	_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_list.size_flags_stretch_ratio = 1.0
+	_list.add_theme_constant_override("h_separation", 10)
+	_list.add_theme_constant_override("v_separation", 10)
+	col.add_child(_list)
 
 	_skip_btn = UITheme.outline_button("", UITheme.GOOD)
 	_skip_btn.pressed.connect(_skip_for_repair)
@@ -212,45 +215,53 @@ func _offer_row(offer: Dictionary) -> Control:
 	var wrap := UITheme.box(UITheme.PANEL,
 		UITheme.WARN if shout_deficit else rarity_c,
 		2 if shout_deficit else 1, 4, 12)
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	wrap.custom_minimum_size = Vector2(0, 120)
 	UITheme.tip(wrap, UITheme.part_tip(def))
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	wrap.add_child(row)
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 6)
-	row.add_child(info)
+	info.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 5)
+	wrap.add_child(info)
 
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	info.add_child(head)
-	head.add_child(UITheme.label(def.name, 18, UITheme.TEXT, "Bold"))
-	head.add_child(UITheme.badge(String(rarity).to_upper(), rarity_c))
-	head.add_child(UITheme.badge(String(def.slot).to_upper(), UITheme.ACCENT))
+	var name_l := UITheme.label(def.name, 17, UITheme.TEXT, "Bold")
+	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(name_l)
+
+	var badges := HBoxContainer.new()
+	badges.add_theme_constant_override("separation", 6)
+	info.add_child(badges)
+	badges.add_child(UITheme.badge(String(rarity).to_upper(), rarity_c))
+	badges.add_child(UITheme.badge(String(def.slot).to_upper(), UITheme.ACCENT))
 
 	var costs := _cost_bits(def)
 	if not costs.is_empty():
-		info.add_child(UITheme.label("  ·  ".join(costs), 11, UITheme.TEXT_FAINT))
-
-	if def.flavor != "":
-		info.add_child(UITheme.label(def.flavor, 11, UITheme.TEXT_FAINT))
+		var cost_l := UITheme.label("  ·  ".join(costs), 11, UITheme.TEXT_FAINT)
+		cost_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		info.add_child(cost_l)
 
 	if shout_deficit:
 		info.add_child(UITheme.deficit_panel(after_def,
-			"energy %d → %d / turn if you bolt this on." % [before["energy"], after["energy"]]))
+			"energy %d → %d / turn" % [before["energy"], after["energy"]]))
 	elif int(after["energy"]) != int(before["energy"]) or def.power_draw > 0:
 		info.add_child(UITheme.energy_note(int(before["energy"]), int(after["energy"])))
 
-	info.add_child(UITheme.label("GRANTS — hover a card", 10, UITheme.TEXT_FAINT, "Bold"))
+	info.add_child(UITheme.label("GRANTS", 10, UITheme.TEXT_FAINT, "Bold"))
 	info.add_child(_card_chips(def.grants))
 
-	var take := UITheme.button("  TAKE  ", UITheme.GOOD)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info.add_child(spacer)
+
+	var take := UITheme.button("TAKE", UITheme.GOOD)
+	take.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if not offer["can_install"]:
 		var replaces: PartInstance = offer.get("replaces")
 		if replaces != null:
-			take = UITheme.button("  REPLACE %s  " % replaces.def.name, UITheme.WARN)
+			take = UITheme.button("REPLACE", UITheme.WARN)
+			take.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			UITheme.tip(take, "Replace %s\n---\nFrees that slot and its cards, then installs %s." % [
 				replaces.def.name, def.name])
 		else:
@@ -258,7 +269,6 @@ func _offer_row(offer: Dictionary) -> Control:
 			UITheme.tip(take, "No free %s slot." % String(def.slot))
 	else:
 		UITheme.tip(take, "Install %s\n---\nAdds its three cards to the deck. Check power draw first." % def.name)
-	UITheme.row_cta(take)
 	take.pressed.connect(func():
 		var before_uids: Dictionary = {}
 		for inst in Game.run.ship.parts:
@@ -277,30 +287,34 @@ func _offer_row(offer: Dictionary) -> Control:
 				_continue()
 		else:
 			_status.text = err)
-	row.add_child(take)
+	info.add_child(take)
 	return wrap
 
 func _jettison_row(inst: PartInstance) -> Control:
 	var wrap := UITheme.box(UITheme.PANEL, UITheme.HOSTILE, 1, 4, 12)
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	wrap.custom_minimum_size = Vector2(0, 100)
 	UITheme.tip(wrap, UITheme.part_tip(inst.def, "Jettison frees the slot and removes these cards."))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	wrap.add_child(row)
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(info)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	info.add_child(head)
-	head.add_child(UITheme.label(inst.def.name, 17, UITheme.TEXT, "Bold"))
-	head.add_child(UITheme.label("[%s]" % String(inst.def.slot).to_upper(), 12,
-		UITheme.ACCENT, "SemiBold"))
-	head.add_child(UITheme.label("frees the slot and these cards", 12, UITheme.TEXT_FAINT))
-	info.add_child(_card_chips(inst.granted_cards()))
+	info.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 5)
+	wrap.add_child(info)
 
-	var cut := UITheme.button("  JETTISON  ", UITheme.HOSTILE)
-	UITheme.row_cta(cut)
+	var name_l := UITheme.label(inst.def.name, 16, UITheme.TEXT, "Bold")
+	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(name_l)
+	info.add_child(UITheme.badge(String(inst.def.slot).to_upper(), UITheme.ACCENT))
+	info.add_child(UITheme.label("frees slot + cards", 11, UITheme.TEXT_FAINT))
+	info.add_child(_card_chips(inst.granted_cards()))
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info.add_child(spacer)
+
+	var cut := UITheme.button("JETTISON", UITheme.HOSTILE)
+	cut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UITheme.tip(cut, "Jettison %s\n---\nSlot opens. Its cards leave the deck for the rest of the run." % inst.def.name)
 	cut.pressed.connect(func():
 		var err := RewardPool.jettison(Game.run, inst)
@@ -310,17 +324,19 @@ func _jettison_row(inst: PartInstance) -> Control:
 			_continue()
 		else:
 			_status.text = err)
-	row.add_child(cut)
+	info.add_child(cut)
 	return wrap
 
 func _card_chips(card_ids) -> Control:
-	var cards := HBoxContainer.new()
-	cards.add_theme_constant_override("separation", 6)
+	var cards := VBoxContainer.new()
+	cards.add_theme_constant_override("separation", 4)
+	cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for cid in card_ids:
 		var cd: CardDef = Database.card(cid)
 		if cd == null:
 			continue
 		var chip := UITheme.chip(cd.name, UITheme.KIND_COLOUR.get(cd.kind, UITheme.ACCENT))
+		chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		chip.mouse_filter = Control.MOUSE_FILTER_STOP
 		UITheme.tip(chip, UITheme.card_tip(CardInstance.create(cd)))
 		chip.mouse_entered.connect(_show_card_preview.bind(cd, chip))

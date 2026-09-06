@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Salvage Run"
 config/description="Steal a ship, fight across a sector, sell it for salvage — unlock new parts and bigger hulls to steal next."
-config/version="0.10"
+config/version="0.11"
 run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
@@ -24,8 +24,10 @@ Game="*res://src/core/game.gd"
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+window/size/min_width=960
+window/size/min_height=540
 window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
+window/stretch/aspect="keep"
 window/handheld/orientation=1
 
 [rendering]

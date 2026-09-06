@@ -25,15 +25,33 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	host.add_child(centre)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(740, 540)
+	# Fit inside the viewport with a margin — never taller/wider than the screen.
+	var vp := host.get_viewport_rect().size
+	panel.custom_minimum_size = Vector2(
+		minf(740.0, vp.x - 48.0),
+		minf(540.0, vp.y - 48.0))
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override("panel",
 		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 18))
 	centre.add_child(panel)
 
+	var outer := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		outer.add_theme_constant_override("margin_" + side, 0)
+	panel.add_child(outer)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(scroll)
+
 	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 10)
-	panel.add_child(col)
+	scroll.add_child(col)
 
 	var run: RunState = Game.run
 	var prof := run.profile
@@ -86,7 +104,7 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 		col.add_child(UITheme.label("! " + w, 13, UITheme.WARN, "SemiBold"))
 
 	var ship_view := ShipView.new()
-	ship_view.custom_minimum_size = Vector2(0, 160)
+	ship_view.custom_minimum_size = Vector2(0, 120)
 	ship_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(ship_view)
 	ship_view.refresh(run.ship)
