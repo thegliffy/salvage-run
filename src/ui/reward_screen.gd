@@ -71,10 +71,14 @@ func _ready() -> void:
 	_status = UITheme.label("", 14, UITheme.TEXT, "SemiBold")
 	col.add_child(_status)
 
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(scroll)
 	_list = VBoxContainer.new()
-	_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_theme_constant_override("separation", 8)
-	col.add_child(_list)
+	scroll.add_child(_list)
 
 	_skip_btn = UITheme.outline_button("", UITheme.GOOD)
 	_skip_btn.pressed.connect(_skip_for_repair)
