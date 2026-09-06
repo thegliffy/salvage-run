@@ -143,7 +143,7 @@ static func bar(fill: Color, height: int = 14) -> ProgressBar:
 	var pb := ProgressBar.new()
 	pb.show_percentage = false
 	pb.custom_minimum_size.y = height
-	pb.add_theme_stylebox_override("background", panel(Color("0c1218"), Color("2a3544"), 1, 2, 0))
+	pb.add_theme_stylebox_override("background", panel(PANEL_DEEP, TEXT_FAINT, 1, 2, 0))
 	pb.add_theme_stylebox_override("fill", panel(fill, Color(0,0,0,0), 0, 2, 0))
 	return pb
 
