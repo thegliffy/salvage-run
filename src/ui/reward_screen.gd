@@ -30,7 +30,7 @@ func _ready() -> void:
 	add_child(margin)
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
+	col.add_theme_constant_override("separation", 8)
 	margin.add_child(col)
 
 	var chrome := HBoxContainer.new()
@@ -60,7 +60,7 @@ func _ready() -> void:
 	col.add_child(_payout_banner(imp))
 
 	_ship_view = ShipView.new()
-	_ship_view.custom_minimum_size = Vector2(0, 170)
+	_ship_view.custom_minimum_size = Vector2(0, 120)
 	_ship_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(_ship_view)
 	_ship_view.refresh(Game.run.ship)

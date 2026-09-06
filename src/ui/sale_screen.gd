@@ -39,11 +39,8 @@ func _ready() -> void:
 	col.add_child(UITheme.label(
 		"You stole her, flew her, and sold her for salvage." if won
 		else "Not every theft comes back whole — the yard still pays for scrap.",
-		13, UITheme.TEXT_DIM))
-	col.add_child(UITheme.label(
-		"Salvage unlocks new parts for the next run — and bigger ships to steal.",
-		12, UITheme.TEXT_FAINT))
-	col.add_child(UITheme.spacer(8))
+		13, UITheme.TEXT_DIM, "SemiBold"))
+	col.add_child(UITheme.spacer(4))
 
 	_lines = VBoxContainer.new()
 	_lines.add_theme_constant_override("separation", 4)
@@ -53,7 +50,7 @@ func _ready() -> void:
 	_total_host.add_theme_constant_override("separation", 8)
 	col.add_child(_total_host)
 
-	col.add_child(UITheme.spacer(10))
+	col.add_child(UITheme.spacer(6))
 	var back := UITheme.button("  FIND ANOTHER SHIP  ")
 	back.pressed.connect(func(): Game.goto_title())
 	col.add_child(back)
