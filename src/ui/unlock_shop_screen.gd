@@ -143,6 +143,7 @@ func _row(def: PartDef) -> Control:
 		UITheme.tip(buy, "Need %d salvage (have %d)." % [def.unlock_cost, Game.meta.salvage])
 	else:
 		UITheme.tip(buy, "Unlock %s\n---\nPuts it in the reward pool. You still have to find and steal it." % def.name)
+	UITheme.row_cta(buy)
 	buy.pressed.connect(func():
 		if Game.meta.unlock(def.id):
 			SaveSystem.save_meta(Game.meta)

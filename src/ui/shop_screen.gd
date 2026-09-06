@@ -173,6 +173,7 @@ func _offer_row(offer: Dictionary) -> Control:
 		UITheme.tip(buy, "Need %d credits (have %d)." % [price, Game.run.credits])
 	else:
 		UITheme.tip(buy, "Buy %s for %d credits." % [def.name, price])
+	UITheme.row_cta(buy)
 	buy.pressed.connect(func():
 		if Game.run.credits < price:
 			return

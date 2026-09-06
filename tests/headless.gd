@@ -654,6 +654,8 @@ func _test_ui_copy() -> void:
 	note.free()
 	var btn := UITheme.button("GO")
 	_check("buttons meet touch floor", btn.custom_minimum_size.y >= 48)
+	UITheme.row_cta(btn)
+	_check("row CTA does not stretch vertically", btn.size_flags_vertical == Control.SIZE_SHRINK_BEGIN)
 	btn.free()
 
 func _test_meta_progression() -> void:

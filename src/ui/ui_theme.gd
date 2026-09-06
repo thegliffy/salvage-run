@@ -78,6 +78,15 @@ static func button(text: String, colour: Color = ACCENT) -> Button:
 	b.add_theme_stylebox_override("disabled", panel(PANEL_RAISED, Color(0,0,0,0), 0, 3, 12))
 	return touch(b)
 
+## Keep a row CTA at natural height (top-aligned) so a tall offer card
+## cannot stretch the button and clip its label out of view.
+static func row_cta(b: Button, min_w: int = 108) -> Button:
+	b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	b.clip_text = false
+	if b.custom_minimum_size.x < min_w:
+		b.custom_minimum_size.x = min_w
+	return b
+
 ## Secondary / skip action: coloured outline on a raised panel, light text.
 static func outline_button(text: String, colour: Color = GOOD) -> Button:
 	var b := ThemedButton.new()

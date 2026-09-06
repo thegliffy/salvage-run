@@ -258,6 +258,7 @@ func _offer_row(offer: Dictionary) -> Control:
 			UITheme.tip(take, "No free %s slot." % String(def.slot))
 	else:
 		UITheme.tip(take, "Install %s\n---\nAdds its three cards to the deck. Check power draw first." % def.name)
+	UITheme.row_cta(take)
 	take.pressed.connect(func():
 		var before_uids: Dictionary = {}
 		for inst in Game.run.ship.parts:
@@ -299,6 +300,7 @@ func _jettison_row(inst: PartInstance) -> Control:
 	info.add_child(_card_chips(inst.granted_cards()))
 
 	var cut := UITheme.button("  JETTISON  ", UITheme.HOSTILE)
+	UITheme.row_cta(cut)
 	UITheme.tip(cut, "Jettison %s\n---\nSlot opens. Its cards leave the deck for the rest of the run." % inst.def.name)
 	cut.pressed.connect(func():
 		var err := RewardPool.jettison(Game.run, inst)
