@@ -64,6 +64,8 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 		return "not enough energy"
 	if card.def.needs_target() and target_system == &"":
 		return "card requires a target system"
+	if target_system == &"hull" and not card.def.can_target_hull():
+		return "%s needs a subsystem, not the hull" % card.def.name
 
 	player.energy -= card.cost()
 	EventBus.energy_changed.emit(player.energy, player.max_energy)

@@ -21,7 +21,16 @@ func current_seed() -> int:
 func new_seed() -> int:
 	return abs(int(Time.get_unix_time_from_system() * 1000.0)) % 2147483647
 
-## Named streams: "map", "combat", "reward", "shop", "enemy_ai".
+## Named streams. Keep these disjoint by PURPOSE, not by convenience: two
+## unrelated systems sharing a stream means an action in one silently reorders
+## the other, and "same seed replays identically" stops being true.
+##
+##   map              sector layout
+##   combat           deck shuffles and reshuffles ONLY
+##   evasion          to-hit rolls -- must not disturb draw order
+##   target_fallback  auto-picking a target when none was chosen
+##   enemy_ai         enemy intent selection
+##   reward, shop     payouts and stock
 func stream(name: StringName) -> RandomNumberGenerator:
 	if not _streams.has(name):
 		var r := RandomNumberGenerator.new()

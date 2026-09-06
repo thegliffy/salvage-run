@@ -57,6 +57,9 @@ func _run_tests() -> int:
 	_test_loadout()
 	_test_compile()
 	_test_rng_determinism()
+	_test_stream_isolation()
+	_test_targeting_rules()
+	_test_map_navigation()
 	_test_combat_fizzle()
 	_test_deck_cycling()
 	_test_damage_pipeline()
@@ -170,6 +173,106 @@ func _test_rng_determinism() -> void:
 	var c: Array = [1, 2, 3, 4, 5, 6, 7, 8]
 	Rng.shuffle(&"map", c)
 	_check("streams are independent", a != c)
+
+func _test_stream_isolation() -> void:
+	print("rng stream isolation")
+	# Consuming one stream must not disturb another, or "same seed replays
+	# identically" only holds for an identical sequence of player decisions.
+	Rng.seed_run(4242)
+	var baseline: Array[int] = []
+	for i in 8:
+		baseline.append(Rng.stream(&"combat").randi_range(1, 1000))
+
+	Rng.seed_run(4242)
+	for i in 20:
+		Rng.stream(&"evasion").randi_range(1, 100)       # dodge rolls
+		Rng.stream(&"target_fallback").randi_range(1, 5) # auto-target picks
+	var after: Array[int] = []
+	for i in 8:
+		after.append(Rng.stream(&"combat").randi_range(1, 1000))
+	_eq("evasion and target picks leave the deck stream untouched", after, baseline)
+
+	# The target fallback fires for player actions too, so it must not share a
+	# stream with enemy intent selection.
+	Rng.seed_run(99)
+	var ai_baseline: Array[int] = []
+	for i in 5:
+		ai_baseline.append(Rng.stream(&"enemy_ai").randi_range(1, 1000))
+	Rng.seed_run(99)
+	for i in 15:
+		Rng.stream(&"target_fallback").randi_range(1, 5)
+	var ai_after: Array[int] = []
+	for i in 5:
+		ai_after.append(Rng.stream(&"enemy_ai").randi_range(1, 1000))
+	_eq("target fallback does not shift enemy intents", ai_after, ai_baseline)
+
+func _test_targeting_rules() -> void:
+	print("targeting rules")
+	Rng.seed_run(13)
+	var ship := StarterShips.salvager()
+	var c := CombatController.new()
+	c.setup(ship.compile(), Database.enemy(&"raider"), ship)
+
+	# Hull is a legal target for damage, but not for pure suppression: aiming
+	# EMP Pulse at bare hull used to spend the energy and do nothing at all.
+	_check("a damage card may target the hull",
+		Database.card(&"laser_burst").can_target_hull())
+	_check("a suppression card may not", not Database.card(&"emp_pulse").can_target_hull())
+	_check("a mixed card may (its damage still lands)",
+		Database.card(&"weak_point").can_target_hull())
+
+	var emp := CardInstance.create(Database.card(&"emp_pulse"))
+	c.deck.hand.append(emp)
+	c.player.energy = 9
+	var before: int = c.player.energy
+	var err := c.play_card(emp, &"hull")
+	_check("playing suppression at the hull is refused", err != "", err)
+	_eq("and costs no energy", c.player.energy, before)
+
+	var laser := CardInstance.create(Database.card(&"laser_burst"))
+	c.deck.hand.append(laser)
+	c.enemy.shield = 0
+	c.enemy.evasion = 0
+	var hull_before: int = c.enemy.hull
+	_eq("damage at the hull is allowed", c.play_card(laser, &"hull"), "")
+	_check("and lands on the hull", c.enemy.hull < hull_before)
+
+	# An op with no valid subsystem must say so rather than vanishing.
+	var seen := {"hit": false}
+	var probe := func(ev: Dictionary):
+		if ev.get("type", "") == "no_target":
+			seen["hit"] = true
+	EventBus.effect_resolved.connect(probe)
+	c.resolver.run([{"op": "suppress_system"}],
+		{"source": c.player, "opponent": c.enemy, "target_system": &"hull"})
+	EventBus.effect_resolved.disconnect(probe)
+	_check("an untargetable suppression reports no_target", seen["hit"])
+
+func _test_map_navigation() -> void:
+	print("map navigation")
+	Rng.seed_run(8)
+	var run := RunState.new()
+	run.start(StarterShips.salvager(), 8)
+	var start: int = run.current_node
+	var count: int = run.map["nodes"].size()
+
+	_check("valid node accepted", run.is_valid_node(start))
+	_check("negative id rejected", not run.is_valid_node(-1))
+	_check("out-of-range id rejected", not run.is_valid_node(count + 50))
+
+	# The sim and the UI share this path; a bad index used to throw.
+	_eq("advance_to refuses a bad id", run.advance_to(count + 50), {})
+	_eq("and does not move the player", run.current_node, start)
+	_eq("advance_to refuses a negative id", run.advance_to(-3), {})
+	_eq("still at the start", run.current_node, start)
+	_check("at_boss is safe on a bogus position", not _boss_check_safe(run, count + 99))
+
+func _boss_check_safe(run: RunState, bogus: int) -> bool:
+	var keep: int = run.current_node
+	run.current_node = bogus
+	var result: bool = run.at_boss()
+	run.current_node = keep
+	return result
 
 func _test_combat_fizzle() -> void:
 	print("combat: hull targeting + soft systems")

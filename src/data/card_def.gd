@@ -74,5 +74,21 @@ func cost_for(upgraded: bool) -> int:
 func text_for(upgraded: bool) -> String:
 	return upgrade_text if (upgraded and upgrade_text != "") else text
 
+## Ops that still do something when aimed at the bare hull. Suppression and
+## repair need an actual subsystem; damage does not.
+const HULL_CAPABLE_OPS := ["damage_system", "damage_hull"]
+
+## Whether pointing this card at the hull accomplishes anything.
+##
+## Without this, any enemy-system card could be aimed at the hull, and a pure
+## suppression card (EMP Pulse) would spend its energy resolving against a
+## subsystem that does not exist -- a silent no-op the player reads as a bug.
+func can_target_hull() -> bool:
+	for effs in [effects, upgrade_effects]:
+		for op in effs:
+			if typeof(op) == TYPE_DICTIONARY and HULL_CAPABLE_OPS.has(op.get("op", "")):
+				return true
+	return false
+
 func needs_target() -> bool:
 	return target == Target.ENEMY_SYSTEM or target == Target.SELF_SYSTEM

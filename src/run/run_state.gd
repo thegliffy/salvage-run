@@ -88,7 +88,18 @@ func finish_combat(c: CombatController) -> void:
 		alive = false
 	recompile()
 
+## True when `node_id` is a real node on the current map.
+func is_valid_node(node_id: int) -> bool:
+	var nodes: Array = map.get("nodes", [])
+	return node_id >= 0 and node_id < nodes.size()
+
+## Move to a node. Returns {} and leaves position untouched if the id is bogus
+## -- the sim and the UI share this path, and an out-of-range index used to
+## throw rather than fail visibly.
 func advance_to(node_id: int) -> Dictionary:
+	if not is_valid_node(node_id):
+		push_error("[RunState] advance_to: no node %d on this map" % node_id)
+		return {}
 	current_node = node_id
 	var node: Dictionary = MapGenerator.node_at(map, node_id)
 	node["visited"] = true
@@ -99,4 +110,6 @@ func options() -> Array:
 	return MapGenerator.options_from(map, current_node)
 
 func at_boss() -> bool:
+	if not is_valid_node(current_node):
+		return false
 	return MapGenerator.node_at(map, current_node)["type"] == "boss"

@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Pin the engine: Godot patch releases have changed GDScript parsing before, and
+# a green build here should mean the same thing next month.
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  test:
+    name: Headless tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot binary
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -sSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          chmod +x ~/godot/godot
+
+      - name: Import project
+        # First run builds the import cache and registers global classes.
+        # Without it every class_name resolves to null and nothing compiles.
+        run: ~/godot/godot --headless --path . --import
+
+      - name: Fail on content or script errors
+        # The import pass reports bad JSON references and parse errors but still
+        # exits 0, so grep for them explicitly.
+        run: |
+          ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
+          if grep -qE 'SCRIPT ERROR|Parse Error|\[Database\]' /tmp/import.log; then
+            echo "::error::Script or content errors during import"
+            grep -E 'SCRIPT ERROR|Parse Error|\[Database\]' /tmp/import.log
+            exit 1
+          fi
+
+      - name: Run test suite
+        # headless.gd exits non-zero when any assertion fails.
+        run: ~/godot/godot --headless --path . res://tests/headless.tscn -- --test
+
+  balance:
+    name: Balance simulation
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}
+      - name: Download Godot
+        run: |
+          if [ ! -x ~/godot/godot ]; then
+            mkdir -p ~/godot
+            curl -sSL -o /tmp/godot.zip \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+            unzip -q /tmp/godot.zip -d ~/godot
+            mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+            chmod +x ~/godot/godot
+          fi
+      - run: ~/godot/godot --headless --path . --import
+
+      - name: Simulate 200 runs
+        # Not a pass/fail gate -- balance is a judgement call. This surfaces the
+        # win rate and the card-play histogram in the job log so a content PR
+        # shows its effect on the numbers without anyone running it locally.
+        run: |
+          ~/godot/godot --headless --path . res://tests/headless.tscn -- --sim 200 \
+            | tee /tmp/sim.log
+          {
+            echo '### Balance simulation'
+            echo '```'
+            sed -n '/win rate/,/NEVER PLAYED/p' /tmp/sim.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

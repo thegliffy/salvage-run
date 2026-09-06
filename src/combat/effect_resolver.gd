@@ -47,7 +47,12 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 		"suppress_system":
 			var sid2: StringName = _resolve_target_system(op, ctx)
 			var s: ShipSystem = opponent.system(sid2)
-			if s != null:
+			if s == null:
+				# Nothing left to suppress. Say so: an op that quietly does
+				# nothing reads to the player as a bug in their own card.
+				_emit({"type": "no_target", "op": kind,
+					"target": opponent.display_name})
+			else:
 				s.suppress(int(op.get("turns", 1)))
 				_emit({"type": "suppress", "target": opponent.display_name,
 					"system": String(sid2), "turns": int(op.get("turns", 1))})
@@ -61,7 +66,10 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 		"repair_system":
 			var sid3: StringName = _resolve_target_system(op, ctx, true)
 			var rs: ShipSystem = source.system(sid3)
-			if rs != null:
+			if rs == null:
+				_emit({"type": "no_target", "op": kind,
+					"target": source.display_name})
+			else:
 				var healed := rs.repair(amount)
 				EventBus.system_repaired.emit(source, sid3)
 				_emit({"type": "repair", "target": source.display_name,
@@ -130,7 +138,9 @@ func _resolve_target_system(op: Dictionary, ctx: Dictionary, own: bool = false) 
 	var live := pool.targetable_systems()
 	if live.is_empty():
 		return &""
-	return Rng.pick(&"enemy_ai", live).id
+	# Its own stream: this fires for player-initiated ops too, so drawing from
+	# enemy_ai here would let a player's card choice shift enemy intents.
+	return Rng.pick(&"target_fallback", live).id
 
 ## The single damage pipeline. Evasion -> shields -> subsystem -> hull spill.
 func _deal_damage(source: Combatant, target: Combatant, amount: int,
@@ -143,7 +153,9 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int,
 	# 1. Evasion
 	if not unavoidable and not bool(op.get("homing", false)):
 		var ev := target.effective_evasion()
-		if ev > 0 and Rng.stream(&"combat").randi_range(1, 100) <= ev:
+		# Dedicated stream: sharing "combat" with deck shuffles meant a single
+		# dodge reordered every subsequent draw for the rest of the fight.
+		if ev > 0 and Rng.stream(&"evasion").randi_range(1, 100) <= ev:
 			_emit({"type": "miss", "target": target.display_name})
 			return
 
