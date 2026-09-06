@@ -4,9 +4,9 @@ extends Control
 ## The player stands on the current node and may only enter a node linked from
 ## it. Visited nodes stay lit so the path taken is readable at a glance.
 
-const COL_W := 110.0
-const ROW_H := 88.0
-const NODE_R := 22.0
+const COL_W := 116.0
+const ROW_H := 92.0
+const NODE_R := 24.0
 const PAD_X := 48.0
 const PAD_Y := 56.0
 
@@ -46,23 +46,36 @@ func _build() -> void:
 		head.add_theme_constant_override("margin_" + side, 18 if side != "bottom" else 8)
 	root.add_child(head)
 
+	var head_col := VBoxContainer.new()
+	head_col.add_theme_constant_override("separation", 6)
+	head.add_child(head_col)
+
 	var head_row := HBoxContainer.new()
 	head_row.add_theme_constant_override("separation", 14)
-	head.add_child(head_row)
-	head_row.add_child(UITheme.label("SECTOR MAP", 28, UITheme.ACCENT, "Black"))
-	_status = UITheme.label("", 14, UITheme.TEXT_DIM, "SemiBold")
+	head_col.add_child(head_row)
+	head_row.add_child(UITheme.label("SECTOR MAP", 26, UITheme.ACCENT, "Black"))
+	_status = UITheme.label("", 13, UITheme.TEXT_DIM, "SemiBold")
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head_row.add_child(_status)
 
-	var ship_btn := UITheme.button("  SHIP STATUS  ", UITheme.ACCENT_DIM)
-	ship_btn.add_theme_color_override("font_color", UITheme.TEXT)
+	var ship_btn := UITheme.ghost_button("  SHIP STATUS  ")
+	UITheme.tip(ship_btn, "Ship status\n---\nSlots, power budget, deck, and the painted hull.")
 	ship_btn.pressed.connect(_open_ship_status)
 	head_row.add_child(ship_btn)
 
-	var legend := UITheme.label(
-		"FIGHT  ·  MINI-BOSS  ·  STORE  ·  CHEST  ·  BOSS",
-		12, UITheme.TEXT_FAINT)
-	head_row.add_child(legend)
+	var legend := HBoxContainer.new()
+	legend.add_theme_constant_override("separation", 8)
+	head_col.add_child(legend)
+	for pair in [
+		["FIGHT", TYPE_COLOUR["combat"], "Regular combat — credits and a part offer."],
+		["MINI-BOSS", TYPE_COLOUR["elite"], "Elite fight — harder, pays an improvement."],
+		["STORE", TYPE_COLOUR["shop"], "Buy parts or strip a card from a mount."],
+		["CHEST", TYPE_COLOUR["chest"], "Free ship improvement. No slot, no cards."],
+		["BOSS", TYPE_COLOUR["boss"], "Sector boss. Win and sell the ship."],
+	]:
+		var badge := UITheme.badge(String(pair[0]), pair[1] as Color)
+		UITheme.tip(badge, "%s\n---\n%s" % [pair[0], pair[2]])
+		legend.add_child(badge)
 
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -131,9 +144,11 @@ func _rebuild() -> void:
 			_canvas.add_child(_make_node(map["nodes"][nid], reachable.has(int(nid))))
 
 	var cur := MapGenerator.node_at(map, run.current_node)
-	_status.text = "hull %d/%d   credits %d   deck %d   at %s" % [
+	_status.text = "HULL %d/%d    CREDITS %d    DECK %d    AT %s" % [
 		run.hull_carryover, run.profile.max_hull, run.credits,
 		run.profile.deck.size(), MapGenerator.label_for(String(cur["type"]))]
+	UITheme.tip(_status, "Run status\nhull %d/%d · credits %d · deck %d\n---\nSHIP STATUS opens the full loadout, power budget, and deck." % [
+		run.hull_carryover, run.profile.max_hull, run.credits, run.profile.deck.size()])
 
 	# Keep the current column in view.
 	await get_tree().process_frame
@@ -164,27 +179,27 @@ func _make_node(node: Dictionary, can_enter: bool) -> Control:
 	var is_here: bool = int(node["id"]) == Game.run.current_node
 
 	var wrap := Control.new()
-	wrap.position = pos - Vector2(NODE_R + 8, NODE_R + 18)
-	wrap.custom_minimum_size = Vector2((NODE_R + 8) * 2, (NODE_R + 18) * 2 + 10)
+	wrap.position = pos - Vector2(NODE_R + 10, NODE_R + 22)
+	wrap.custom_minimum_size = Vector2((NODE_R + 10) * 2, (NODE_R + 22) * 2 + 12)
 	wrap.size = wrap.custom_minimum_size
 
-	var btn := Button.new()
-	btn.position = Vector2(8, 18)
+	var btn := ThemedButton.new()
+	btn.position = Vector2(10, 22)
 	btn.custom_minimum_size = Vector2(NODE_R * 2, NODE_R * 2)
 	btn.size = btn.custom_minimum_size
 	btn.text = _glyph(ntype)
-	btn.tooltip_text = _tooltip(node)
+	UITheme.tip(btn, _tooltip(node, can_enter, is_here, visited))
 	btn.disabled = not can_enter
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.add_theme_font_override("font", UITheme.font("Black"))
-	btn.add_theme_font_size_override("font_size", 14)
+	btn.add_theme_font_size_override("font_size", 15)
 	btn.add_theme_color_override("font_color", UITheme.BG if can_enter or is_here else UITheme.TEXT_FAINT)
 	btn.add_theme_color_override("font_hover_color", UITheme.BG)
 	btn.add_theme_color_override("font_disabled_color", UITheme.TEXT_FAINT)
 
 	var fill := colour if (can_enter or is_here or visited) else colour.darkened(0.55)
-	var border := Color.WHITE if is_here else (colour.lightened(0.25) if can_enter else Color(0, 0, 0, 0))
-	var bw := 3 if is_here else (2 if can_enter else 0)
+	var border := Color.WHITE if is_here else (colour.lightened(0.35) if can_enter else Color(0, 0, 0, 0))
+	var bw := 4 if is_here else (2 if can_enter else 0)
 	btn.add_theme_stylebox_override("normal", UITheme.panel(fill, border, bw, int(NODE_R), 0))
 	btn.add_theme_stylebox_override("hover", UITheme.panel(fill.lightened(0.15), Color.WHITE, 3, int(NODE_R), 0))
 	btn.add_theme_stylebox_override("pressed", UITheme.panel(fill.darkened(0.2), Color.WHITE, 3, int(NODE_R), 0))
@@ -198,11 +213,18 @@ func _make_node(node: Dictionary, can_enter: bool) -> Control:
 
 	wrap.add_child(btn)
 
-	var tag := UITheme.label(MapGenerator.label_for(ntype), 10,
-		colour if (can_enter or is_here or visited) else UITheme.TEXT_FAINT, "SemiBold")
+	if is_here:
+		var here := UITheme.label("YOU", 10, Color.WHITE, "Black")
+		here.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		here.position = Vector2(0, 2)
+		here.size = Vector2((NODE_R + 10) * 2, 16)
+		wrap.add_child(here)
+
+	var tag := UITheme.label(MapGenerator.label_for(ntype), 11,
+		colour if (can_enter or is_here or visited) else UITheme.TEXT_FAINT, "Bold")
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tag.position = Vector2(0, NODE_R * 2 + 20)
-	tag.size = Vector2((NODE_R + 8) * 2, 16)
+	tag.position = Vector2(0, NODE_R * 2 + 24)
+	tag.size = Vector2((NODE_R + 10) * 2, 16)
 	wrap.add_child(tag)
 	return wrap
 
@@ -216,19 +238,40 @@ func _glyph(ntype: String) -> String:
 		"boss": return "B"
 		_: return "?"
 
-func _tooltip(node: Dictionary) -> String:
+func _tooltip(node: Dictionary, can_enter: bool, is_here: bool, visited: bool) -> String:
 	var ntype := String(node["type"])
-	var label := MapGenerator.label_for(ntype)
+	var title := MapGenerator.label_for(ntype)
+	var bits: PackedStringArray = [title]
 	var enemy_id := StringName(node.get("enemy", &""))
 	if enemy_id != &"":
 		var e: EnemyDef = Database.enemy(enemy_id)
 		if e != null:
-			return "%s — %s" % [label, e.name]
+			bits.append("%s · hull %d · evasion %d" % [e.name, e.hull, e.evasion])
+			if e.shield > 0:
+				bits.append("shields %d (+%d/t)" % [e.shield, e.shield_regen])
+	bits.append("---")
 	match ntype:
-		"shop": return "Store — buy parts, strip cards"
-		"chest": return "Reward chest — ship improvement"
-		"start": return "Sector entry"
-		_: return label
+		"shop":
+			bits.append("Buy parts with credits, or strip one card from a mount.")
+		"chest":
+			bits.append("A ship improvement — no slot, no cards.")
+		"start":
+			bits.append("Sector entry. Pick a linked node to the right.")
+		"elite":
+			bits.append("Harder fight. Better rewards, including an improvement.")
+		"boss":
+			bits.append("Sector boss. Win and the ship goes to sale.")
+		_:
+			bits.append("Combat. Credits and a part offer on a win.")
+	if is_here:
+		bits.append("You are here.")
+	elif can_enter:
+		bits.append("Reachable — click to enter.")
+	elif visited:
+		bits.append("Already visited.")
+	else:
+		bits.append("Not reachable from here.")
+	return "\n".join(bits)
 
 # --- Ship status overlay -----------------------------------------------------
 

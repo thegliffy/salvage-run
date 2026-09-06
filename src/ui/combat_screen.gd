@@ -13,8 +13,13 @@ var _enemy_name: Label
 var _enemy_hull: ProgressBar
 var _enemy_hull_txt: Label
 var _enemy_shield: Label
-var _intent: Label
 var _intent_panel: PanelContainer
+var _intent_kicker: Label
+var _intent_status: Label
+var _intent_name: Label
+var _intent_from: Label
+var _intent_amount: Label
+var _intent_unit: Label
 var _enemy_systems: VBoxContainer
 var _portrait: TextureRect
 var _player_systems: VBoxContainer
@@ -23,6 +28,8 @@ var _player_hull_txt: Label
 var _player_shield: Label
 var _energy: Label
 var _piles: Label
+var _draw_count: Label
+var _discard_count: Label
 var _hand: HandView
 var _log: VBoxContainer
 var _log_scroll: ScrollContainer
@@ -100,15 +107,14 @@ func _build() -> void:
 
 	# Header
 	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
 	root.add_child(head)
 	head.add_child(UITheme.label("SALVAGE RUN", 18, UITheme.ACCENT, "Black"))
-	var sp := Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(sp)
-	_banner = UITheme.label(_fight_banner(), 14, UITheme.TEXT_DIM, "SemiBold")
+	head.add_child(UITheme.expand())
+	_banner = UITheme.label(_fight_banner(), 13, UITheme.TEXT_DIM, "SemiBold")
 	head.add_child(_banner)
-	var ship_btn := UITheme.button("  SHIP  ", UITheme.ACCENT_DIM)
-	ship_btn.add_theme_color_override("font_color", UITheme.TEXT)
+	var ship_btn := UITheme.ghost_button("  SHIP  ")
+	UITheme.tip(ship_btn, "Ship status\n---\nSlots, power budget, deck, and the painted hull.")
 	ship_btn.pressed.connect(_open_ship_status)
 	head.add_child(ship_btn)
 
@@ -148,6 +154,51 @@ func _panel(bg: Color = UITheme.PANEL) -> PanelContainer:
 	p.add_theme_stylebox_override("panel", UITheme.panel(bg, Color(0,0,0,0), 0, 4, 12))
 	return p
 
+func _build_intent_banner() -> Control:
+	_intent_panel = ThemedPanel.new()
+	_intent_panel.add_theme_stylebox_override("panel",
+		UITheme.panel_stripe(UITheme.INK_WARN, UITheme.WARN, 10))
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_intent_panel.add_child(col)
+
+	var kicker := HBoxContainer.new()
+	kicker.add_theme_constant_override("separation", 8)
+	col.add_child(kicker)
+	_intent_kicker = UITheme.label("NEXT ATTACK", 11, UITheme.WARN, "Bold")
+	kicker.add_child(_intent_kicker)
+	kicker.add_child(UITheme.expand())
+	_intent_status = UITheme.label("LIVE", 11, UITheme.WARN, "Black")
+	kicker.add_child(_intent_status)
+
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 12)
+	col.add_child(body)
+
+	var names := VBoxContainer.new()
+	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	names.add_theme_constant_override("separation", 1)
+	body.add_child(names)
+	_intent_name = UITheme.label("", 20, UITheme.TEXT, "Black")
+	_intent_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	names.add_child(_intent_name)
+	_intent_from = UITheme.label("", 12, UITheme.TEXT_DIM, "SemiBold")
+	names.add_child(_intent_from)
+
+	var amt := VBoxContainer.new()
+	amt.add_theme_constant_override("separation", 0)
+	amt.alignment = BoxContainer.ALIGNMENT_CENTER
+	body.add_child(amt)
+	_intent_amount = UITheme.label("", 28, UITheme.WARN, "Black")
+	_intent_amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	amt.add_child(_intent_amount)
+	_intent_unit = UITheme.label("DAMAGE", 11, UITheme.WARN, "Bold")
+	_intent_unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	amt.add_child(_intent_unit)
+	return _intent_panel
+
 func _build_enemy_panel() -> Control:
 	var wrap := _panel()
 	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -159,36 +210,29 @@ func _build_enemy_panel() -> Control:
 	_enemy_name = UITheme.label("Enemy", 20, UITheme.HOSTILE, "Bold")
 	col.add_child(_enemy_name)
 
-	_hull_target = PanelContainer.new()
+	_hull_target = ThemedPanel.new()
 	_hull_target.mouse_filter = Control.MOUSE_FILTER_STOP
 	_hull_target.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL, Color(0, 0, 0, 0), 0, 3, 7))
+		UITheme.panel(UITheme.PANEL, Color(0, 0, 0, 0), 0, 3, 8))
 	_hull_target.gui_input.connect(_on_hull_gui_input)
 	col.add_child(_hull_target)
 	var hull_row := HBoxContainer.new()
 	hull_row.add_theme_constant_override("separation", 8)
 	_hull_target.add_child(hull_row)
-	hull_row.add_child(UITheme.label("HULL", 12, UITheme.TEXT_DIM, "SemiBold"))
-	_enemy_hull = UITheme.bar(UITheme.HOSTILE, 16)
+	hull_row.add_child(UITheme.label("HULL", 12, UITheme.TEXT_DIM, "Bold"))
+	_enemy_hull = UITheme.bar(UITheme.HOSTILE, 18)
 	_enemy_hull.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_enemy_hull.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hull_row.add_child(_enemy_hull)
-	_enemy_hull_txt = UITheme.label("", 13, UITheme.TEXT)
+	_enemy_hull_txt = UITheme.label("", 13, UITheme.TEXT, "SemiBold")
 	hull_row.add_child(_enemy_hull_txt)
 	_enemy_shield = UITheme.label("", 13, UITheme.SHIELD, "SemiBold")
 	hull_row.add_child(_enemy_shield)
 
-	# Intent telegraph.
-	_intent_panel = PanelContainer.new()
-	_intent_panel.add_theme_stylebox_override("panel",
-		UITheme.panel(Color("2a1d16"), UITheme.WARN, 1, 3, 9))
-	_intent = UITheme.label("", 14, UITheme.WARN, "SemiBold")
-	_intent.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_intent_panel.add_child(_intent)
-	col.add_child(_intent_panel)
+	col.add_child(_build_intent_banner())
 
 	col.add_child(UITheme.label(
-		"Click HULL to shoot the ship, or a subsystem to soft-disable it",
+		"Click HULL to finish the ship, or a subsystem to silence the shot",
 		11, UITheme.TEXT_FAINT, "SemiBold"))
 	_enemy_systems = VBoxContainer.new()
 	_enemy_systems.add_theme_constant_override("separation", 5)
@@ -216,22 +260,21 @@ func _build_side_panel() -> Control:
 	pwrap.add_child(pcol)
 
 	var title := HBoxContainer.new()
+	title.add_theme_constant_override("separation", 8)
 	pcol.add_child(title)
 	title.add_child(UITheme.label("YOUR SHIP", 15, UITheme.ACCENT, "Bold"))
-	var s2 := Control.new()
-	s2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_child(s2)
-	_energy = UITheme.label("", 15, UITheme.WARN, "Black")
+	title.add_child(UITheme.expand())
+	_energy = UITheme.label("", 16, UITheme.WARN, "Black")
 	title.add_child(_energy)
 
 	var hrow := HBoxContainer.new()
 	hrow.add_theme_constant_override("separation", 8)
 	pcol.add_child(hrow)
-	hrow.add_child(UITheme.label("HULL", 12, UITheme.TEXT_DIM, "SemiBold"))
-	_player_hull = UITheme.bar(UITheme.GOOD, 16)
+	hrow.add_child(UITheme.label("HULL", 12, UITheme.TEXT_DIM, "Bold"))
+	_player_hull = UITheme.bar(UITheme.GOOD, 18)
 	_player_hull.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hrow.add_child(_player_hull)
-	_player_hull_txt = UITheme.label("", 13, UITheme.TEXT)
+	_player_hull_txt = UITheme.label("", 13, UITheme.TEXT, "SemiBold")
 	hrow.add_child(_player_hull_txt)
 	_player_shield = UITheme.label("", 13, UITheme.SHIELD, "SemiBold")
 	hrow.add_child(_player_shield)
@@ -270,20 +313,51 @@ func _build_hand_row() -> Control:
 	_hand.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# The fan's raised middle deliberately overhangs this row; the wrapping
 	# panel has clip_contents off so it is never cut.
-	_hand.custom_minimum_size.y = CardView.CARD_SIZE.y + 8
+	_hand.custom_minimum_size.y = CardView.CARD_SIZE.y + 14
 	_hand.card_clicked.connect(_on_card_clicked)
 	row.add_child(_hand)
 
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 6)
-	side.custom_minimum_size.x = 130
+	side.custom_minimum_size.x = 136
 	row.add_child(side)
-	_piles = UITheme.label("", 12, UITheme.TEXT_DIM)
-	side.add_child(_piles)
+
+	var piles := HBoxContainer.new()
+	piles.add_theme_constant_override("separation", 6)
+	side.add_child(piles)
+	var draw_box := _pile_box("DRAW")
+	_draw_count = draw_box.get_meta("count")
+	piles.add_child(draw_box)
+	var disc_box := _pile_box("DISC")
+	_discard_count = disc_box.get_meta("count")
+	piles.add_child(disc_box)
+	# Invisible label keeps the FX pile anchors used by CardFx.
+	_piles = UITheme.label("", 1, Color(0, 0, 0, 0))
+	_piles.custom_minimum_size = Vector2(1, 1)
+	piles.add_child(_piles)
+
 	_end_turn = UITheme.button("END TURN", UITheme.WARN)
 	_end_turn.pressed.connect(_on_end_turn)
+	UITheme.tip(_end_turn, "End turn\n---\nDiscard leftover cards, then the enemy resolves the amber shot.")
 	side.add_child(_end_turn)
 	return wrap
+
+func _pile_box(caption: String) -> PanelContainer:
+	var box := ThemedPanel.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_stylebox_override("panel",
+		UITheme.panel(UITheme.PANEL, UITheme.ACCENT_DIM, 1, 3, 6))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	box.add_child(col)
+	var cap := UITheme.label(caption, 9, UITheme.TEXT_FAINT, "Bold")
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(cap)
+	var count := UITheme.label("0", 16, UITheme.TEXT, "Black")
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(count)
+	box.set_meta("count", count)
+	return box
 
 func _build_system_rows() -> void:
 	for sid in combat.enemy.systems:
@@ -308,14 +382,13 @@ func _refresh() -> void:
 	_enemy_hull.value = e.hull
 	_enemy_hull_txt.text = "%d/%d" % [e.hull, e.max_hull]
 	_set_shield_label(_enemy_shield, e)
+	UITheme.tip(_hull_target,
+		"HULL\n%d / %d  ·  primary finish target\n---\nShoot the hull to win. Subsystems are optional control — they auto-repair if left alone." % [
+			e.hull, e.max_hull])
+	UITheme.tip(_enemy_name, "%s\n---\nEnemy ship. The amber banner is the next shot." % e.display_name)
 
-	_intent.text = combat.brain.telegraph()
+	_refresh_intent()
 	var offline := combat.brain.intent_offline()
-	_intent_panel.add_theme_stylebox_override("panel", UITheme.panel(
-		Color("16241a") if offline else Color("2a1d16"),
-		UITheme.TEXT_DIM if offline else UITheme.WARN, 1, 3, 9))
-	_intent.add_theme_color_override("font_color",
-		UITheme.TEXT_DIM if offline else UITheme.WARN)
 
 	var intent_sys := StringName(combat.brain.current_intent.get("requires_system", ""))
 	for sid in _enemy_views:
@@ -329,20 +402,107 @@ func _refresh() -> void:
 	_player_hull.value = p.hull
 	_player_hull_txt.text = "%d/%d" % [p.hull, p.max_hull]
 	_set_shield_label(_player_shield, p)
-	_energy.text = "⚡ %d/%d" % [p.energy, p.max_energy]
+	UITheme.tip(_player_hull_txt,
+		"Your hull\n%d / %d\n---\nIf this hits 0, the run ends and the wreck is sold at 40%%." % [
+			p.hull, p.max_hull])
+	_energy.text = "⚡ %d / %d" % [p.energy, p.max_energy]
+	UITheme.tip(_energy, "Energy\n%d / %d this turn\n---\nRefills each turn. Playing a card spends its cost. Overdraw from ship power cuts this maximum." % [
+		p.energy, p.max_energy])
+	if _draw_count != null:
+		_draw_count.text = str(combat.deck.draw_pile.size())
+		UITheme.tip(_draw_count.get_parent().get_parent(),
+			"Draw pile\n%d cards\n---\nDrawn at the start of your turn. Empty pile reshuffles discard." % combat.deck.draw_pile.size())
+	if _discard_count != null:
+		_discard_count.text = str(combat.deck.discard_pile.size())
+		UITheme.tip(_discard_count.get_parent().get_parent(),
+			"Discard pile\n%d cards\n---\nPlayed and leftover cards land here until reshuffle." % combat.deck.discard_pile.size())
 	_piles.text = "draw %d\ndiscard %d" % [combat.deck.draw_pile.size(), combat.deck.discard_pile.size()]
 	var bud: Dictionary = Game.run.ship.power_budget()
 	var prof := Game.run.profile
 	# Max shield lives on the ◆ readout beside the hull bar; repeating it here
 	# is just clutter, so this line carries the regen rate only.
-	_ship_stats.text = "evasion %d · shield +%d/t · power %d/%d · deck %d" % [
+	var stats := "evasion %d  ·  shield +%d/t  ·  power %d/%d  ·  deck %d" % [
 		prof.evasion, prof.shield_regen, bud["draw"], bud["output"], prof.deck.size()]
 	if int(bud["deficit"]) > 0:
 		_ship_stats.add_theme_color_override("font_color", UITheme.WARN)
-		_ship_stats.text += " · DEFICIT %d" % bud["deficit"]
+		_ship_stats.text = "⚠ POWER DEFICIT %d  —  %s" % [bud["deficit"], stats]
 	else:
 		_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
+		_ship_stats.text = stats
+	UITheme.tip(_ship_stats, UITheme.power_tip(bud))
 	_rebuild_hand()
+
+func _refresh_intent() -> void:
+	var info: Dictionary = combat.brain.telegraph_info()
+	var status := String(info.get("status", "live"))
+	var offline: bool = bool(info.get("offline", false))
+	var ink := UITheme.INK_WARN
+	var stripe := UITheme.WARN
+	var accent := UITheme.WARN
+	var kicker := "NEXT ATTACK"
+	var status_txt := "LIVE"
+	match status:
+		"offline":
+			ink = UITheme.INK_GOOD
+			stripe = UITheme.TEXT_DIM
+			accent = UITheme.TEXT_DIM
+			kicker = "SHOT SILENCED"
+			status_txt = "OFFLINE"
+		"damaged":
+			ink = UITheme.INK_WARN
+			stripe = UITheme.WARN
+			accent = UITheme.WARN
+			kicker = "NEXT ATTACK"
+			status_txt = "WEAKENED"
+		"idle":
+			ink = UITheme.PANEL
+			stripe = UITheme.TEXT_FAINT
+			accent = UITheme.TEXT_DIM
+			kicker = "NO INTENT"
+			status_txt = "IDLE"
+	_intent_panel.add_theme_stylebox_override("panel",
+		UITheme.panel_stripe(ink, stripe, 10))
+	_intent_kicker.text = kicker
+	_intent_kicker.add_theme_color_override("font_color", accent)
+	_intent_status.text = status_txt
+	_intent_status.add_theme_color_override("font_color", accent)
+	_intent_name.text = String(info.get("title", "Idle"))
+	_intent_name.add_theme_color_override("font_color",
+		UITheme.TEXT_DIM if offline else UITheme.TEXT)
+	var sys := String(info.get("system", ""))
+	var sys_name := String(info.get("system_name", ""))
+	if sys != "":
+		_intent_from.text = "from %s" % (sys_name if sys_name != "" else sys.to_upper())
+	else:
+		_intent_from.text = ""
+	var scaled := int(info.get("scaled", 0))
+	var printed := int(info.get("printed", 0))
+	if offline:
+		_intent_amount.text = "—"
+	elif status == "damaged" and printed > 0 and scaled != printed:
+		_intent_amount.text = "%d" % scaled
+	else:
+		_intent_amount.text = str(scaled) if scaled > 0 else "—"
+	_intent_amount.add_theme_color_override("font_color", accent)
+	var unit := String(info.get("action", "DAMAGE"))
+	if status == "damaged" and printed > 0 and scaled != printed:
+		unit = "%s  (of %d)" % [unit, printed]
+	_intent_unit.text = unit
+	_intent_unit.add_theme_color_override("font_color", accent)
+	var from := String(info.get("system_name", info.get("system", "")))
+	var tip := "%s\n%s" % [kicker, String(info.get("title", "Idle"))]
+	tip += "\n---\n"
+	if offline:
+		tip += "Source system is offline — this shot cannot fire."
+	elif status == "damaged":
+		tip += "Damaged %s: %d %s (printed %d). Chip it further or shoot the hull." % [
+			from, scaled, String(info.get("action", "DAMAGE")).to_lower(), printed]
+	else:
+		tip += "%s %s from %s. Disable that subsystem to silence it, or finish the hull." % [
+			str(scaled) if scaled > 0 else "An",
+			String(info.get("action", "EFFECT")).to_lower(),
+			from if from != "" else "this ship"]
+	UITheme.tip(_intent_panel, tip)
 
 ## Shield as current/max, shown even at zero whenever the ship has any shield
 ## capacity at all. A depleted shield and no shield system rendered identically
@@ -355,6 +515,9 @@ func _set_shield_label(label: Label, c: Combatant) -> void:
 	# Dimmed while down, so a live shield still stands out at a glance.
 	label.add_theme_color_override("font_color",
 		UITheme.SHIELD if c.shield > 0 else UITheme.TEXT_FAINT)
+	if label.text != "":
+		UITheme.tip(label, "Shields\n%d / %d\n---\nAbsorbs incoming damage first. Regen +%d / turn while the shield system is up." % [
+			c.shield, c.max_shield, c.shield_regen])
 
 func _rebuild_hand() -> void:
 	# Playing a card refreshes the screen, so this can re-enter while an
@@ -405,7 +568,7 @@ func _set_hull_highlight(on: bool) -> void:
 	var border := UITheme.WARN if on else Color(0, 0, 0, 0)
 	_hull_target.add_theme_stylebox_override("panel",
 		UITheme.panel(UITheme.PANEL_RAISED if on else UITheme.PANEL, border,
-			2 if on else 0, 3, 7))
+			2 if on else 0, 3, 8))
 
 func _on_hull_gui_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed \
@@ -486,12 +649,16 @@ func _target_pos(target: StringName) -> Vector2:
 ## The pile counters double as the piles themselves: two lines, draw over
 ## discard, so the top and bottom halves of that label are the anchors.
 func _draw_pile_pos() -> Vector2:
+	if _draw_count != null:
+		return _draw_count.get_global_rect().get_center()
 	if _piles == null:
 		return get_global_rect().get_center()
 	var r := _piles.get_global_rect()
 	return r.position + Vector2(r.size.x * 0.35, r.size.y * 0.25)
 
 func _discard_pile_pos() -> Vector2:
+	if _discard_count != null:
+		return _discard_count.get_global_rect().get_center()
 	if _piles == null:
 		return get_global_rect().get_center()
 	var r := _piles.get_global_rect()

@@ -68,6 +68,10 @@ func setup(instance: CardInstance) -> void:
 	_build_frame()
 	_build_content()
 	_restyle()
+	tooltip_text = UITheme.card_tip(card)
+
+func _make_custom_tooltip(for_text: String) -> Object:
+	return UITheme.make_tooltip(for_text)
 
 ## The painted frame, or a flat kind-coloured panel when the art is absent
 ## (frames are not redistributed with the repo -- see docs/ASSETS.md).
@@ -184,8 +188,10 @@ func _place(node: Control, frac: Rect2) -> void:
 	node.offset_right = 0
 	node.offset_bottom = 0
 
-func set_playable(value: bool) -> void:
+func set_playable(value: bool, energy: int = -1) -> void:
 	playable = value
+	if card != null:
+		tooltip_text = UITheme.card_tip(card, energy)
 	_restyle()
 
 func set_selected(value: bool) -> void:

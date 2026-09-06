@@ -28,7 +28,7 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	panel.custom_minimum_size = Vector2(740, 540)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL, UITheme.ACCENT_DIM, 1, 6, 18))
+		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 18))
 	centre.add_child(panel)
 
 	var col := VBoxContainer.new()
@@ -43,39 +43,48 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	head.add_theme_constant_override("separation", 16)
 	col.add_child(head)
 	head.add_child(UITheme.label(run.ship.display_name.to_upper(), 24, UITheme.ACCENT, "Black"))
-	var sp := Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(sp)
-	head.add_child(UITheme.label(
-		"hull %d/%d   energy %d/turn   draw %d/%d   evasion %d   mass %d   deck %d" % [
-			run.hull_carryover, prof.max_hull,
-			bud["energy"], bud["draw"], bud["output"],
-			prof.evasion, prof.mass, prof.deck.size()],
-		13, UITheme.TEXT_DIM, "SemiBold"))
+	head.add_child(UITheme.expand())
+	var close := UITheme.ghost_button("  CLOSE  ")
+	close.pressed.connect(on_close)
+	head.add_child(close)
+
+	var deficit: int = int(bud["deficit"])
+	if deficit > 0:
+		col.add_child(UITheme.callout(
+			"POWER DEFICIT  %d" % deficit,
+			"Part draw %d exceeds hull output %d, so energy is cut to %d every turn. Jettison a hungry part or find a power improvement." % [
+				bud["draw"], bud["output"], bud["energy"]],
+			&"warn"))
 
 	# Explicit stats block so the numbers are impossible to miss.
 	var stats := PanelContainer.new()
 	stats.add_theme_stylebox_override("panel", UITheme.panel(
-		Color("2a1d16") if int(bud["deficit"]) > 0 else UITheme.PANEL_RAISED,
-		UITheme.WARN if int(bud["deficit"]) > 0 else UITheme.ACCENT_DIM, 1, 4, 10))
+		UITheme.INK_WARN if deficit > 0 else UITheme.PANEL_RAISED,
+		UITheme.WARN if deficit > 0 else UITheme.ACCENT_DIM, 1, 4, 10))
 	col.add_child(stats)
 	var srow := HBoxContainer.new()
 	srow.add_theme_constant_override("separation", 22)
 	stats.add_child(srow)
-	srow.add_child(_stat("HULL", "%d / %d" % [run.hull_carryover, prof.max_hull], UITheme.GOOD))
-	srow.add_child(_stat("ENERGY", "%d / turn" % bud["energy"],
-		UITheme.WARN if int(bud["deficit"]) > 0 else UITheme.ACCENT))
-	srow.add_child(_stat("POWER", "draw %d / out %d" % [bud["draw"], bud["output"]],
-		UITheme.WARN if int(bud["deficit"]) > 0 else UITheme.TEXT))
-	srow.add_child(_stat("EVASION", str(prof.evasion), UITheme.TEXT))
-	srow.add_child(_stat("SHIELD", "%d (+%d/t)" % [prof.max_shield, prof.shield_regen], UITheme.SHIELD))
-	srow.add_child(_stat("DECK", str(prof.deck.size()), UITheme.TEXT))
+	srow.add_child(UITheme.metric("HULL", "%d / %d" % [run.hull_carryover, prof.max_hull], UITheme.GOOD,
+		"Hull\n%d / %d\n---\nCarry-over between fights. Hit 0 and the wreck is sold." % [
+			run.hull_carryover, prof.max_hull]))
+	srow.add_child(UITheme.metric("ENERGY", "%d / turn" % bud["energy"],
+		UITheme.WARN if deficit > 0 else UITheme.ACCENT,
+		UITheme.power_tip(bud)))
+	srow.add_child(UITheme.metric("POWER", "draw %d / out %d" % [bud["draw"], bud["output"]],
+		UITheme.WARN if deficit > 0 else UITheme.TEXT,
+		UITheme.power_tip(bud)))
+	srow.add_child(UITheme.metric("EVASION", str(prof.evasion), UITheme.TEXT,
+		"Evasion %d\n---\nChance incoming shots miss. Heavier ships dodge worse." % prof.evasion))
+	srow.add_child(UITheme.metric("SHIELD", "%d (+%d/t)" % [prof.max_shield, prof.shield_regen], UITheme.SHIELD,
+		"Shields\n%d max · +%d / turn\n---\nAbsorbs damage before hull. Needs a live shield system." % [
+			prof.max_shield, prof.shield_regen]))
+	srow.add_child(UITheme.metric("DECK", str(prof.deck.size()), UITheme.TEXT,
+		"Deck %d\n---\nThree cards per installed part. Bigger ships draw worse." % prof.deck.size()))
 
-	if int(bud["deficit"]) > 0:
-		col.add_child(UITheme.label(
-			"POWER DEFICIT %d — part draw exceeds hull output, so energy is cut for the whole run." % bud["deficit"],
-			12, UITheme.WARN, "SemiBold"))
 	for w in prof.warnings:
+		if deficit > 0 and String(w).begins_with("Power deficit"):
+			continue
 		col.add_child(UITheme.label("! " + w, 13, UITheme.WARN, "SemiBold"))
 
 	var ship_view := ShipView.new()
@@ -136,10 +145,9 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	for cid in order:
 		deck_col.add_child(_deck_row(cid, int(counts[cid]), preview_layer, on_close))
 
-	var close := UITheme.button("  CLOSE  ", UITheme.ACCENT_DIM)
-	close.add_theme_color_override("font_color", UITheme.TEXT)
-	close.pressed.connect(on_close)
-	col.add_child(close)
+	var close_foot := UITheme.ghost_button("  CLOSE  ")
+	close_foot.pressed.connect(on_close)
+	col.add_child(close_foot)
 
 static func close(host: Control, preview_layer: Control = null) -> void:
 	if preview_layer != null:
@@ -149,21 +157,16 @@ static func close(host: Control, preview_layer: Control = null) -> void:
 		c.queue_free()
 	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-static func _stat(label: String, value: String, colour: Color) -> Control:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 1)
-	col.add_child(UITheme.label(label, 10, UITheme.TEXT_FAINT, "Bold"))
-	col.add_child(UITheme.label(value, 14, colour, "SemiBold"))
-	return col
-
 static func _slot_block(run: RunState, slot: StringName) -> Control:
 	var used := run.ship.installed_in(slot)
 	var cap := run.ship.slot_capacity(slot)
-	var wrap := PanelContainer.new()
+	var wrap := ThemedPanel.new()
 	var full := used.size() >= cap
 	wrap.add_theme_stylebox_override("panel", UITheme.panel(
 		UITheme.PANEL_RAISED,
 		UITheme.WARN if full else UITheme.ACCENT_DIM, 1, 4, 10))
+	UITheme.tip(wrap, "%s slots\n%d / %d%s\n---\nTyped mounts. Full means a new part of this type must replace one." % [
+		String(slot).to_upper(), used.size(), cap, " · FULL" if full else ""])
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 3)
 	wrap.add_child(col)
@@ -190,8 +193,15 @@ static func _slot_block(run: RunState, slot: StringName) -> Control:
 			if inst.def.power_draw > 0:
 				bits.append("-%d power" % inst.def.power_draw)
 			bits.append("%d mass" % inst.def.mass)
-			col.add_child(UITheme.label("· %s  (%s)" % [line, "  ".join(bits)], 12,
-				UITheme.HOSTILE if inst.is_wrecked() else UITheme.TEXT))
+			var part_l := UITheme.label("· %s  (%s)" % [line, "  ".join(bits)], 12,
+				UITheme.HOSTILE if inst.is_wrecked() else UITheme.TEXT)
+			var extra := ""
+			if inst.is_wrecked():
+				extra = "Wrecked — cards gone until repaired."
+			elif inst.is_stripped():
+				extra = "Stripped — one card already cut from this mount."
+			UITheme.tip(part_l, UITheme.part_tip(inst.def, extra))
+			col.add_child(part_l)
 	return wrap
 
 static func _deck_row(card_id: StringName, count: int, preview_layer: Control,
@@ -200,7 +210,7 @@ static func _deck_row(card_id: StringName, count: int, preview_layer: Control,
 	if cd == null:
 		return UITheme.label("· unknown card", 12, UITheme.TEXT_FAINT)
 
-	var row := PanelContainer.new()
+	var row := ThemedPanel.new()
 	row.mouse_filter = Control.MOUSE_FILTER_STOP
 	row.add_theme_stylebox_override("panel", UITheme.panel(
 		UITheme.PANEL_RAISED, UITheme.KIND_COLOUR.get(cd.kind, UITheme.ACCENT), 1, 3, 6))
@@ -217,6 +227,7 @@ static func _deck_row(card_id: StringName, count: int, preview_layer: Control,
 		h.add_child(UITheme.label("x%d" % count, 12, UITheme.TEXT_DIM, "Bold"))
 	h.add_child(UITheme.label(String(cd.kind), 11, UITheme.TEXT_FAINT))
 
+	UITheme.tip(row, UITheme.card_tip(CardInstance.create(cd)))
 	row.mouse_entered.connect(func():
 		_show_preview(cd, row, preview_layer))
 	row.mouse_exited.connect(func():

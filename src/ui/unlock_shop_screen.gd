@@ -4,12 +4,6 @@ extends Control
 ## Unlocks do not hand you the part. They make it eligible to appear as a
 ## battle reward or store stock on the next theft.
 
-const RARITY_COLOUR := {
-	&"common": UITheme.TEXT_DIM,
-	&"uncommon": UITheme.ACCENT,
-	&"rare": Color("ce93d8"),
-}
-
 const TIER_NAME := {1: &"common", 2: &"uncommon", 3: &"rare"}
 
 var _salvage: Label
@@ -35,8 +29,13 @@ func _ready() -> void:
 	head.add_theme_constant_override("separation", 18)
 	col.add_child(head)
 	head.add_child(UITheme.label("SALVAGE YARD", 30, UITheme.ACCENT, "Black"))
-	_salvage = UITheme.label("", 16, UITheme.WARN, "SemiBold")
-	head.add_child(_salvage)
+	head.add_child(UITheme.expand())
+	var salvage_box := PanelContainer.new()
+	salvage_box.add_theme_stylebox_override("panel",
+		UITheme.panel(UITheme.INK_WARN, UITheme.WARN, 1, 4, 10))
+	head.add_child(salvage_box)
+	_salvage = UITheme.label("", 16, UITheme.WARN, "Black")
+	salvage_box.add_child(_salvage)
 
 	col.add_child(UITheme.label(
 		"Spend salvage to unlock parts into the reward pool. Uncommon and rare weapons only show up in runs after you unlock them here.",
@@ -55,15 +54,15 @@ func _ready() -> void:
 	_list.add_theme_constant_override("separation", 8)
 	scroll.add_child(_list)
 
-	var back := UITheme.button("  BACK  ", UITheme.ACCENT_DIM)
-	back.add_theme_color_override("font_color", UITheme.TEXT)
+	var back := UITheme.ghost_button("  BACK  ")
 	back.pressed.connect(func(): Game.goto_title())
 	col.add_child(back)
 
 	_refresh()
 
 func _refresh() -> void:
-	_salvage.text = "salvage %d" % Game.meta.salvage
+	_salvage.text = "SALVAGE  %d" % Game.meta.salvage
+	UITheme.tip(_salvage, "Salvage\n%d\n---\nMeta currency from selling ships. Unlocks do not hand you the part — they put it in the pool." % Game.meta.salvage)
 	for c in _list.get_children():
 		c.queue_free()
 
@@ -79,31 +78,37 @@ func _refresh() -> void:
 		_list.add_child(UITheme.label("Everything unlocked. Steal bigger ships.", 15, UITheme.GOOD, "SemiBold"))
 		return
 
+	var last_tier := -1
 	for def in locked:
+		if def.tier != last_tier:
+			last_tier = def.tier
+			var rarity: StringName = TIER_NAME.get(def.tier, &"common")
+			_list.add_child(UITheme.section(String(rarity).to_upper()))
 		_list.add_child(_row(def))
 
 func _row(def: PartDef) -> Control:
 	var rarity: StringName = TIER_NAME.get(def.tier, &"common")
-	var wrap := PanelContainer.new()
-	wrap.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL, RARITY_COLOUR.get(rarity, UITheme.ACCENT_DIM), 1, 4, 12))
+	var rarity_c := UITheme.rarity_colour(rarity)
+	var wrap := UITheme.box(UITheme.PANEL, rarity_c, 1, 4, 12)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	wrap.add_child(row)
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 4)
 	row.add_child(info)
 
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
 	info.add_child(head)
-	head.add_child(UITheme.label(def.name, 17, UITheme.TEXT, "Bold"))
-	head.add_child(UITheme.label(String(rarity).to_upper(), 11,
-		RARITY_COLOUR.get(rarity, UITheme.TEXT_DIM), "Bold"))
-	head.add_child(UITheme.label("[%s]" % String(def.slot).to_upper(), 12, UITheme.ACCENT, "SemiBold"))
-	head.add_child(UITheme.label("draw %d  mass %d" % [def.power_draw, def.mass],
-		12, UITheme.TEXT_FAINT))
+	head.add_child(UITheme.label(def.name, 18, UITheme.TEXT, "Bold"))
+	head.add_child(UITheme.badge(String(rarity).to_upper(), rarity_c))
+	head.add_child(UITheme.badge(String(def.slot).to_upper(), UITheme.ACCENT))
+	head.add_child(UITheme.expand())
+	if def.power_draw > 0:
+		head.add_child(UITheme.chip("−%d power" % def.power_draw, UITheme.TEXT_FAINT))
+	head.add_child(UITheme.chip("%d mass" % def.mass, UITheme.TEXT_FAINT))
 
 	if def.flavor != "":
 		info.add_child(UITheme.label(def.flavor, 12, UITheme.TEXT_FAINT))
@@ -115,18 +120,18 @@ func _row(def: PartDef) -> Control:
 		var cd: CardDef = Database.card(cid)
 		if cd == null:
 			continue
-		var chip := PanelContainer.new()
-		chip.add_theme_stylebox_override("panel", UITheme.panel(
-			UITheme.PANEL_RAISED, UITheme.KIND_COLOUR.get(cd.kind, UITheme.ACCENT), 1, 3, 6))
-		var cl := UITheme.label(cd.name, 12, UITheme.TEXT)
-		cl.tooltip_text = cd.text
-		chip.add_child(cl)
+		var chip := UITheme.chip(cd.name, UITheme.KIND_COLOUR.get(cd.kind, UITheme.ACCENT))
+		UITheme.tip(chip, UITheme.card_tip(CardInstance.create(cd)))
 		cards.add_child(chip)
 
+	UITheme.tip(wrap, UITheme.part_tip(def, "Unlock cost %d salvage." % def.unlock_cost))
 	var buy := UITheme.button("  UNLOCK  %d  " % def.unlock_cost, UITheme.GOOD)
 	buy.disabled = not Game.meta.can_afford(def.id)
 	if buy.disabled and Game.meta.salvage < def.unlock_cost:
 		buy.text = "  NEED %d  " % def.unlock_cost
+		UITheme.tip(buy, "Need %d salvage (have %d)." % [def.unlock_cost, Game.meta.salvage])
+	else:
+		UITheme.tip(buy, "Unlock %s\n---\nPuts it in the reward pool. You still have to find and steal it." % def.name)
 	buy.pressed.connect(func():
 		if Game.meta.unlock(def.id):
 			SaveSystem.save_meta(Game.meta)
