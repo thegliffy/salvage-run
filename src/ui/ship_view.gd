@@ -1,13 +1,14 @@
 class_name ShipView
 extends Control
-## Procedural side-view of the stolen ship.
+## Side-view of the stolen ship.
 ##
-## The chassis is always there. Each installed part bolts on as a module in a
-## slot-typed hardpoint (weapons forward/top, hull plating mid-body, utilities
-## aft). Calling refresh() with a newly-added part uid plays a short bolt-on
-## pop so the reward screen can show the ship growing as you pick hardware.
+## Uses the painted hull art when present, then bolts installed parts onto
+## hardpoints (weapons dorsal, hull plating belly, utilities aft). Falls back
+## to a procedural chassis if the art file is missing.
 
 signal part_clicked(part_uid: int)
+
+const HULL_ART := "res://assets/ships/salvager-hull.png"
 
 const SLOT_COLOUR := {
 	&"weapon": UITheme.HOSTILE,
@@ -16,14 +17,16 @@ const SLOT_COLOUR := {
 }
 
 var _ship: ShipLoadout
-var _modules: Array = []          # [{uid, slot, index, def, wrecked, stripped}]
+var _hull_tex: Texture2D
+var _modules: Array = []
 var _animating_uid: int = -1
 var _anim_t: float = 0.0
 var _pulse: float = 0.0
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(360, 160)
+	custom_minimum_size = Vector2(360, 180)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	_hull_tex = UITheme.art(HULL_ART)
 	set_process(true)
 
 func _process(delta: float) -> void:
@@ -33,9 +36,6 @@ func _process(delta: float) -> void:
 		if _anim_t >= 1.0:
 			_animating_uid = -1
 		queue_redraw()
-	elif int(_pulse * 8.0) % 2 == 0:
-		# Cheap idle shimmer without redrawing every frame aggressively.
-		pass
 
 ## Rebuild from the current loadout. Pass `animate_uid` to pop that part in.
 func refresh(ship: ShipLoadout, animate_uid: int = -1) -> void:
@@ -69,14 +69,12 @@ func refresh(ship: ShipLoadout, animate_uid: int = -1) -> void:
 
 func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
-	# Soft bay backdrop
 	draw_rect(r, Color(0.04, 0.07, 0.1, 1.0))
 	_draw_grid(r)
 
 	var hull := _hull_rect(r)
 	_draw_chassis(hull)
 
-	# Empty hardpoint ghosts so free slots are readable.
 	if _ship != null:
 		for slot in ShipLoadout.SLOT_TYPES:
 			var cap := _ship.slot_capacity(slot)
@@ -88,12 +86,10 @@ func _draw() -> void:
 	for m in _modules:
 		_draw_module(hull, m)
 
-	# Nameplate
 	if _ship != null:
-		var label := _ship.display_name
 		var font := UITheme.font("SemiBold")
-		draw_string(font, Vector2(12, size.y - 10), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
-			UITheme.TEXT_DIM)
+		draw_string(font, Vector2(12, size.y - 10), _ship.display_name,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UITheme.TEXT_DIM)
 
 func _draw_grid(r: Rect2) -> void:
 	var c := Color(0.12, 0.18, 0.24, 0.35)
@@ -108,14 +104,37 @@ func _draw_grid(r: Rect2) -> void:
 		y += step
 
 func _hull_rect(r: Rect2) -> Rect2:
-	var margin := 18.0
-	var h := mini(72.0, r.size.y * 0.42)
-	var w := r.size.x - margin * 2.0
-	var y := r.position.y + (r.size.y - h) * 0.42
-	return Rect2(r.position.x + margin, y, w, h)
+	var margin_x := 10.0
+	var margin_y := 8.0
+	var avail := Rect2(
+		r.position.x + margin_x,
+		r.position.y + margin_y,
+		r.size.x - margin_x * 2.0,
+		r.size.y - margin_y * 2.0 - 14.0)
+	if _hull_tex == null:
+		var h := mini(72.0, avail.size.y * 0.7)
+		return Rect2(avail.position.x, avail.position.y + (avail.size.y - h) * 0.35,
+			avail.size.x, h)
+	# Fit the painted hull into the bay, preserving aspect.
+	var tex := _hull_tex.get_size()
+	var scale := mini(avail.size.x / tex.x, avail.size.y / tex.y)
+	var w := tex.x * scale
+	var h := tex.y * scale
+	return Rect2(
+		avail.position.x + (avail.size.x - w) * 0.5,
+		avail.position.y + (avail.size.y - h) * 0.5,
+		w, h)
 
 func _draw_chassis(hull: Rect2) -> void:
-	# Main body — stretched hex-ish side profile.
+	if _hull_tex != null:
+		draw_texture_rect(_hull_tex, hull, false)
+		# Soft engine pulse over the rear nozzles (left side of the art).
+		var exhaust := hull.position + Vector2(hull.size.x * 0.07, hull.size.y * 0.55)
+		var glow := 0.35 + 0.2 * sin(_pulse * 4.0)
+		draw_circle(exhaust, hull.size.y * 0.12, Color(0.2, 0.75, 1.0, glow * 0.25))
+		return
+
+	# Procedural fallback when art is absent.
 	var pts := PackedVector2Array([
 		hull.position + Vector2(hull.size.x * 0.08, hull.size.y * 0.25),
 		hull.position + Vector2(hull.size.x * 0.72, hull.size.y * 0.05),
@@ -125,50 +144,33 @@ func _draw_chassis(hull: Rect2) -> void:
 		hull.position + Vector2(hull.size.x * 0.02, hull.size.y * 0.55),
 	])
 	draw_colored_polygon(pts, Color("1a2836"))
-	# Cockpit canopy near the nose
-	var canopy := PackedVector2Array([
-		hull.position + Vector2(hull.size.x * 0.70, hull.size.y * 0.18),
-		hull.position + Vector2(hull.size.x * 0.88, hull.size.y * 0.38),
-		hull.position + Vector2(hull.size.x * 0.74, hull.size.y * 0.48),
-		hull.position + Vector2(hull.size.x * 0.64, hull.size.y * 0.28),
-	])
-	draw_colored_polygon(canopy, Color("29b6f6").darkened(0.35))
-	# Outline
 	for i in pts.size():
 		draw_line(pts[i], pts[(i + 1) % pts.size()], UITheme.ACCENT_DIM, 2.0, true)
-	# Engine glow stub (always present; thruster parts amplify it)
-	var exhaust := hull.position + Vector2(hull.size.x * 0.02, hull.size.y * 0.55)
-	var glow := 0.45 + 0.15 * sin(_pulse * 4.0)
-	draw_circle(exhaust, 7.0, Color(0.2, 0.7, 1.0, glow * 0.35))
-	draw_circle(exhaust, 3.5, Color(0.7, 0.95, 1.0, glow))
 
 func _hardpoint(hull: Rect2, slot: StringName, index: int) -> Vector2:
+	# Tuned to the painted hull: nose right, engines left, dorsal rails on top.
 	match slot:
 		ShipLoadout.SLOT_WEAPON:
-			# Along the dorsal ridge, forward-biased.
-			var t := 0.55 - index * 0.11
-			return hull.position + Vector2(hull.size.x * t, hull.size.y * 0.08)
+			var t := 0.62 - index * 0.12
+			return hull.position + Vector2(hull.size.x * t, hull.size.y * 0.22)
 		ShipLoadout.SLOT_HULL:
-			# Belly / mid plating.
-			var t2 := 0.28 + index * 0.16
+			var t2 := 0.35 + index * 0.14
 			return hull.position + Vector2(hull.size.x * t2, hull.size.y * 0.78)
 		_:
-			# Utility: aft cluster and underside pods.
-			var t3 := 0.12 + index * 0.10
-			return hull.position + Vector2(hull.size.x * t3, hull.size.y * (0.25 if index % 2 == 0 else 0.70))
+			var t3 := 0.18 + index * 0.09
+			return hull.position + Vector2(hull.size.x * t3, hull.size.y * (0.28 if index % 2 == 0 else 0.72))
 
 func _draw_hardpoint_ghost(hull: Rect2, slot: StringName, index: int) -> void:
 	var p := _hardpoint(hull, slot, index)
 	var c: Color = SLOT_COLOUR.get(slot, UITheme.TEXT_FAINT)
-	c.a = 0.25
-	draw_arc(p, 9.0, 0.0, TAU, 20, c, 1.5, true)
+	c.a = 0.3
+	draw_arc(p, 8.0, 0.0, TAU, 20, c, 1.5, true)
 
 func _draw_module(hull: Rect2, m: Dictionary) -> void:
 	var p := _hardpoint(hull, m["slot"], int(m["index"]))
 	var scale := 1.0
 	var alpha := 1.0
 	if int(m["uid"]) == _animating_uid:
-		# Pop in from above with a brief overshoot.
 		var t := _anim_t
 		var ease := 1.0 - pow(1.0 - t, 3.0)
 		scale = lerpf(0.2, 1.0, ease) * lerpf(1.25, 1.0, ease)
@@ -191,9 +193,7 @@ func _draw_module(hull: Rect2, m: Dictionary) -> void:
 func _draw_weapon(p: Vector2, colour: Color, scale: float, m: Dictionary) -> void:
 	var w := 22.0 * scale
 	var h := 8.0 * scale
-	# Turret body
 	draw_rect(Rect2(p - Vector2(w * 0.35, h), Vector2(w * 0.55, h * 1.4)), colour)
-	# Barrel pointing forward (right)
 	draw_rect(Rect2(p + Vector2(w * 0.15, -h * 0.35), Vector2(w * 0.7, h * 0.55)), colour.lightened(0.2))
 	if m["stripped"]:
 		draw_line(p + Vector2(-6, -10) * scale, p + Vector2(6, 4) * scale, UITheme.WARN, 2.0)
@@ -214,13 +214,12 @@ func _draw_armor(p: Vector2, colour: Color, scale: float, m: Dictionary) -> void
 		draw_circle(p, 3.0 * scale, UITheme.WARN)
 
 func _draw_utility(p: Vector2, colour: Color, scale: float, m: Dictionary) -> void:
-	var r := 10.0 * scale
-	draw_circle(p, r, colour.darkened(0.2))
-	draw_arc(p, r, 0.0, TAU, 24, colour.lightened(0.3), 2.0, true)
-	# Tiny antenna / thruster fin
-	draw_line(p + Vector2(0, -r), p + Vector2(0, -r * 1.8), colour, 2.0 * scale, true)
+	var rad := 10.0 * scale
+	draw_circle(p, rad, colour.darkened(0.2))
+	draw_arc(p, rad, 0.0, TAU, 24, colour.lightened(0.3), 2.0, true)
+	draw_line(p + Vector2(0, -rad), p + Vector2(0, -rad * 1.8), colour, 2.0 * scale, true)
 	if m["stripped"]:
-		draw_line(p + Vector2(-r, 0), p + Vector2(r, 0), UITheme.WARN, 2.0)
+		draw_line(p + Vector2(-rad, 0), p + Vector2(rad, 0), UITheme.WARN, 2.0)
 
 func _gui_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed \

@@ -203,6 +203,46 @@ func compile() -> ShipProfile:
 	prof.mass = total_mass
 	return prof
 
+## What combat energy would be with the current parts (and optional swap).
+## Returns {output, draw, energy, deficit}.
+func power_budget(add: PartDef = null, remove: PartInstance = null) -> Dictionary:
+	var output := base_power
+	var draw := 0
+	var present: Dictionary = {}
+	for inst in parts:
+		if remove != null and inst == remove:
+			continue
+		if inst.is_wrecked():
+			continue
+		present[inst.def.system] = true
+	if add != null:
+		present[add.system] = true
+
+	for inst in parts:
+		if remove != null and inst == remove:
+			continue
+		if inst.is_wrecked():
+			continue
+		output += inst.def.power_gen
+		draw += inst.def.power_draw
+		if not inst.def.synergy.is_empty():
+			var want := StringName(inst.def.synergy.get("requires_system", ""))
+			if want == &"" or present.has(want):
+				output += int(inst.def.synergy.get("bonus", {}).get("power", 0))
+	for imp in improvement_defs():
+		output += int(imp.stats.get("power", 0))
+	if add != null:
+		output += add.power_gen
+		draw += add.power_draw
+		if not add.synergy.is_empty():
+			var want2 := StringName(add.synergy.get("requires_system", ""))
+			if want2 == &"" or present.has(want2):
+				output += int(add.synergy.get("bonus", {}).get("power", 0))
+
+	var deficit := maxi(0, draw - output)
+	var energy := maxi(0, output - deficit)
+	return {"output": output, "draw": draw, "energy": energy, "deficit": deficit}
+
 func scrap_value() -> int:
 	var total := 0
 	for p in parts:

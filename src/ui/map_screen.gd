@@ -268,16 +268,24 @@ func _open_ship_status() -> void:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(sp)
 	head.add_child(UITheme.label(
-		"hull %d/%d   power %d/%d   evasion %d   deck %d" % [
-			run.hull_carryover, prof.max_hull, prof.power_draw, prof.power,
+		"hull %d/%d   energy %d/turn   draw %d/%d   evasion %d   deck %d" % [
+			run.hull_carryover, prof.max_hull,
+			run.ship.power_budget()["energy"],
+			run.ship.power_budget()["draw"], run.ship.power_budget()["output"],
 			prof.evasion, prof.deck.size()],
 		13, UITheme.TEXT_DIM, "SemiBold"))
+
+	var bud: Dictionary = run.ship.power_budget()
+	if int(bud["deficit"]) > 0:
+		col.add_child(UITheme.label(
+			"POWER DEFICIT %d — part draw exceeds hull output, so energy is cut for the whole run." % bud["deficit"],
+			12, UITheme.WARN, "SemiBold"))
 
 	for w in prof.warnings:
 		col.add_child(UITheme.label("! " + w, 13, UITheme.WARN, "SemiBold"))
 
 	var ship_view := ShipView.new()
-	ship_view.custom_minimum_size = Vector2(0, 150)
+	ship_view.custom_minimum_size = Vector2(0, 170)
 	ship_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(ship_view)
 	ship_view.refresh(run.ship)

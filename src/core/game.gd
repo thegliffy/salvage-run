@@ -14,6 +14,7 @@ const SCENE_REWARD := "res://scenes/reward.tscn"
 const SCENE_SHOP := "res://scenes/shop.tscn"
 const SCENE_CHEST := "res://scenes/chest.tscn"
 const SCENE_SALE := "res://scenes/sale.tscn"
+const SCENE_UNLOCK := "res://scenes/unlock_shop.tscn"
 
 var run: RunState
 var meta: MetaState
@@ -112,3 +113,6 @@ func _end_run() -> void:
 
 func goto_title() -> void:
 	get_tree().change_scene_to_file(SCENE_TITLE)
+
+func goto_unlock_shop() -> void:
+	get_tree().change_scene_to_file(SCENE_UNLOCK)

@@ -18,6 +18,7 @@ var _status: Label
 var _heading: Label
 var _skip_btn: Button
 var _ship_view: ShipView
+var _power_panel: PanelContainer
 var _jettisoning := false
 var _preview_layer: Control
 var _preview_card: CardView
@@ -56,13 +57,13 @@ func _ready() -> void:
 	col.add_child(_payout_banner(imp))
 
 	_ship_view = ShipView.new()
-	_ship_view.custom_minimum_size = Vector2(0, 150)
+	_ship_view.custom_minimum_size = Vector2(0, 170)
 	_ship_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(_ship_view)
 	_ship_view.refresh(Game.run.ship)
-	col.add_child(UITheme.label(
-		"Take a part to bolt it onto the hull. Red = weapons, cyan = armor, green = utility.",
-		11, UITheme.TEXT_FAINT))
+
+	_power_panel = PanelContainer.new()
+	col.add_child(_power_panel)
 
 	_status = UITheme.label("", 14, UITheme.TEXT, "SemiBold")
 	col.add_child(_status)
@@ -109,12 +110,14 @@ func _payout_banner(imp: ImprovementDef) -> Control:
 func _refresh() -> void:
 	var run: RunState = Game.run
 	var prof := run.profile
-	_status.text = "hull %d/%d   slots  weapon %d/%d   hull %d/%d   utility %d/%d   deck %d   power %d/%d" % [
+	_status.text = "hull %d/%d   slots  weapon %d/%d   hull %d/%d   utility %d/%d   deck %d" % [
 		run.hull_carryover, prof.max_hull,
 		run.ship.installed_in(ShipLoadout.SLOT_WEAPON).size(), run.ship.slot_capacity(ShipLoadout.SLOT_WEAPON),
 		run.ship.installed_in(ShipLoadout.SLOT_HULL).size(), run.ship.slot_capacity(ShipLoadout.SLOT_HULL),
 		run.ship.installed_in(ShipLoadout.SLOT_UTILITY).size(), run.ship.slot_capacity(ShipLoadout.SLOT_UTILITY),
-		prof.deck.size(), prof.power_draw, prof.power]
+		prof.deck.size()]
+
+	_rebuild_power_panel()
 
 	var heal := RewardPool.skip_repair_amount(run)
 	if heal > 0:
@@ -140,6 +143,42 @@ func _refresh() -> void:
 			else ("MINI-BOSS DOWN" if int(_reward.get("tier", 1)) == 2 else "SECTOR BOSS DOWN")
 		for offer in _reward.get("parts", []):
 			_list.add_child(_offer_row(offer))
+
+func _rebuild_power_panel() -> void:
+	for c in _power_panel.get_children():
+		c.queue_free()
+	var run: RunState = Game.run
+	var bud: Dictionary = run.ship.power_budget()
+	var deficit: int = int(bud["deficit"])
+	var energy: int = int(bud["energy"])
+	var draw: int = int(bud["draw"])
+	var output: int = int(bud["output"])
+
+	var bg := Color("2a1d16") if deficit > 0 else Color("121a24")
+	var border := UITheme.WARN if deficit > 0 else UITheme.ACCENT_DIM
+	_power_panel.add_theme_stylebox_override("panel", UITheme.panel(bg, border, 1, 4, 10))
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 3)
+	_power_panel.add_child(col)
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 16)
+	col.add_child(head)
+	head.add_child(UITheme.label("POWER BUDGET", 13, UITheme.TEXT, "Bold"))
+	head.add_child(UITheme.label(
+		"hull output %d   part draw %d   →   energy %d / turn" % [output, draw, energy],
+		13, UITheme.WARN if deficit > 0 else UITheme.TEXT, "SemiBold"))
+
+	if deficit > 0:
+		col.add_child(UITheme.label(
+			"OVERDRAWN by %d — every point of draw past output cuts another energy. Jettison a hungry part or find a power improvement." % deficit,
+			12, UITheme.WARN))
+	else:
+		var headroom := output - draw
+		col.add_child(UITheme.label(
+			"Headroom %d. Parts list their power draw (−N power). Taking more than you generate permanently lowers energy for the rest of the run." % headroom,
+			12, UITheme.TEXT_DIM))
 
 func _offer_row(offer: Dictionary) -> Control:
 	var def: PartDef = offer["def"]
@@ -168,6 +207,25 @@ func _offer_row(offer: Dictionary) -> Control:
 
 	if def.flavor != "":
 		info.add_child(UITheme.label(def.flavor, 12, UITheme.TEXT_FAINT))
+
+	# Preview what this part does to combat energy if taken / swapped in.
+	var replace_target: PartInstance = null if offer["can_install"] else offer.get("replaces")
+	var after: Dictionary = Game.run.ship.power_budget(def, replace_target)
+	var before: Dictionary = Game.run.ship.power_budget()
+	var energy_note := ""
+	if int(after["energy"]) < int(before["energy"]):
+		energy_note = "energy %d → %d / turn" % [before["energy"], after["energy"]]
+		if int(after["deficit"]) > 0:
+			energy_note += "  (deficit %d)" % after["deficit"]
+	elif int(after["energy"]) > int(before["energy"]):
+		energy_note = "energy %d → %d / turn" % [before["energy"], after["energy"]]
+	elif def.power_draw > 0:
+		energy_note = "uses %d power  (energy stays %d)" % [def.power_draw, after["energy"]]
+	if energy_note != "":
+		info.add_child(UITheme.label(energy_note, 12,
+			UITheme.WARN if int(after["energy"]) < int(before["energy"]) else UITheme.GOOD,
+			"SemiBold"))
+
 	info.add_child(UITheme.label("grants — hover a card", 11, UITheme.TEXT_FAINT))
 	info.add_child(_card_chips(def.grants))
 

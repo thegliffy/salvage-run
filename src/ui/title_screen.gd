@@ -31,11 +31,29 @@ func _ready() -> void:
 	pitch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	pitch.custom_minimum_size.x = 520
 	col.add_child(pitch)
-	col.add_child(UITheme.spacer(22))
+	col.add_child(UITheme.spacer(10))
+
+	var art := UITheme.art("res://assets/ships/salvager-hull.png")
+	if art != null:
+		var ship := TextureRect.new()
+		ship.texture = art
+		ship.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ship.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ship.custom_minimum_size = Vector2(420, 200)
+		ship.modulate = Color(1, 1, 1, 0.95)
+		col.add_child(ship)
+		col.add_child(UITheme.spacer(12))
+	else:
+		col.add_child(UITheme.spacer(16))
 
 	var start := UITheme.button("  STEAL A SHIP  ")
 	start.pressed.connect(func(): Game.start_run())
 	col.add_child(start)
+
+	var yard := UITheme.button("  SALVAGE YARD — UNLOCK PARTS  ", UITheme.ACCENT_DIM)
+	yard.add_theme_color_override("font_color", UITheme.TEXT)
+	yard.pressed.connect(func(): Game.goto_unlock_shop())
+	col.add_child(yard)
 
 	var quit := UITheme.button("  QUIT  ", UITheme.PANEL_RAISED)
 	quit.add_theme_color_override("font_color", UITheme.TEXT)
@@ -43,15 +61,16 @@ func _ready() -> void:
 	col.add_child(quit)
 
 	col.add_child(UITheme.spacer(24))
+	var locked_n := Game.meta.unlockable().size()
 	var stats := UITheme.label(
-		"salvage %d    ships stolen %d    best haul %d" % [
-			Game.meta.salvage, Game.meta.runs_started, Game.meta.best_total],
+		"salvage %d    ships stolen %d    best haul %d    locked parts %d" % [
+			Game.meta.salvage, Game.meta.runs_started, Game.meta.best_total, locked_n],
 		13, UITheme.TEXT_FAINT)
 	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(stats)
 
 	var hint := UITheme.label(
-		"Shoot the hull to finish fights. Soft-disable guns or shields to buy a turn.",
+		"Uncommon/rare weapons only appear after you unlock them at the yard.",
 		12, UITheme.TEXT_FAINT)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(hint)
