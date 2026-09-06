@@ -75,6 +75,15 @@ static func bar(fill: Color, height: int = 14) -> ProgressBar:
 	pb.add_theme_stylebox_override("fill", panel(fill, Color(0,0,0,0), 0, 2, 0))
 	return pb
 
+## Load optional artwork. Returns null instead of erroring when the file is
+## absent -- the purchased art is not redistributed with this repository, so a
+## fresh clone legitimately has none and must still run.
+static func art(path: String) -> Texture2D:
+	if not ResourceLoader.exists(path):
+		return null
+	var res := load(path)
+	return res if res is Texture2D else null
+
 static func spacer(h: int = 8) -> Control:
 	var c := Control.new()
 	c.custom_minimum_size.y = h

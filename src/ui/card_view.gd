@@ -55,11 +55,18 @@ func setup(instance: CardInstance) -> void:
 	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_icon.custom_minimum_size.y = 92
-	if card.def.icon != "":
-		var tex := load("res://assets/icons/" + card.def.icon)
-		if tex != null:
-			_icon.texture = tex
-	root.add_child(_icon)
+	var art := UITheme.art("res://assets/icons/" + card.def.icon) if card.def.icon != "" else null
+	if art != null:
+		_icon.texture = art
+		root.add_child(_icon)
+	else:
+		# No art available (assets are not redistributed with the repo).
+		# A flat kind-coloured block keeps the card readable and deliberate.
+		var block := PanelContainer.new()
+		block.custom_minimum_size.y = 92
+		block.add_theme_stylebox_override("panel",
+			UITheme.panel(_kind_colour.darkened(0.55), _kind_colour, 1, 3, 0))
+		root.add_child(block)
 
 	# Rules text
 	_text = UITheme.label(card.text(), 11, UITheme.TEXT_DIM)

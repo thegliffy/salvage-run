@@ -21,3 +21,9 @@ libsteam_api*.so
 # OS
 .DS_Store
 Thumbs.db
+
+# Purchased artwork -- licensed for use in the game, NOT for redistribution.
+# See docs/ASSETS.md. The game runs without these; cards fall back to flat
+# kind-coloured blocks.
+assets/icons/
+assets/portraits/

@@ -40,9 +40,9 @@ func _ready() -> void:
 	EventBus.intent_fizzled.connect(_on_fizzle)
 	_build_system_rows()
 	if combat.brain.def.portrait != "":
-		var tex := load("res://assets/portraits/" + combat.brain.def.portrait)
-		if tex != null:
-			_portrait.texture = tex
+		var art := UITheme.art("res://assets/portraits/" + combat.brain.def.portrait)
+		if art != null:
+			_portrait.texture = art
 	_refresh()
 	_log_line("Engaging %s." % combat.enemy.display_name, UITheme.WARN)
 
