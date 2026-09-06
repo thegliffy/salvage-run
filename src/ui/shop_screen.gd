@@ -109,10 +109,11 @@ func _offer_row(offer: Dictionary) -> Control:
 	var replace_target: PartInstance = null if offer["can_install"] else offer.get("replaces")
 	var after: Dictionary = Game.run.ship.power_budget(def, replace_target)
 	var before: Dictionary = Game.run.ship.power_budget()
-	var creates_deficit := int(before["deficit"]) <= 0 and int(after["deficit"]) > 0
+	var after_def := int(after["deficit"])
+	var shout_deficit := after_def > 0
 	var wrap := UITheme.box(UITheme.PANEL,
-		UITheme.WARN if creates_deficit else UITheme.ACCENT_DIM,
-		2 if creates_deficit else 1, 4, 12)
+		UITheme.WARN if shout_deficit else UITheme.ACCENT_DIM,
+		2 if shout_deficit else 1, 4, 12)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	wrap.add_child(row)
@@ -138,12 +139,11 @@ func _offer_row(offer: Dictionary) -> Control:
 	if def.flavor != "":
 		info.add_child(UITheme.label(def.flavor, 11, UITheme.TEXT_FAINT))
 
-	if int(after["energy"]) != int(before["energy"]) or def.power_draw > 0:
+	if shout_deficit:
+		info.add_child(UITheme.deficit_panel(after_def,
+			"energy %d → %d / turn if you buy this." % [before["energy"], after["energy"]]))
+	elif int(after["energy"]) != int(before["energy"]) or def.power_draw > 0:
 		info.add_child(UITheme.energy_note(int(before["energy"]), int(after["energy"])))
-	if creates_deficit:
-		info.add_child(UITheme.label(
-			"⚡ DEFICIT %d  —  this buy overdraws the hull." % after["deficit"],
-			13, UITheme.WARN, "SemiBold"))
 
 	var cards := HBoxContainer.new()
 	cards.add_theme_constant_override("separation", 6)

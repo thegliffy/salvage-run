@@ -45,6 +45,7 @@ var _fx_layer: Control
 var _pending_draw: int = 0
 var _hand_epoch: int = 0
 var _ship_stats: Label
+var _deficit_host: PanelContainer
 var _deficit: Label
 
 func _ready() -> void:
@@ -275,9 +276,13 @@ func _build_side_panel() -> Control:
 	_player_shield = UITheme.label("", 13, UITheme.SHIELD, "SemiBold")
 	hrow.add_child(_player_shield)
 
-	_deficit = UITheme.label("", 13, UITheme.WARN, "SemiBold")
-	_deficit.visible = false
-	pcol.add_child(_deficit)
+	_deficit_host = ThemedPanel.new()
+	_deficit_host.visible = false
+	_deficit_host.add_theme_stylebox_override("panel", UITheme.deficit_style(2))
+	pcol.add_child(_deficit_host)
+	_deficit = UITheme.label("", 14, UITheme.WARN, "SemiBold")
+	_deficit.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_deficit_host.add_child(_deficit)
 	_ship_stats = UITheme.label("", 11, UITheme.TEXT_FAINT)
 	pcol.add_child(_ship_stats)
 
@@ -426,11 +431,11 @@ func _refresh() -> void:
 	_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
 	var deficit_n := int(bud["deficit"])
 	if deficit_n > 0:
-		_deficit.visible = true
+		_deficit_host.visible = true
 		_deficit.text = "⚡ DEFICIT %d  —  overdraw cuts energy every remaining fight." % deficit_n
-		UITheme.tip(_deficit, UITheme.power_tip(bud))
+		UITheme.tip(_deficit_host, UITheme.power_tip(bud))
 	else:
-		_deficit.visible = false
+		_deficit_host.visible = false
 		_deficit.text = ""
 	UITheme.tip(_ship_stats, UITheme.power_tip(bud))
 	_rebuild_hand()

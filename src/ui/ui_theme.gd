@@ -120,7 +120,7 @@ static func deficit_panel(n: int, sentence: String = "") -> PanelContainer:
 	col.add_theme_constant_override("separation", 4)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wrap.add_child(col)
-	col.add_child(label("⚡ DEFICIT %d" % n, 14, WARN, "SemiBold"))
+	col.add_child(label("⚡ DEFICIT %d" % n, 16, WARN, "Bold"))
 	if sentence != "":
 		var b := label(sentence, 13, TEXT)
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -369,7 +369,7 @@ static func part_tip(def: PartDef, extra: String = "") -> String:
 
 static func power_tip(bud: Dictionary) -> String:
 	var deficit := int(bud.get("deficit", 0))
-	var title := "POWER DEFICIT %d" % deficit if deficit > 0 else "Power budget"
+	var title := "⚡ DEFICIT %d" % deficit if deficit > 0 else "Power budget"
 	var body := "Hull output %d · part draw %d · energy %d / turn." % [
 		bud.get("output", 0), bud.get("draw", 0), bud.get("energy", 0)]
 	if deficit > 0:
