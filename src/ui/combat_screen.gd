@@ -472,7 +472,10 @@ func _refresh_intent() -> void:
 	var sys := String(info.get("system", ""))
 	var sys_name := String(info.get("system_name", ""))
 	if sys != "":
-		_intent_from.text = "from %s" % (sys_name if sys_name != "" else sys.to_upper())
+		# Title is usually the gun name; the useful extra is the subsystem role.
+		_intent_from.text = "from %s" % sys.to_upper()
+		if sys_name != "" and sys_name != String(info.get("title", "")):
+			_intent_from.text += "  ·  %s" % sys_name
 	else:
 		_intent_from.text = ""
 	var scaled := int(info.get("scaled", 0))

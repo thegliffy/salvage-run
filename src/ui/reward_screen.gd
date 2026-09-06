@@ -115,7 +115,7 @@ func _refresh() -> void:
 	if heal > 0:
 		_skip_btn.text = "  SKIP PART — REPAIR +%d HULL (15%%)  " % heal
 		_skip_btn.disabled = false
-		UITheme.tip(_skip_btn, "Skip the part\n---\nField-repair 15% of max hull (+%d). Leave with no new hardware." % heal)
+		UITheme.tip(_skip_btn, "Skip the part\n---\nField-repair 15%% of max hull (+%d). Leave with no new hardware." % heal)
 	else:
 		_skip_btn.text = "  SKIP PART — HULL ALREADY FULL  "
 		_skip_btn.disabled = false  # still a valid way to leave without a part
