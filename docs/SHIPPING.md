@@ -13,6 +13,48 @@ The renderer is set to **GL Compatibility** on both desktop and mobile. For a 2D
 card game this is the right call: it runs on far more Android hardware than the
 Vulkan-based Mobile renderer, and nothing in this game needs the extra features.
 
+## Installed toolchain (this machine)
+
+Godot is installed per-user, no sudo, fully reversible:
+
+| Thing | Location |
+|---|---|
+| Editor | `~/.local/share/godot-engine/4.7.2.stable/godot` |
+| Commands | `~/.local/bin/godot`, `~/.local/bin/godot4` (symlinks) |
+| Export templates | `~/.local/share/godot/export_templates/4.7.2.stable/` (2.0 GB) |
+| Launcher entry | `~/.local/share/applications/org.godotengine.Godot.desktop` |
+| Icon | `~/.local/share/icons/hicolor/128x128/apps/godot.png` |
+| MIME types | `~/.local/share/mime/packages/org.godotengine.Godot.xml` |
+
+Both downloads were verified against the release's official SHA512 sums.
+
+Upgrading is a matter of unpacking the new version beside the old one and
+repointing the symlink; export templates are versioned by tag, so several
+versions coexist without conflict.
+
+To remove entirely: delete the paths in the table above.
+
+### Verified working
+
+A Linux release export has been run end to end on this machine and the resulting
+binary boots. `export_presets.cfg` exists locally with a Linux preset (it stays
+gitignored, per the note below) and excludes `tests/*` from release builds.
+
+```bash
+godot --headless --path . --export-release "Linux" build/salvage-run.x86_64
+```
+
+### Still needed before Android will export
+
+Export templates are only half of it. The Android pipeline additionally needs:
+
+- A JDK (17+), the Android SDK with build-tools and platform-tools, and the NDK
+- Those paths configured in Godot's Editor Settings under `export/android`
+- A debug keystore for development and a separate upload keystore for release
+
+None of these are installed on this machine yet — `java`, `gradle`, and `adb`
+are all absent. Android export will fail until they are present.
+
 ## Steam
 
 ### GodotSteam moved to Codeberg — this matters
