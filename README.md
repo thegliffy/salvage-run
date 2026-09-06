@@ -113,4 +113,5 @@ to read the receipt and immediately know what to do differently.
 | `tests/` | Headless test suite and balance simulator |
 
 Design rationale is in [docs/DESIGN.md](docs/DESIGN.md).
+How it was built, and what broke on the way, is in [docs/DEVLOG.md](docs/DEVLOG.md).
 Shipping to Steam and Android is in [docs/SHIPPING.md](docs/SHIPPING.md).
