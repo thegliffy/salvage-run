@@ -76,8 +76,8 @@ static func bar(fill: Color, height: int = 14) -> ProgressBar:
 	return pb
 
 ## Load optional artwork. Returns null instead of erroring when the file is
-## absent -- the purchased art is not redistributed with this repository, so a
-## fresh clone legitimately has none and must still run.
+## absent -- redistributable icons and portraits ship with the repo, but a
+## missing file (or a commercial pack that was never added) must still run.
 static func art(path: String) -> Texture2D:
 	if not ResourceLoader.exists(path):
 		return null
