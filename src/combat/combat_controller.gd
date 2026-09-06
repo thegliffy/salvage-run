@@ -48,7 +48,8 @@ func begin_player_turn() -> void:
 	phase = Phase.PLAYER
 	player.energy = player.max_energy
 	player.tick_systems()
-	# Shields regenerate at the top of your turn, scaled by shield system health.
+	# Overshield expires at the start of your turn, then regen fills toward cap.
+	player.clear_overshield()
 	player.shield = mini(player.max_shield, player.shield + player.effective_shield_regen())
 	deck.draw(player.draw_per_turn)
 	EventBus.energy_changed.emit(player.energy, player.max_energy)
@@ -96,6 +97,7 @@ func _run_enemy_turn() -> void:
 	phase = Phase.ENEMY
 	EventBus.turn_began.emit(&"enemy")
 	enemy.tick_systems()
+	enemy.clear_overshield()
 	enemy.shield = mini(enemy.max_shield, enemy.shield + enemy.effective_shield_regen())
 
 	var effects := brain.scaled_effects()

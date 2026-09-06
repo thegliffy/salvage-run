@@ -14,7 +14,7 @@ func _ready() -> void:
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel",
 		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 28))
-	card.custom_minimum_size.x = 640
+	card.custom_minimum_size.x = 680
 	centre.add_child(card)
 
 	var col := VBoxContainer.new()
@@ -68,13 +68,15 @@ func _ready() -> void:
 	stack.add_theme_constant_override("separation", 8)
 	col.add_child(stack)
 
-	var start := UITheme.button("  STEAL A SHIP  ")
-	UITheme.tip(start, "Steal a ship\n---\nBegin a run. Steal a hull, fight to the boss, sell what you built.")
-	start.pressed.connect(func(): Game.start_run())
-	stack.add_child(start)
+	stack.add_child(UITheme.label("STEAL A SHIP", 14, UITheme.TEXT_DIM, "Bold"))
+	var picks := HBoxContainer.new()
+	picks.add_theme_constant_override("separation", 10)
+	stack.add_child(picks)
+	for choice in StarterShips.choices():
+		picks.add_child(_ship_pick(choice))
 
 	var yard := UITheme.ghost_button("  SALVAGE YARD  ")
-	UITheme.tip(yard, "Salvage Yard\n---\nSpend salvage to unlock parts into the next run's reward pool.")
+	UITheme.tip(yard, "Salvage Yard\n---\nSpend salvage to unlock hulls and parts. The Tank is the cheapest hull unlock.")
 	yard.pressed.connect(func(): Game.goto_unlock_shop())
 	stack.add_child(yard)
 
@@ -88,12 +90,58 @@ func _ready() -> void:
 	col.add_child(UITheme.spacer(8))
 	col.add_child(UITheme.hairline())
 
-	var locked_n := Game.meta.unlockable().size()
+	var locked_n := Game.meta.unlockable().size() + Game.meta.unlockable_ships().size()
 	var meta := UITheme.label(
-		"salvage %d  ·  ships stolen %d  ·  best haul %d  ·  %d parts locked" % [
+		"salvage %d  ·  ships stolen %d  ·  best haul %d  ·  %d locked" % [
 			Game.meta.salvage, Game.meta.runs_started, Game.meta.best_total, locked_n],
 		11, UITheme.TEXT_FAINT)
 	meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.tip(meta,
-		"Meta\n---\nSalvage is spent at the yard. Best haul is the highest single-run sale.")
+		"Meta\n---\nSalvage is spent at the yard. Unlock parts first; the Tank is the cheapest hull.")
 	col.add_child(meta)
+
+func _ship_pick(choice: Dictionary) -> Control:
+	var ship_id: StringName = choice["id"]
+	var unlocked := Game.meta.is_ship_unlocked(ship_id)
+	var cost := int(choice.get("unlock_cost", 0))
+	var wrap := UITheme.box(UITheme.PANEL_RAISED, UITheme.ACCENT_DIM, 1, 4, 10)
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	wrap.add_child(col)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	col.add_child(head)
+	head.add_child(UITheme.label(String(choice["name"]).to_upper(), 16, UITheme.ACCENT, "Bold"))
+	if not unlocked:
+		head.add_child(UITheme.badge("LOCKED", UITheme.WARN))
+	var blurb := UITheme.label(String(choice["blurb"]), 12, UITheme.TEXT_DIM)
+	blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(blurb)
+	if unlocked:
+		var steal := UITheme.button("  STEAL  ")
+		steal.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UITheme.tip(steal, "Steal the %s\n---\n%s\nBegin a run with this hull." % [
+			choice["name"], choice["blurb"]])
+		steal.pressed.connect(func(): Game.start_run(-1, ship_id))
+		col.add_child(steal)
+	else:
+		var can := Game.meta.can_afford_ship(ship_id)
+		var buy := UITheme.button(
+			"  UNLOCK  %d  " % cost if can else "  NEED  %d  " % cost,
+			UITheme.GOOD if can else UITheme.PANEL_RAISED)
+		buy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		buy.disabled = not can
+		if not can:
+			buy.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
+			UITheme.tip(buy, "Need %d salvage (have %d).\n---\nSell a ship, then unlock the Tank here or in the Salvage Yard." % [
+				cost, Game.meta.salvage])
+		else:
+			UITheme.tip(buy, "Unlock the %s\n---\n%d salvage. Cheapest hull unlock — costs more than any part." % [
+				choice["name"], cost])
+		buy.pressed.connect(func():
+			if Game.meta.unlock_ship(ship_id):
+				SaveSystem.save_meta(Game.meta)
+				Game.goto_title())
+		col.add_child(buy)
+	return wrap

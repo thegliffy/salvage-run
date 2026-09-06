@@ -44,10 +44,10 @@ func _ready() -> void:
 	salvage_box.add_child(_salvage)
 
 	col.add_child(UITheme.label(
-		"Spend salvage to unlock parts into the reward pool. Uncommon and rare weapons only show up in runs after you unlock them here.",
+		"Spend salvage to unlock starter hulls and parts. The Tank is the cheapest hull — and costs more than any part.",
 		14, UITheme.TEXT_DIM))
 	col.add_child(UITheme.label(
-		"Starter parts are already unlocked. Locked gear never appears as a fight reward.",
+		"Starter parts and the Brawler are free. Locked gear never appears as a fight reward.",
 		12, UITheme.TEXT_FAINT))
 	col.add_child(UITheme.spacer(4))
 
@@ -68,10 +68,11 @@ func _ready() -> void:
 
 func _refresh() -> void:
 	_salvage.text = "SALVAGE  %d" % Game.meta.salvage
-	UITheme.tip(_salvage, "Salvage\n%d\n---\nMeta currency from selling ships. Unlocks do not hand you the part — they put it in the pool." % Game.meta.salvage)
+	UITheme.tip(_salvage, "Salvage\n%d\n---\nMeta currency from selling ships. Hull unlocks open new starters; part unlocks put gear in the reward pool." % Game.meta.salvage)
 	for c in _list.get_children():
 		c.queue_free()
 
+	var locked_ships: Array = Game.meta.unlockable_ships()
 	var locked: Array = Game.meta.unlockable()
 	locked.sort_custom(func(a: PartDef, b: PartDef):
 		if a.tier != b.tier:
@@ -80,9 +81,14 @@ func _refresh() -> void:
 			return String(a.slot) < String(b.slot)
 		return a.unlock_cost < b.unlock_cost)
 
-	if locked.is_empty():
+	if locked_ships.is_empty() and locked.is_empty():
 		_list.add_child(UITheme.label("Everything unlocked. Steal bigger ships.", 15, UITheme.GOOD, "SemiBold"))
 		return
+
+	if not locked_ships.is_empty():
+		_list.add_child(UITheme.section("HULLS"))
+		for choice in locked_ships:
+			_list.add_child(_ship_row(choice))
 
 	var last_tier := -1
 	for def in locked:
@@ -91,6 +97,51 @@ func _refresh() -> void:
 			var rarity: StringName = TIER_NAME.get(def.tier, &"common")
 			_list.add_child(UITheme.section(String(rarity).to_upper()))
 		_list.add_child(_row(def))
+
+func _ship_row(choice: Dictionary) -> Control:
+	var ship_id: StringName = choice["id"]
+	var cost := int(choice["unlock_cost"])
+	var wrap := UITheme.box(UITheme.PANEL, UITheme.WARN, 1, 4, 12)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	wrap.add_child(row)
+
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 4)
+	row.add_child(info)
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	info.add_child(head)
+	head.add_child(UITheme.label(String(choice["name"]), 18, UITheme.TEXT, "Bold"))
+	head.add_child(UITheme.badge("HULL", UITheme.WARN))
+	head.add_child(UITheme.expand())
+
+	info.add_child(UITheme.label(String(choice["blurb"]), 12, UITheme.TEXT_FAINT))
+	info.add_child(UITheme.label(
+		"Unlocks a new starter on the title screen. Cheapest hull — costs more than any part.",
+		12, UITheme.TEXT_DIM))
+
+	var can_afford := Game.meta.can_afford_ship(ship_id)
+	var price := UITheme.label("%d salvage" % cost,
+		13, UITheme.TEXT_FAINT if not can_afford else UITheme.WARN, "SemiBold")
+	info.add_child(price)
+	var buy := UITheme.button("  UNLOCK  %d  " % cost, UITheme.GOOD)
+	buy.disabled = not can_afford
+	if not can_afford:
+		buy.text = "  NEED %d  " % cost
+		buy.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
+		UITheme.tip(buy, "Need %d salvage (have %d)." % [cost, Game.meta.salvage])
+	else:
+		UITheme.tip(buy, "Unlock %s\n---\nSteal this hull from the title screen." % choice["name"])
+	UITheme.row_cta(buy)
+	buy.pressed.connect(func():
+		if Game.meta.unlock_ship(ship_id):
+			SaveSystem.save_meta(Game.meta)
+			_refresh())
+	row.add_child(buy)
+	return wrap
 
 func _row(def: PartDef) -> Control:
 	var rarity: StringName = TIER_NAME.get(def.tier, &"common")

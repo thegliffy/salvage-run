@@ -63,6 +63,8 @@ func _run_tests() -> int:
 	_test_combat_fizzle()
 	_test_deck_cycling()
 	_test_damage_pipeline()
+	_test_overshield()
+	_test_shield_dump()
 	_test_strip()
 	_test_rewards()
 	_test_valuation()
@@ -127,13 +129,26 @@ func _test_compile() -> void:
 	_eq("utility slot", ship.free_slots(ShipLoadout.SLOT_UTILITY), 3)
 
 	_check("has weapons system", prof.has_system(&"weapons"))
-	_check("has shields system", prof.has_system(&"shields"))
+	_check("has armor system", prof.has_system(&"armor"))
+	_check("brawler starts with no shield capacity", prof.max_shield == 0)
 	_eq("starter deck is 3 parts x 3 cards", prof.deck.size(), 9)
 	_eq("laser granted twice by burst laser", prof.deck.count(&"laser_burst"), 2)
+	_eq("starter ship is the Brawler", prof.display_name, "Brawler")
 	_check("hull includes base", prof.max_hull >= 30)
 	_check("ship is self-powered without a reactor", prof.power > 0)
 	_check("starter is within its power budget", prof.warnings.is_empty(),
 		str(prof.warnings))
+
+	var tank_ship := StarterShips.tank()
+	var tank := tank_ship.compile()
+	_eq("tank name", tank.display_name, "Tank")
+	_eq("tank has one fewer weapon slot", tank_ship.slot_capacity(ShipLoadout.SLOT_WEAPON), 3)
+	_eq("tank has one fewer energy", tank.power, 4)  # base 4, draw 4, no deficit
+	_eq("tank deflector is 10 shield", tank.max_shield, 10)
+	_eq("tank deflector is +2 regen", tank.shield_regen, 2)
+	_check("tank starts with the Deflector Mk I", tank.has_system(&"shields"))
+	_eq("tank still starts with three parts", tank_ship.parts.size(), 3)
+	_check("tank stays in its power budget", tank.warnings.is_empty(), str(tank.warnings))
 
 	# Wrecked parts contribute nothing.
 	var before := prof.deck.size()
@@ -445,9 +460,96 @@ func _test_damage_pipeline() -> void:
 		{"source": c.enemy, "opponent": c.player, "target_system": &"weapons"})
 	var worn := false
 	for inst in ship.parts:
-		if wsys.part_uids.has(inst.uid) and inst.wear > 0:
+		if inst.def.system == &"weapons" and inst.wear > 0:
 			worn = true
-	_check("destroyed player system wears its part", worn)
+	_check("destroying a subsystem wears its part", worn)
+	_check("weapons system is offline", not wsys.is_active())
+
+func _test_overshield() -> void:
+	print("overshield")
+	Rng.seed_run(12)
+	var ship := StarterShips.brawler()
+	var c := CombatController.new()
+	c.setup(ship.compile(), Database.enemy(&"raider"), ship)
+	_eq("brawler starts at 0/0 shield", c.player.shield, 0)
+	_eq("brawler max shield is 0", c.player.max_shield, 0)
+
+	# Gain with no capacity — the whole pool is overshield.
+	c.resolver.run([{"op": "shield", "amount": 8}],
+		{"source": c.player, "opponent": c.enemy})
+	_eq("shield gain above capacity is kept", c.player.shield, 8)
+	_eq("overshield reports the excess", c.player.overshield(), 8)
+
+	# Overshield still absorbs damage.
+	c.enemy.evasion = 0
+	c.resolver.run([{"op": "damage_hull", "amount": 3, "unavoidable": true}],
+		{"source": c.enemy, "opponent": c.player})
+	_eq("overshield absorbs damage", c.player.shield, 5)
+	_eq("hull untouched while overshield holds", c.player.hull, c.player.max_hull)
+
+	# Bolt on capacity mid-fight and gain past it.
+	c.player.max_shield = 4
+	c.player.shield = 4
+	c.resolver.run([{"op": "shield", "amount": 5}],
+		{"source": c.player, "opponent": c.enemy})
+	_eq("gain past capacity becomes overshield", c.player.shield, 9)
+	_eq("overshield is current - max", c.player.overshield(), 5)
+
+	# Start of player turn clears overshield, then regen fills toward cap.
+	c.player.shield_regen = 0
+	c.begin_player_turn()
+	_eq("overshield cleared at turn start", c.player.shield, 4)
+	_eq("no overshield remains", c.player.overshield(), 0)
+
+	c.player.shield = 9
+	c.player.shield_regen = 2
+	c.begin_player_turn()
+	_eq("regen applies after overshield drop", c.player.shield, 4)
+
+func _test_shield_dump() -> void:
+	print("shield dump")
+	Rng.seed_run(44)
+	var ship := StarterShips.tank()
+	var c := CombatController.new()
+	c.setup(ship.compile(), Database.enemy(&"raider"), ship)
+	c.enemy.evasion = 0
+	c.enemy.shield = 0
+	var hull_before := c.enemy.hull
+
+	c.player.shield = 14
+	c.resolver.run([{
+		"op": "damage_system",
+		"amount": 0,
+		"pierce": true,
+		"spend_own_shield": true,
+		"unavoidable": true,
+	}], {"source": c.player, "opponent": c.enemy, "target_system": &"hull"})
+	_eq("dump spends all shield", c.player.shield, 0)
+	_eq("dump deals spent shield as damage", c.enemy.hull, hull_before - 14)
+
+	# Flat bonus stacks on top of the dump.
+	c.player.shield = 5
+	hull_before = c.enemy.hull
+	c.resolver.run([{
+		"op": "damage_system",
+		"amount": 3,
+		"pierce": true,
+		"spend_own_shield": true,
+		"unavoidable": true,
+	}], {"source": c.player, "opponent": c.enemy, "target_system": &"hull"})
+	_eq("dump plus printed amount", c.enemy.hull, hull_before - 8)
+	_eq("shield emptied after bonus dump", c.player.shield, 0)
+
+	# Empty bank is a no-op hit.
+	hull_before = c.enemy.hull
+	c.resolver.run([{
+		"op": "damage_system",
+		"amount": 0,
+		"pierce": true,
+		"spend_own_shield": true,
+		"unavoidable": true,
+	}], {"source": c.player, "opponent": c.enemy, "target_system": &"hull"})
+	_eq("zero-shield dump deals nothing", c.enemy.hull, hull_before)
 
 func _test_strip() -> void:
 	print("strip (card removal)")
@@ -663,6 +765,24 @@ func _test_meta_progression() -> void:
 	var meta := MetaState.new()
 	meta.grant_starting_unlocks()
 	_check("starters unlocked", meta.unlocked.size() > 0)
+	_check("brawler starts unlocked", meta.is_ship_unlocked(&"brawler"))
+	_check("tank starts locked", not meta.is_ship_unlocked(&"tank"))
+	_check("tank is the cheapest ship unlock", meta.unlockable_ships().size() >= 1
+		and meta.unlockable_ships()[0]["id"] == &"tank")
+	_eq("tank unlock cost", StarterShips.unlock_cost(&"tank"), 450)
+	var dearest_part := 0
+	for p in meta.unlockable():
+		dearest_part = maxi(dearest_part, p.unlock_cost)
+	_check("tank costs more than every locked part",
+		StarterShips.unlock_cost(&"tank") > dearest_part)
+
+	_check("cannot afford tank with no salvage", not meta.can_afford_ship(&"tank"))
+	meta.salvage = StarterShips.unlock_cost(&"tank")
+	_check("tank unlock succeeds when affordable", meta.unlock_ship(&"tank"))
+	_eq("tank unlock spends salvage", meta.salvage, 0)
+	_check("tank now unlocked", meta.is_ship_unlocked(&"tank"))
+	_check("cannot unlock tank twice", not meta.unlock_ship(&"tank"))
+
 	_check("locked parts exist to buy", meta.unlockable().size() > 0)
 
 	var target: PartDef = meta.unlockable()[0]
@@ -678,7 +798,14 @@ func _test_meta_progression() -> void:
 	var meta2 := MetaState.new()
 	meta2.from_dict(d)
 	_check("save round-trip keeps unlocks", meta2.is_unlocked(target.id))
+	_check("save round-trip keeps ship unlocks", meta2.is_ship_unlocked(&"tank"))
 	_eq("save round-trip keeps salvage", meta2.salvage, meta.salvage)
+
+	# Old saves without unlocked_ships still get free starters.
+	var meta3 := MetaState.new()
+	meta3.from_dict({"salvage": 0, "unlocked": []})
+	_check("legacy save still unlocks brawler", meta3.is_ship_unlocked(&"brawler"))
+	_check("legacy save keeps tank locked", not meta3.is_ship_unlocked(&"tank"))
 
 func _test_map() -> void:
 	print("map")
@@ -945,11 +1072,19 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 	var score := 0.0
 	# Shields absorb in order, so track what is left as ops are considered.
 	var shield_left := c.enemy.shield
+	var own_shield := c.player.shield
 
 	for op in card.effects():
 		var amount: int = c.resolver.scaled_amount(op, ctx)
 		var kind: String = op.get("op", "")
 		var pierce: bool = bool(op.get("pierce", false))
+		if bool(op.get("spend_own_shield", false)):
+			# Dump current shield into the hit; penalize cover we still needed.
+			var dumped := own_shield
+			var needed_cover := maxi(0, incoming - 0)
+			score -= mini(dumped, needed_cover) * W_SHIELD
+			amount += dumped
+			own_shield = 0
 
 		match kind:
 			"damage_system":
@@ -988,16 +1123,14 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 				else:
 					score += W_SUPPRESS
 			"shield":
-				# The resolver caps shield gain at max_shield, so scoring the
-				# card's printed number makes every defensive card look far
-				# better than it is. Without this the pilot turtles forever
-				# and fights hit the turn guard instead of ending.
-				var room := 999999 if bool(op.get("overshield", false)) \
-					else maxi(0, c.player.max_shield - c.player.shield)
-				var gained := mini(amount, room)
-				var needed := maxi(0, incoming - c.player.shield)
+				# Excess above max_shield is overshield until next turn, so the
+				# printed amount is always reachable. Score only what covers
+				# incoming damage this turn as fully useful.
+				var gained := amount
+				var needed := maxi(0, incoming - own_shield)
 				var useful := mini(gained, needed)
 				score += useful * W_SHIELD + (gained - useful) * W_WASTED_SHIELD
+				own_shield += gained
 			"repair_hull":
 				score += mini(amount, c.player.max_hull - c.player.hull) * W_REPAIR_HULL
 			"repair_system":

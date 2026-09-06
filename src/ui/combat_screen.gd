@@ -496,19 +496,24 @@ func _refresh_intent() -> void:
 			from if from != "" else "this ship"]
 	UITheme.tip(_intent_panel, tip)
 
-## Shield as current/max, shown even at zero whenever the ship has any shield
-## capacity at all. A depleted shield and no shield system rendered identically
-## before, and they play very differently -- one of them comes back next turn.
+## Shield as current/max. Overshield (current > max) still shows on the same
+## readout so a temporary surge is obvious. A ship with no capacity and no live
+## overshield hides the label entirely.
 func _set_shield_label(label: Label, c: Combatant) -> void:
 	if c.max_shield <= 0 and c.shield <= 0:
 		label.text = ""
+		label.tooltip_text = ""
 		return
 	label.text = "◆ %d/%d" % [c.shield, c.max_shield]
-	# Dimmed while down, so a live shield still stands out at a glance.
-	label.add_theme_color_override("font_color",
-		UITheme.SHIELD if c.shield > 0 else UITheme.TEXT_FAINT)
-	if label.text != "":
-		UITheme.tip(label, "Shields\n%d / %d\n---\nAbsorbs incoming damage first. Regen +%d / turn while the shield system is up." % [
+	var over := c.overshield()
+	if over > 0:
+		label.add_theme_color_override("font_color", UITheme.WARN)
+		UITheme.tip(label, "Shields\n%d / %d  (+%d overshield)\n---\nAbsorbs damage first. Overshield expires at the start of your next turn. Regen +%d / turn into capacity." % [
+			c.shield, c.max_shield, over, c.shield_regen])
+	else:
+		label.add_theme_color_override("font_color",
+			UITheme.SHIELD if c.shield > 0 else UITheme.TEXT_FAINT)
+		UITheme.tip(label, "Shields\n%d / %d\n---\nAbsorbs incoming damage first. Gain above capacity becomes overshield until your next turn. Regen +%d / turn while the shield system is up." % [
 			c.shield, c.max_shield, c.shield_regen])
 
 func _rebuild_hand() -> void:
@@ -690,9 +695,15 @@ func _on_effect(event: Dictionary) -> void:
 		"shield_absorb":
 			line = "  %s shields absorb %d" % [event["target"], event["amount"]]
 			colour = UITheme.SHIELD
+		"shield_spent":
+			line = "  %s dumps %d shield" % [event["target"], event["amount"]]
+			colour = UITheme.WARN
 		"shield":
-			if int(event["amount"]) > 0:
-				line = "  %s +%d shield" % [event["target"], event["amount"]]
+			line = "  %s +%d shield" % [event["target"], event["amount"]]
+			if int(event.get("overshield", 0)) > 0:
+				line += " (+%d over)" % int(event["overshield"])
+				colour = UITheme.WARN
+			else:
 				colour = UITheme.SHIELD
 		"miss":
 			line = "  %s evades!" % event["target"]

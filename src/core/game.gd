@@ -34,9 +34,11 @@ func _ready() -> void:
 	if i != -1 and i + 1 < args.size():
 		ShotRunner.run(self, args[i + 1])
 
-func start_run(run_seed: int = -1) -> void:
+func start_run(run_seed: int = -1, ship_id: StringName = &"brawler") -> void:
+	if not meta.is_ship_unlocked(ship_id):
+		ship_id = &"brawler"
 	run = RunState.new()
-	run.start(StarterShips.salvager(), run_seed)
+	run.start(StarterShips.make(ship_id), run_seed)
 	pending_enemy = &""
 	pending_node_id = -1
 	meta.runs_started += 1

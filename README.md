@@ -1,10 +1,10 @@
 # Salvage Run
 
-**v0.11** · by **thegliffy**
+**v0.15** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
 across a sector map to the boss, then sell what you built for salvage that
-unlocks new parts to steal next time.
+unlocks new parts — and new hulls — to steal next time.
 
 FTL's subsystem targeting, Slay the Spire's card economy and map, and a run-end
 sale that turns "how good was this ship" into a number you spend.
@@ -13,14 +13,34 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-253 tests passing · 200-run balance sim at ~37% win rate
+293 tests passing · playable PC demo
 ```
+
+---
+
+## Screenshots
+
+![Title — steal a ship](docs/ui-shots/title.png)
+
+![Sector map](docs/ui-shots/sector_map.png)
+
+![Combat with telegraphed intent](docs/ui-shots/combat_intent.png)
+
+![Combat hand](docs/ui-shots/combat_hand_hover.png)
+
+![Ship status](docs/ui-shots/ship_status.png)
+
+![Reward offers](docs/ui-shots/reward_offers.png)
+
+![Salvage Yard](docs/ui-shots/salvage_yard.png)
+
+![Ship sale receipt](docs/ui-shots/ship_sale_receipt.png)
 
 ---
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.11-win64.zip` from
+**Windows:** download `SalvageRun-v0.15-win64.zip` from
 [Releases](https://github.com/thegliffy/salvage-run/releases), unzip, run
 `SalvageRun.exe`. Single self-contained executable — no installer, no separate
 data files.
@@ -62,10 +82,21 @@ Title → salvage unlock shop → sector map → combat / shop / chest → rewar
 **Working:** StS-style sector map (~15 stops), combat with hull as the primary
 target and soft subsystem control, typed-slot ship loadout, power-budget UI,
 tiered rewards (skip = field repair), ship status overlay, ship improvements,
-jettison, card stripping, run-end appraisal, meta unlock shop, meta saves.
+jettison, card stripping, run-end appraisal, meta unlock shop (parts + hulls),
+overshield, Brawler / Tank starters, meta saves.
 
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+### What's new in v0.15
+
+- **Brawler** starter (4 weapons, 5 energy, no innate shields) and unlockable
+  **Tank** (3 weapons, 4 energy, Deflector Mk I at 10 shield / +2 regen)
+- Tank is the cheapest hull unlock at **450 salvage** — more than any part
+- **Overshield** — shield gains above capacity stick until your next turn
+- Tank-oriented weapons: Plasma Cycler, Aegis Rail, and rare **Capacitor Cannon**
+  with **Shield Dump** (spend all your shield as pierce damage)
+- Ship status overlay from combat and map; reward offers as equal tiles across
 
 ---
 
@@ -73,10 +104,10 @@ integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 You never edit your deck directly. You edit your **ship**.
 
-The hull has typed slots — **4 weapon, 3 hull, 4 utility**. Each installed part
-grants three cards. Bolt on a Missile Rack and `Breach Missile` enters your deck;
-jettison that part and its cards leave with it. Deckbuilding and ship building
-are the same action.
+The hull has typed slots — **4 weapon, 3 hull, 4 utility** (Tank starts with 3
+weapon slots). Each installed part grants three cards. Bolt on a Missile Rack
+and `Breach Missile` enters your deck; jettison that part and its cards leave
+with it. Deckbuilding and ship building are the same action.
 
 Nothing limits how much you carry except the slots. What limits *what* you carry
 is three soft costs:
@@ -140,10 +171,11 @@ to sell.
 ### Meta unlocks
 
 Between runs, the title screen's **Salvage Yard** spends salvage to unlock parts
-into the reward pool. Unlocks do not hand you the part — they make it eligible
-to appear on the next theft. Starter weapons begin unlocked (Burst Laser);
-uncommon/rare weapons cost salvage (Missile Rack 150, EMP Projector 200,
-Carrion Lance 400, …).
+into the reward pool and new starter hulls. Unlocks do not hand you the part —
+they make it eligible to appear on the next theft. The **Brawler** starts free;
+the **Tank** is the first hull unlock (450 salvage, above any part). Starter
+weapons begin unlocked (Burst Laser); uncommon/rare weapons cost salvage
+(Missile Rack 150, EMP Projector 200, Carrion Lance 400, …).
 
 ### The sale
 
@@ -205,6 +237,7 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 | `assets/ships/` | Painted hull art used by `ShipView` |
 | `assets/icons/` | Redistributable tinted card icons (`cards.json` `icon`) |
 | `assets/portraits/` | Redistributable enemy portraits (`enemies.json` `portrait`) |
+| `docs/ui-shots/` | README screenshots |
 | `tests/` | Headless test suite and balance simulator |
 
 ## Docs

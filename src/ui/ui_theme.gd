@@ -284,6 +284,7 @@ static func spacer(h: int = 8) -> Control:
 
 const KEYWORD_BLURB := {
 	&"pierce": "Ignores shields. Hits the system or hull directly.",
+	&"dump": "Spends all your current shield (including overshield) and deals that much as damage.",
 	&"exhaust": "Leaves the run after you play it — not discarded.",
 	&"retain": "Stays in hand when you end the turn.",
 	&"overload": "Pays a bigger effect if you can afford the extra energy.",

@@ -30,6 +30,15 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 	var source: Combatant = ctx.get("source")
 	var opponent: Combatant = ctx.get("opponent")
 	var amount := scaled_amount(op, ctx)
+	# Tank payoff: dump current shield (incl. overshield) into the hit.
+	# Printed amount is a flat bonus on top of the dump when both are set.
+	if bool(op.get("spend_own_shield", false)) and source != null:
+		var dumped := source.shield
+		if dumped > 0:
+			source.shield = 0
+			_emit({"type": "shield_spent", "target": source.display_name,
+				"amount": dumped})
+		amount += dumped
 
 	match kind:
 		"damage_system":
@@ -57,12 +66,14 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 				_emit({"type": "suppress", "target": opponent.display_name,
 					"system": String(sid2), "turns": int(op.get("turns", 1))})
 		"shield":
-			var gained := mini(amount, maxi(0, source.max_shield - source.shield))
-			# Allow overshield when the op says so; some tech cards want it.
-			if bool(op.get("overshield", false)):
-				gained = amount
-			source.shield += gained
-			_emit({"type": "shield", "target": source.display_name, "amount": gained})
+			# Excess above max_shield is overshield — it still absorbs damage,
+			# then drops at the start of this combatant's next turn.
+			var before := source.shield
+			source.shield += amount
+			var gained := source.shield - before
+			_emit({"type": "shield", "target": source.display_name, "amount": gained,
+				"shield": source.shield, "max_shield": source.max_shield,
+				"overshield": source.overshield()})
 		"repair_system":
 			var sid3: StringName = _resolve_target_system(op, ctx, true)
 			var rs: ShipSystem = source.system(sid3)

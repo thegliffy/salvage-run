@@ -6,7 +6,7 @@ extends RefCounted
 ## parts into this stat block + system list + deck list, and combat reads only
 ## this. One seam, so there is exactly one place where parts become numbers.
 
-var display_name: String = "Salvager"
+var display_name: String = "Brawler"
 var max_hull: int = 40
 var max_shield: int = 0
 var shield_regen: int = 0

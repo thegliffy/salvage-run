@@ -61,6 +61,14 @@ static func from_enemy(def: EnemyDef) -> Combatant:
 		c.systems[s.id] = s
 	return c
 
+## Shield points above capacity. Still absorb damage; expire at turn start.
+func overshield() -> int:
+	return maxi(0, shield - max_shield)
+
+func clear_overshield() -> void:
+	if shield > max_shield:
+		shield = max_shield
+
 func system(sid: StringName) -> ShipSystem:
 	return systems.get(sid)
 

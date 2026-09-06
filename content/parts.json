@@ -25,8 +25,8 @@
     "power_draw": 1,
     "mass": 2,
     "stats": {
-      "shield": 6,
-      "shield_regen": 3
+      "shield": 10,
+      "shield_regen": 2
     },
     "grants": [
       "raise_deflector",
@@ -308,5 +308,77 @@
       }
     },
     "slot": "utility"
+  },
+  "plasma_cycler": {
+    "name": "Plasma Cycler",
+    "system": "weapons",
+    "tier": 1,
+    "flavor": "Banks a little charge on every shot. Tank pilots love it.",
+    "integrity": 8,
+    "power_draw": 2,
+    "mass": 2,
+    "grants": [
+      "plasma_bolt",
+      "plasma_bolt",
+      "ion_haze"
+    ],
+    "base_value": 70,
+    "unlock_cost": 90,
+    "synergy": {
+      "requires_system": "shields",
+      "bonus": {
+        "shield": 2
+      }
+    },
+    "slot": "weapon",
+    "power_gen": 0
+  },
+  "aegis_rail": {
+    "name": "Aegis Rail",
+    "system": "weapons",
+    "tier": 2,
+    "flavor": "Charge the field, then fire the spike.",
+    "integrity": 9,
+    "power_draw": 2,
+    "mass": 3,
+    "grants": [
+      "banked_charge",
+      "rail_spike",
+      "field_bleed"
+    ],
+    "base_value": 140,
+    "unlock_cost": 180,
+    "synergy": {
+      "requires_system": "shields",
+      "bonus": {
+        "shield_regen": 1
+      }
+    },
+    "slot": "weapon",
+    "power_gen": 0
+  },
+  "capacitor_cannon": {
+    "name": "Capacitor Cannon",
+    "system": "weapons",
+    "tier": 3,
+    "flavor": "Your shield bank is the magazine.",
+    "integrity": 10,
+    "power_draw": 3,
+    "mass": 3,
+    "grants": [
+      "shield_dump",
+      "mirror_lance",
+      "thermal_vent"
+    ],
+    "base_value": 220,
+    "unlock_cost": 380,
+    "synergy": {
+      "requires_system": "shields",
+      "bonus": {
+        "shield": 4
+      }
+    },
+    "slot": "weapon",
+    "power_gen": 0
   }
 }

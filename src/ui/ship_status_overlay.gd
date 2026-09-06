@@ -93,7 +93,7 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	srow.add_child(UITheme.metric("EVASION", str(prof.evasion), UITheme.TEXT,
 		"Evasion %d\n---\nChance incoming shots miss. Heavier ships dodge worse." % prof.evasion))
 	srow.add_child(UITheme.metric("SHIELD", "%d (+%d/t)" % [prof.max_shield, prof.shield_regen], UITheme.SHIELD,
-		"Shields\n%d max · +%d / turn\n---\nAbsorbs damage before hull. Needs a live shield system." % [
+		"Shields\n%d max · +%d / turn\n---\nAbsorbs damage before hull. Gain above capacity becomes overshield until your next turn." % [
 			prof.max_shield, prof.shield_regen]))
 	srow.add_child(UITheme.metric("DECK", str(prof.deck.size()), UITheme.TEXT,
 		"Deck %d\n---\nThree cards per installed part. Bigger ships draw worse." % prof.deck.size()))

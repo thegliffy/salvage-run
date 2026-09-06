@@ -26,7 +26,7 @@ func _ready() -> void:
 	lines.append("")
 
 	Rng.seed_run(1)
-	var ship := StarterShips.salvager()
+	var ship := StarterShips.brawler()
 	var prof := ship.compile()
 	lines.append("Starter ship: " + prof.summary())
 	for w in prof.warnings:

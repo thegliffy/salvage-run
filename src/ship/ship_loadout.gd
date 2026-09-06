@@ -20,7 +20,7 @@ const SLOT_HULL := &"hull"
 const SLOT_UTILITY := &"utility"
 const SLOT_TYPES: Array[StringName] = [SLOT_WEAPON, SLOT_HULL, SLOT_UTILITY]
 
-var display_name: String = "Salvager"
+var display_name: String = "Brawler"
 var capacity: Dictionary = {SLOT_WEAPON: 4, SLOT_HULL: 3, SLOT_UTILITY: 4}
 var parts: Array[PartInstance] = []
 ## Permanent ship upgrades. They fill no slot and grant no cards -- they change
@@ -33,8 +33,11 @@ var improvements: Array[StringName] = []
 var base_hull: int = 30
 var base_power: int = 5
 var base_draw: int = 5
+## Hull-innate shield. Starters leave these at 0; shield comes from parts.
+var base_shield: int = 0
+var base_shield_regen: int = 0
 
-func _init(name: String = "Salvager") -> void:
+func _init(name: String = "Brawler") -> void:
 	display_name = name
 
 # --- Slots -------------------------------------------------------------------
@@ -122,6 +125,8 @@ func compile() -> ShipProfile:
 	prof.max_hull = base_hull
 	prof.power = base_power
 	prof.draw_per_turn = base_draw
+	prof.max_shield = base_shield
+	prof.shield_regen = base_shield_regen
 
 	var systems_acc: Dictionary = {}
 	var power_draw := 0
@@ -257,13 +262,20 @@ func to_dict() -> Dictionary:
 	for i in improvements:
 		imp.append(String(i))
 	return {"name": display_name, "capacity": capacity, "parts": pd,
-		"improvements": imp}
+		"improvements": imp,
+		"base_hull": base_hull, "base_power": base_power, "base_draw": base_draw,
+		"base_shield": base_shield, "base_shield_regen": base_shield_regen}
 
 static func from_dict(d: Dictionary) -> ShipLoadout:
-	var g := ShipLoadout.new(d.get("name", "Salvager"))
+	var g := ShipLoadout.new(d.get("name", "Brawler"))
 	var cap: Dictionary = d.get("capacity", {})
 	for k in cap:
 		g.capacity[StringName(k)] = int(cap[k])
+	g.base_hull = int(d.get("base_hull", g.base_hull))
+	g.base_power = int(d.get("base_power", g.base_power))
+	g.base_draw = int(d.get("base_draw", g.base_draw))
+	g.base_shield = int(d.get("base_shield", g.base_shield))
+	g.base_shield_regen = int(d.get("base_shield_regen", g.base_shield_regen))
 	for i in d.get("improvements", []):
 		g.improvements.append(StringName(i))
 	for pd in d.get("parts", []):
