@@ -1,67 +1,74 @@
 # Asset provenance
 
-What is in `assets/`, where it came from, and what that means for distributing
-this repository.
+What `assets/` needs, what ships with this repository, and what does not.
 
 ---
 
-## Summary
+## What ships here
 
-| Asset | Used for | Source | Redistributable? |
-|---|---|---|---|
-| `assets/icons/` (142 PNG) | Card art | Sci-Fi Skill Icon Pack — commercial purchase | **No — see below** |
-| `assets/portraits/` (4 PNG) | Enemy portraits | Sci-Fi Character Icons — commercial purchase | **No — see below** |
-| `assets/fonts/Exo-*.ttf` | All UI type | [Exo](https://fonts.google.com/specimen/Exo) by Natanael Gama | Yes — SIL Open Font License 1.1 |
-
-## The licensing problem
-
-The two icon packs were bought from an asset marketplace and **ship no licence
-file**. Marketplace licences of this kind almost always permit use *inside* a
-released game while prohibiting redistribution of the source art — and a public
-git repository redistributes it.
-
-**Therefore: this repository should stay private** unless the purchased packs are
-removed or their licences are checked and found to permit redistribution.
-
-If the repository ever needs to be public, either:
-
-1. Remove `assets/icons/` and `assets/portraits/` from git history, add them to
-   `.gitignore`, and document how a developer supplies their own; or
-2. Replace them with assets under a permissive licence (CC0, CC-BY); or
-3. Confirm in writing that the purchased licence allows source redistribution.
-
-Option 1 is the usual answer. Note that deleting the files in a new commit is
-**not** sufficient — they remain in history and must be stripped with
-`git filter-repo` or equivalent.
-
-## Fonts
-
-`Exo` is licensed under the SIL Open Font License 1.1, which permits bundling and
-redistribution provided the licence travels with it. The full licence text is at
-[`assets/fonts/OFL.txt`](../assets/fonts/OFL.txt).
+| Asset | Used for | Licence |
+|---|---|---|
+| `assets/fonts/Exo-*.ttf` | All UI type | SIL Open Font License 1.1 — see [`OFL.txt`](../assets/fonts/OFL.txt) |
 
 Attribution: **Exo** designed by Natanael Gama.
 
-## Card icon convention
+## What does not ship here
 
-Icon colour is keyed to card kind so a hand reads as shapes before it reads as
-words:
+`assets/icons/` and `assets/portraits/` are **not in this repository**. They are
+commercially purchased artwork, licensed for use inside a released game but not
+for redistribution — and a public git repository redistributes.
+
+They are listed in `.gitignore` and were removed from git history, not merely
+deleted in a later commit.
+
+**The game runs without them.** `UITheme.art()` returns null for absent files
+rather than erroring, and cards fall back to a flat block in their kind colour.
+A full run has been rendered end to end with both directories removed; every
+screen draws and the hand stays readable. You lose the art, not the game.
+
+## Supplying your own art
+
+### Card icons — `assets/icons/`
+
+Square PNGs, 256×256 works well. Filenames are referenced by the `icon` field in
+`content/cards.json`, so any naming scheme works as long as the JSON matches.
+
+Colour is load-bearing: icon colour is keyed to card kind so a hand reads as
+shapes before it reads as words.
 
 | Colour | Card kind |
 |---|---|
 | Red | attack |
-| Cyan/blue | tech |
+| Cyan / blue | tech |
 | Green | manoeuvre |
 | Violet | status (drawback cards) |
 
-Assignments live in the `icon` field of `content/cards.json` and can be retuned
-without touching code.
+The reference set used four colour families named `red_*`, `blue_*`, `green_*`
+and `violet_*`. To regenerate assignments after dropping in a new set, the
+mapping is a plain loop over `content/cards.json` — assign by `kind`, then write
+the filename into each card's `icon` field.
+
+### Enemy portraits — `assets/portraits/`
+
+Square PNGs with transparency, 256×256. Referenced by the `portrait` field in
+`content/enemies.json`. They render scaled to fit whatever vertical space the
+enemy's subsystem list leaves, so they should read at roughly 150–300px tall.
+
+Four are needed for the current enemy roster.
+
+### Free alternatives
+
+If you want a permissively licensed starting point: [Game-icons.net](https://game-icons.net)
+(CC-BY 3.0) covers the card-icon slot well and can be tinted per card kind at
+build time, which would also make the colour convention automatic rather than
+manual.
 
 ## Assets deliberately not used
 
-The purchased **cyberpunk HUD panel** set was evaluated and rejected. Those
-panels are fixed-shape with an asymmetric notch cut into one edge, so stretching
-them to arbitrary panel sizes mangles the artwork and 9-slicing cannot preserve
-the notch. UI panels are Godot `StyleBoxFlat` matched to the same cyan palette
-instead. Using that specific angular look would need purpose-cut 9-slice frames
-rather than the shipped PNGs.
+A purchased **cyberpunk HUD panel** set was evaluated and rejected. Those panels
+are fixed-shape with an asymmetric notch cut into one edge, so stretching them to
+arbitrary sizes mangles the artwork, and 9-slicing cannot preserve the notch. UI
+panels are Godot `StyleBoxFlat` matched to the same cyan palette instead.
+
+Using that angular look properly would need purpose-cut 9-slice frames rather
+than the shipped PNGs.

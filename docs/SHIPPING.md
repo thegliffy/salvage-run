@@ -175,13 +175,15 @@ godot --headless --path . --export-release "Windows Desktop" build/salvage-run.e
 godot --headless --path . --export-release "Android" build/salvage-run.aab
 ```
 
-## Asset licensing affects distribution
+## Asset licensing
 
-`assets/icons/` and `assets/portraits/` are commercially purchased art that ships
-with no licence file. Using them in a released game is almost certainly fine;
-redistributing the source art in a public repository is almost certainly not.
-See [ASSETS.md](ASSETS.md) before making this repository public or shipping the
-project files anywhere.
+The purchased card icons and enemy portraits are **not in this repository** —
+they are licensed for use in a released game, not for redistribution. They live
+in `.gitignore` and were stripped from git history. The game renders without
+them; see [ASSETS.md](ASSETS.md).
+
+This affects *source* distribution only. Shipping the compiled game with the art
+baked into the `.pck` is exactly what those licences are for.
 
 The Exo typeface is SIL OFL and travels with its licence at
 `assets/fonts/OFL.txt`.

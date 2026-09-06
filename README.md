@@ -19,14 +19,13 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 ## Play it
 
 ```bash
-./build/salvage-run.x86_64
-```
-
-or from source:
-
-```bash
 godot --path .
 ```
+
+> **Note on art.** The card icons and enemy portraits are commercially licensed
+> and are not redistributed here, so a fresh clone renders cards as flat
+> kind-coloured blocks. Everything is playable; see
+> [docs/ASSETS.md](docs/ASSETS.md) to supply your own.
 
 **How to play.** Click a card, then click the enemy subsystem you want to hit.
 The amber banner is the enemy's next attack and it *names the subsystem that
