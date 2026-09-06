@@ -453,9 +453,11 @@ func _run_sim(count: int, base_seed: int) -> void:
 	print("A healthy target for a scaffold is a NON-trivial win rate: if this")
 	print("reads 0%% or 100%%, the numbers in content/*.json need a pass, not the code.")
 
-	# Show one annotated fight so the log format is visible.
-	print("\n--- sample fight (seed 1000) ---")
-	_simulate_run(1000, true)
+	# Show one annotated fight so the log format is visible. Honour --seed so
+	# the narrated run is one of the runs just measured.
+	var sample: int = base_seed if base_seed >= 0 else 1000
+	print("\n--- sample fight (seed %d) ---" % sample)
+	_simulate_run(sample, true)
 
 func _simulate_run(run_seed: int, verbose: bool = false,
 		tally: Dictionary = {}) -> Dictionary:
