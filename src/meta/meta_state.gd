@@ -2,10 +2,10 @@ class_name MetaState
 extends RefCounted
 ## Persistent progression: salvage currency and unlocked parts.
 ##
-## Unlocks add parts to the pool that can APPEAR in runs; they are not handed
-## to the player directly. That keeps the meta-game additive (more variety)
-## rather than multiplicative (raw power), which is what keeps run 200 as
-## interesting as run 5.
+## The fantasy: every run is a theft. What you bolt on mid-run becomes scrap at
+## the yard; salvage unlocks new parts into the reward pool and — later — new
+## starter hulls to steal. Unlocks are additive (more variety), not a flat
+## power grant, so run 200 stays as interesting as run 5.
 
 var salvage: int = 0
 var unlocked: Dictionary = {}     # StringName -> true

@@ -51,8 +51,8 @@ func _ready() -> void:
 	scroll.add_child(_list)
 	col.add_child(scroll)
 
-	var go := UITheme.button("  NEXT FIGHT  ")
-	go.pressed.connect(func(): Game.goto_combat())
+	var go := UITheme.button("  BACK TO MAP  ")
+	go.pressed.connect(func(): Game.goto_map())
 	col.add_child(go)
 	_refresh()
 

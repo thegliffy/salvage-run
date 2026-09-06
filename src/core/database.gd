@@ -76,6 +76,13 @@ func part(id: StringName) -> PartDef:
 func enemy(id: StringName) -> EnemyDef:
 	return enemies.get(id)
 
+func enemies_of_tier(tier: int) -> Array:
+	var out: Array = []
+	for eid in enemies:
+		if enemies[eid].tier == tier:
+			out.append(enemies[eid])
+	return out
+
 func improvement(id: StringName) -> ImprovementDef:
 	return improvements.get(id)
 

@@ -1,11 +1,11 @@
 class_name StarterShips
 extends RefCounted
-## Ships the player can begin a run with.
+## Ships the player can begin a run with — hulls worth stealing.
 ##
 ## The hull is self-powered (base_power 5) so a reactor is an upgrade that buys
 ## headroom rather than a part you are forced to carry. The Salvager starts one
 ## part into each of its three slot types, leaving eight slots to fill from
-## battle rewards.
+## battle rewards. Later unlocks add more ships to steal.
 
 static func salvager() -> ShipLoadout:
 	var g := ShipLoadout.new("Salvager")

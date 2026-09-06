@@ -15,6 +15,8 @@ var power: int = 3                  # energy per turn
 var power_draw: int = 0             # total draw, for the loadout readout
 var mass: int = 0
 var draw_per_turn: int = 5
+## Player subsystem auto-repair. Zero unless a rare improvement grants it.
+var system_regen: int = 0
 var systems: Array = []             # [{id, name, integrity, part_uids}]
 var deck: Array[StringName] = []    # card ids
 var warnings: Array[String] = []    # e.g. "power deficit", surfaced in shipyard

@@ -34,7 +34,12 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 	match kind:
 		"damage_system":
 			var sid: StringName = _resolve_target_system(op, ctx)
-			_deal_damage(source, opponent, amount, sid, op)
+			# Hull is a legal target for system-targeted cards: shoot the ship
+			# itself without chewing through a subsystem first.
+			if sid == &"hull":
+				_deal_damage(source, opponent, amount, &"", op)
+			else:
+				_deal_damage(source, opponent, amount, sid, op)
 		"damage_hull":
 			_deal_damage(source, opponent, amount, &"", op)
 		"damage_self_hull":
@@ -120,6 +125,7 @@ func _resolve_target_system(op: Dictionary, ctx: Dictionary, own: bool = false) 
 	if chosen != &"":
 		return chosen
 	# Fall back to a random live system so AI ops never no-op silently.
+	# Never invent a hull target here — hull is an explicit player choice.
 	var pool: Combatant = ctx.get("source") if own else ctx.get("opponent")
 	var live := pool.targetable_systems()
 	if live.is_empty():

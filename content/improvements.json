@@ -51,5 +51,10 @@
     "name": "Combat Uplink", "rarity": "rare",
     "text": "Draw 1 more card each turn, +12 hull",
     "stats": {"draw": 1, "hull": 12}
+  },
+  "damage_control_nanites": {
+    "name": "Damage Control Nanites", "rarity": "rare",
+    "text": "Your subsystems auto-repair 2 HP each turn if undamaged",
+    "stats": {"system_regen": 2}
   }
 }

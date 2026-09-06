@@ -96,13 +96,12 @@ func _run_enemy_turn() -> void:
 	enemy.tick_systems()
 	enemy.shield = mini(enemy.max_shield, enemy.shield + enemy.effective_shield_regen())
 
-	if brain.intent_fizzles():
-		# The payoff moment: the shot the player prevented.
-		EventBus.intent_fizzled.emit(enemy, brain.current_intent)
-		log_event({"type": "fizzle", "target": enemy.display_name,
+	var effects := brain.scaled_effects()
+	if effects.is_empty() and not brain.current_intent.is_empty():
+		log_event({"type": "offline", "target": enemy.display_name,
 			"intent": brain.current_intent.get("id", "?")})
 	else:
-		resolver.run(brain.scaled_effects(), {
+		resolver.run(effects, {
 			"source": enemy, "opponent": player, "target_system": &"",
 		})
 

@@ -2,10 +2,10 @@ class_name EnemyBrain
 extends RefCounted
 ## Chooses and telegraphs enemy intents.
 ##
-## The core rule: an intent names the subsystem it fires from. If the player
-## destroys or suppresses that subsystem before the enemy turn, the intent
-## FIZZLES. Telegraphing one turn ahead is what turns "which system do I shoot"
-## into a real decision instead of a coin flip.
+## Intents name the subsystem they fire from. An offline system cannot fire
+## (damaged weapons hit softer via efficiency). That is a soft control option —
+## the player can also just shoot the hull. There is no full "fizzle cancel"
+## that makes subsystem hunting mandatory.
 
 var def: EnemyDef
 var combatant: Combatant
@@ -24,8 +24,7 @@ func choose_intent() -> Dictionary:
 		var w := float(intent.get("weight", 1.0))
 		var req := StringName(intent.get("requires_system", ""))
 
-		# Heavily deprioritise intents whose system is already down; the AI
-		# is not stupid, it just cannot always avoid them.
+		# Softly deprioritise intents whose system is already down.
 		if req != &"" and not combatant.has_active_system(req):
 			w *= 0.15
 		# Soften repeats so fights do not become one move on loop.
@@ -43,8 +42,9 @@ func choose_intent() -> Dictionary:
 	_history.append(StringName(current_intent.get("id", "")))
 	return current_intent
 
-## True when the intent's source system is down -- the payoff for targeting.
-func intent_fizzles() -> bool:
+## True when the intent's source system is offline — the shot cannot fire.
+## Kept for UI/telegraph; combat no longer treats this as a celebrated cancel.
+func intent_offline() -> bool:
 	if current_intent.is_empty():
 		return true
 	var req := StringName(current_intent.get("requires_system", ""))
@@ -52,12 +52,16 @@ func intent_fizzles() -> bool:
 		return false
 	return not combatant.has_active_system(req)
 
+## Deprecated alias — older call sites / sim. Prefer intent_offline().
+func intent_fizzles() -> bool:
+	return intent_offline()
+
 ## Player-facing telegraph text, degraded if the system is damaged.
 func telegraph() -> String:
 	if current_intent.is_empty():
 		return "Idle"
 	var base: String = current_intent.get("telegraph", current_intent.get("id", "?"))
-	if intent_fizzles():
+	if intent_offline():
 		return "%s (offline)" % base
 	var req := StringName(current_intent.get("requires_system", ""))
 	var s: ShipSystem = combatant.system(req)
@@ -65,8 +69,10 @@ func telegraph() -> String:
 		return "%s (damaged)" % base
 	return base
 
-## Damaged weapons hit softer -- partial damage matters, not just kills.
+## Damaged weapons hit softer. Offline systems produce no effects.
 func scaled_effects() -> Array:
+	if intent_offline():
+		return []
 	var req := StringName(current_intent.get("requires_system", ""))
 	var eff := 1.0
 	var s: ShipSystem = combatant.system(req)

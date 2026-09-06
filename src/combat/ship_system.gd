@@ -2,9 +2,9 @@ class_name ShipSystem
 extends RefCounted
 ## A targetable subsystem on a ship in combat.
 ##
-## Integrity is separate from hull. You can lose every subsystem and still be
-## alive but helpless, or die at full subsystems. That separation is the whole
-## reason subsystem targeting is interesting.
+## Integrity is separate from hull. Soft enemy systems can be knocked offline
+## briefly; they auto-repair unless they were damaged since the last tick.
+## Player systems do not auto-repair unless an improvement grants system_regen.
 
 var id: StringName
 var display_name: String
@@ -13,6 +13,10 @@ var max_integrity: int = 0
 var online: bool = true
 var offline_turns: int = 0   # >0 means temporarily suppressed (EMP-style)
 var part_uids: Array = []
+## HP restored at the start of this combatant's turn when undamaged.
+var auto_repair: int = 0
+## Set when this system takes damage; cleared after the auto-repair check.
+var damaged_since_tick: bool = false
 
 static func from_dict(d: Dictionary) -> ShipSystem:
 	var s := ShipSystem.new()
@@ -21,6 +25,7 @@ static func from_dict(d: Dictionary) -> ShipSystem:
 	s.max_integrity = int(d.get("integrity", 8))
 	s.integrity = s.max_integrity
 	s.part_uids = d.get("part_uids", [])
+	s.auto_repair = int(d.get("auto_repair", 0))
 	return s
 
 func is_active() -> bool:
@@ -30,6 +35,8 @@ func is_active() -> bool:
 func take_damage(amount: int) -> int:
 	var dealt := mini(amount, integrity)
 	integrity -= dealt
+	if dealt > 0:
+		damaged_since_tick = true
 	if integrity <= 0:
 		integrity = 0
 		online = false
@@ -48,6 +55,15 @@ func suppress(turns: int) -> void:
 func tick_suppression() -> void:
 	if offline_turns > 0:
 		offline_turns -= 1
+
+## If undamaged since the last tick, restore auto_repair HP, then clear the flag.
+## Returns HP actually restored (0 when skipped or already full).
+func tick_auto_repair() -> int:
+	var healed := 0
+	if auto_repair > 0 and not damaged_since_tick and integrity < max_integrity:
+		healed = repair(auto_repair)
+	damaged_since_tick = false
+	return healed
 
 ## 0.0 (destroyed) .. 1.0 (pristine). Drives partial effectiveness so that
 ## chipping a system is worthwhile even without destroying it.

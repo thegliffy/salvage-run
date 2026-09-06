@@ -172,7 +172,7 @@ func _test_rng_determinism() -> void:
 	_check("streams are independent", a != c)
 
 func _test_combat_fizzle() -> void:
-	print("combat: subsystem targeting + intent fizzle")
+	print("combat: hull targeting + soft systems")
 	Rng.seed_run(7)
 	var ship := StarterShips.salvager()
 	var c := CombatController.new()
@@ -181,21 +181,25 @@ func _test_combat_fizzle() -> void:
 	_check("combat starts on player turn", c.phase == CombatController.Phase.PLAYER)
 	_check("player drew a hand", c.deck.hand.size() > 0)
 	_check("enemy telegraphs an intent", c.brain.telegraph() != "")
+	_eq("enemy systems are soft (5 HP)", c.enemy.system(&"weapons").max_integrity, 5)
+	_eq("enemy auto-repairs", c.enemy.system_regen, 2)
+	_eq("player has no system regen by default", c.player.system_regen, 0)
 
-	# Destroy the enemy weapons system outright.
+	# Destroy the enemy weapons system — the shot cannot fire while offline.
 	var weapons: ShipSystem = c.enemy.system(&"weapons")
 	weapons.take_damage(weapons.max_integrity)
 	_check("weapons offline after lethal damage", not weapons.is_active())
 
-	# Force the enemy onto a weapons intent, then confirm it fizzles.
 	c.brain.current_intent = c.enemy_intent_by_id(&"pulse")
-	_check("weapons intent fizzles when weapons are down", c.brain.intent_fizzles())
+	_check("weapons intent is offline when weapons are down", c.brain.intent_offline())
 
 	var hull_before := c.player.hull
 	c.end_player_turn()
-	_eq("fizzled intent deals no damage", c.player.hull, hull_before)
+	_eq("offline intent deals no damage", c.player.hull, hull_before)
+	# Damaged this cycle, so no auto-repair on that enemy turn.
+	_eq("no repair on the turn after being destroyed", weapons.integrity, 0)
 
-	# And a live system does fire.
+	# A live system does fire.
 	Rng.seed_run(7)
 	var ship2 := StarterShips.salvager()
 	var c2 := CombatController.new()
@@ -207,9 +211,46 @@ func _test_combat_fizzle() -> void:
 	_check("live intent does damage", after2 < before2,
 		"before=%d after=%d" % [before2, after2])
 
-	# Regression: a fully disabled enemy must still be killable. Before this
-	# rule existed, destroying every subsystem left no legal target and the
-	# fight stalled forever -- the balance sim caught it, not a human.
+	# Hull is a legal target: damage goes through shields straight into hull.
+	Rng.seed_run(8)
+	var ship_h := StarterShips.salvager()
+	var ch := CombatController.new()
+	ch.setup(ship_h.compile(), Database.enemy(&"raider"), ship_h)
+	ch.enemy.evasion = 0
+	ch.enemy.shield = 0
+	var w_before: int = ch.enemy.system(&"weapons").integrity
+	var h_before := ch.enemy.hull
+	ch.resolver.run([{"op": "damage_system", "amount": 9}],
+		{"source": ch.player, "opponent": ch.enemy, "target_system": &"hull"})
+	_eq("hull target leaves subsystems alone", ch.enemy.system(&"weapons").integrity, w_before)
+	_eq("hull target deals full damage to hull", ch.enemy.hull, h_before - 9)
+
+	# Auto-repair: undamaged systems recover 2 HP at the start of their turn.
+	Rng.seed_run(9)
+	var ship_r := StarterShips.salvager()
+	var cr := CombatController.new()
+	cr.setup(ship_r.compile(), Database.enemy(&"scout_drone"), ship_r)
+	var eng: ShipSystem = cr.enemy.system(&"engines")
+	eng.take_damage(3)
+	_eq("engines chipped", eng.integrity, 2)
+	# Clear the damaged flag as if a full cycle passed without further hits.
+	eng.damaged_since_tick = false
+	eng.tick_auto_repair()
+	_eq("undamaged engines auto-repair 2", eng.integrity, 4)
+	eng.damaged_since_tick = true
+	eng.tick_auto_repair()
+	_eq("damaged engines skip auto-repair", eng.integrity, 4)
+
+	# Rare improvement grants player system regen.
+	var ship_n := StarterShips.salvager()
+	ship_n.add_improvement(&"damage_control_nanites")
+	var prof_n := ship_n.compile()
+	_eq("nanites grant system_regen", prof_n.system_regen, 2)
+	var cn := CombatController.new()
+	cn.setup(prof_n, Database.enemy(&"scout_drone"), ship_n)
+	_eq("player systems inherit auto-repair", cn.player.system(&"weapons").auto_repair, 2)
+
+	# Regression: a fully disabled enemy must still be killable.
 	Rng.seed_run(21)
 	var ship3 := StarterShips.salvager()
 	var c3 := CombatController.new()
@@ -426,6 +467,16 @@ func _test_rewards() -> void:
 		run.profile.deck.size() < cards_before)
 	_check("jettisoning it twice fails", RewardPool.jettison(run, victim) != "")
 
+	# Skipping a part offer field-repairs 15% of max hull.
+	run.hull_carryover = 10
+	var max_h := run.profile.max_hull
+	var expected := mini(int(ceil(float(max_h) * 0.15)), max_h - 10)
+	var healed := RewardPool.skip_for_repair(run)
+	_eq("skip repairs 15% of max hull", healed, expected)
+	_eq("hull carryover raised", run.hull_carryover, 10 + expected)
+	run.hull_carryover = max_h
+	_eq("skip heals nothing at full hull", RewardPool.skip_for_repair(run), 0)
+
 func _test_valuation() -> void:
 	print("valuation")
 	Rng.seed_run(5)
@@ -483,10 +534,14 @@ func _test_meta_progression() -> void:
 func _test_map() -> void:
 	print("map")
 	Rng.seed_run(99)
-	var m := MapGenerator.generate(1, 8)
-	_eq("layer count", m["by_layer"].size(), 8)
+	var m := MapGenerator.generate(1)
+	_eq("layer count (start + 15 stops + boss)", m["by_layer"].size(),
+		MapGenerator.STOPS_BEFORE_BOSS + 2)
+	_eq("stops field", m["stops"], MapGenerator.STOPS_BEFORE_BOSS)
 	_check("single entry", m["by_layer"][0].size() == 1)
+	_check("entry is start", m["nodes"][m["entry"]]["type"] == "start")
 	_check("boss is last", m["nodes"].back()["type"] == "boss")
+	_check("entry marked visited", m["nodes"][m["entry"]]["visited"] == true)
 
 	# Every node must be reachable from the entry, or the run can dead-end.
 	var seen := {}
@@ -500,9 +555,42 @@ func _test_map() -> void:
 			queue.append(e)
 	_eq("all nodes reachable", seen.size(), m["nodes"].size())
 
+	# Combat-bearing nodes carry an enemy id assigned at generation.
+	for node in m["nodes"]:
+		var t: String = node["type"]
+		if t == "combat" or t == "elite" or t == "boss":
+			_check("enemy set on %s" % t, StringName(node["enemy"]) != &"")
+			_check("enemy exists for %s" % t, Database.enemy(node["enemy"]) != null)
+
+	# Across many seeds the stop-layer mix should land near the design weights.
+	var counts := {"combat": 0, "shop": 0, "elite": 0, "chest": 0}
+	var total_stops := 0
+	for s in 40:
+		Rng.seed_run(1000 + s)
+		var sample := MapGenerator.generate(1)
+		for node2 in sample["nodes"]:
+			var t2: String = node2["type"]
+			if counts.has(t2):
+				counts[t2] += 1
+				total_stops += 1
+	_check("stop nodes rolled", total_stops > 0)
+	if total_stops > 0:
+		var combat_share := float(counts["combat"]) / float(total_stops)
+		_check("combat near 70%% (got %.0f%%)" % (combat_share * 100.0),
+			combat_share > 0.55 and combat_share < 0.85)
+
 	Rng.seed_run(99)
-	var m2 := MapGenerator.generate(1, 8)
+	var m2 := MapGenerator.generate(1)
 	_eq("map is deterministic for a seed", m2["nodes"].size(), m["nodes"].size())
+
+	# Chest reward returns an improvement the ship does not already have.
+	var run := RunState.new()
+	run.start(StarterShips.salvager(), 42)
+	var before := run.ship.improvements.duplicate()
+	var chest_imp: ImprovementDef = RewardPool.chest_improvement(run)
+	_check("chest yields an improvement", chest_imp != null)
+	if chest_imp != null:
+		_check("chest improvement not already installed", before.find(chest_imp.id) == -1)
 
 # --- Balance simulator -------------------------------------------------------
 
@@ -598,12 +686,11 @@ func _simulate_run(run_seed: int, verbose: bool = false,
 ## one -- the goal is a stable yardstick, so that a change in the win rate
 ## reflects a change in the numbers and not a change in how cleverly it played.
 ##
-## It does understand the one rule the design hangs off: disabling the subsystem
-## behind the telegraphed intent cancels the shot. That is worth far more than
-## the raw damage it costs, and FIZZLE_BONUS says so.
-const FIZZLE_BONUS := 25.0
-const W_HULL_DAMAGE := 1.0
-const W_SYSTEM_DAMAGE := 0.8
+## Soft-disabling the firing subsystem is still valuable (silence for a turn
+## before auto-repair), but hull damage is the primary win condition.
+const OFFLINE_BONUS := 12.0
+const W_HULL_DAMAGE := 1.35
+const W_SYSTEM_DAMAGE := 0.55
 const W_SHIELD := 0.55
 const W_WASTED_SHIELD := 0.05
 const W_REPAIR_HULL := 1.0
@@ -665,10 +752,10 @@ func _autoplay(c: CombatController, verbose: bool = false,
 		c.end_player_turn()
 	return c.turn
 
-## Damage the player is about to take, or 0 if the intent is already dead.
+## Damage the player is about to take, or 0 if the intent is already offline.
 ## Drives how much a shield card is actually worth this turn.
 func _expected_incoming(c: CombatController) -> int:
-	if c.brain.intent_fizzles():
+	if c.brain.intent_offline():
 		return 0
 	var total := 0
 	for op in c.brain.scaled_effects():
@@ -677,9 +764,9 @@ func _expected_incoming(c: CombatController) -> int:
 				total += int(op.get("amount", 0))
 	return total
 
-## The subsystem feeding the enemy's telegraphed shot, or &"" if none/fizzled.
+## The subsystem feeding the enemy's telegraphed shot, or &"" if none/offline.
 func _intent_system(c: CombatController) -> StringName:
-	if c.brain.intent_fizzles():
+	if c.brain.intent_offline():
 		return &""
 	return StringName(c.brain.current_intent.get("requires_system", ""))
 
@@ -688,28 +775,17 @@ func _pick_target(c: CombatController, card: CardInstance) -> StringName:
 		CardDef.Target.SELF_SYSTEM:
 			return _worst_own_system(c)
 		CardDef.Target.ENEMY_SYSTEM:
-			# 1. Shield regeneration gates every point of damage that follows,
-			#    so a ship that out-regenerates our output has to be opened up
-			#    before anything else matters. Without this the pilot tunnels
-			#    on the intent system and fights against regen never end.
+			# 1. High shield regen gates everything — soft-disable shields first.
 			if c.enemy.effective_shield_regen() >= REGEN_PRESSURE \
 					and c.enemy.has_active_system(&"shields"):
 				return &"shields"
-			# 2. Whatever is about to shoot us -- disabling it cancels the shot.
+			# 2. Incoming threat this turn: soft-disable the firing system.
 			var intent := _intent_system(c)
-			if intent != &"" and c.enemy.has_active_system(intent):
+			if intent != &"" and c.enemy.has_active_system(intent) \
+					and c.enemy.system(intent).integrity <= 5:
 				return intent
-			# 2. Otherwise the softest intact system, to disable more of them.
-			var intact := c.enemy.intact_systems()
-			if not intact.is_empty():
-				var softest: ShipSystem = intact[0]
-				for s in intact:
-					if s.integrity < softest.integrity:
-						softest = s
-				return softest.id
-			# 3. Nothing intact left: shoot the wreck, damage spills to hull.
-			var any := c.enemy.targetable_systems()
-			return any[0].id if not any.is_empty() else &""
+			# 3. Default: shoot the hull. Soft systems are optional control.
+			return &"hull"
 		_:
 			return &""
 
@@ -736,14 +812,17 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 					score += absorbed * W_SHIELD_STRIP
 				if through <= 0:
 					continue
+				if target == &"hull":
+					score += through * W_HULL_DAMAGE
+					continue
 				var sys: ShipSystem = c.enemy.system(target)
 				if sys != null and sys.integrity > 0:
 					var into_system := mini(through, sys.integrity)
 					var spill := through - into_system
 					score += into_system * W_SYSTEM_DAMAGE + spill * W_HULL_DAMAGE
-					# The payoff: this kills the system that is about to fire.
+					# Soft-disable the system that is about to fire.
 					if into_system >= sys.integrity and target == intent:
-						score += FIZZLE_BONUS
+						score += OFFLINE_BONUS
 				else:
 					score += through * W_HULL_DAMAGE
 			"damage_hull":
@@ -755,10 +834,8 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 					score += absorbed_h * W_SHIELD_STRIP
 				score += maxi(0, h) * W_HULL_DAMAGE
 			"suppress_system":
-				# Suppression is worth a lot when it cancels the telegraphed
-				# shot and very little otherwise -- exactly the card design.
 				if target == intent and target != &"":
-					score += FIZZLE_BONUS
+					score += OFFLINE_BONUS
 				else:
 					score += W_SUPPRESS
 			"shield":

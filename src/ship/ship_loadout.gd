@@ -150,6 +150,7 @@ func compile() -> ShipProfile:
 		prof.shield_regen += int(d.stats.get("shield_regen", 0))
 		prof.evasion += int(d.stats.get("evasion", 0))
 		prof.draw_per_turn += int(d.stats.get("draw", 0))
+		prof.system_regen += int(d.stats.get("system_regen", 0))
 
 		if not systems_acc.has(d.system):
 			systems_acc[d.system] = {
@@ -186,6 +187,7 @@ func compile() -> ShipProfile:
 		prof.evasion += int(imp.stats.get("evasion", 0))
 		prof.power += int(imp.stats.get("power", 0))
 		prof.draw_per_turn += int(imp.stats.get("draw", 0))
+		prof.system_regen += int(imp.stats.get("system_regen", 0))
 
 	prof.evasion = maxi(0, prof.evasion - int(floor(total_mass / 4.0)))
 	prof.systems = systems_acc.values()

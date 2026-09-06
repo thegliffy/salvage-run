@@ -1,29 +1,29 @@
 extends Node
-## Run flow and scene routing for the demo.
+## Run flow and scene routing.
 ##
 ## Holds the RunState between screens so each screen can be a dumb view. The
-## demo runs a fixed three-fight ladder rather than the generated sector map --
-## the map screen is not built yet, and a fixed ladder makes the demo's length
-## predictable for someone trying it for the first time.
+## player picks nodes on the sector map; this router turns each node type into
+## the matching screen and returns to the map when the node is done.
 
 signal run_changed()
 
-## One of each reward tier so a demo run shows the whole payout ladder:
-## a regular enemy, a mini-boss, then the sector boss.
-const LADDER: Array[StringName] = [&"scout_drone", &"gunship", &"dreadnought"]
-
 const SCENE_TITLE := "res://scenes/title.tscn"
+const SCENE_MAP := "res://scenes/map.tscn"
 const SCENE_COMBAT := "res://scenes/combat.tscn"
 const SCENE_REWARD := "res://scenes/reward.tscn"
-const SCENE_INTERMISSION := "res://scenes/intermission.tscn"
+const SCENE_SHOP := "res://scenes/shop.tscn"
+const SCENE_CHEST := "res://scenes/chest.tscn"
 const SCENE_SALE := "res://scenes/sale.tscn"
 
 var run: RunState
 var meta: MetaState
-var fight_index: int = 0
 var last_combat: CombatController
 var last_valuation: Dictionary = {}
 var pending_reward: Dictionary = {}
+## Enemy id for the combat screen currently (or about to be) shown.
+var pending_enemy: StringName = &""
+## Node id that produced the current combat; used to count elite kills.
+var pending_node_id: int = -1
 
 func _ready() -> void:
 	meta = SaveSystem.load_meta()
@@ -36,39 +36,72 @@ func _ready() -> void:
 func start_run(run_seed: int = -1) -> void:
 	run = RunState.new()
 	run.start(StarterShips.salvager(), run_seed)
-	fight_index = 0
+	pending_enemy = &""
+	pending_node_id = -1
 	meta.runs_started += 1
 	run_changed.emit()
-	goto_combat()
+	goto_map()
 
 func current_enemy() -> StringName:
-	return LADDER[mini(fight_index, LADDER.size() - 1)]
+	return pending_enemy
 
-func is_final_fight() -> bool:
-	return fight_index >= LADDER.size() - 1
+func goto_map() -> void:
+	get_tree().change_scene_to_file(SCENE_MAP)
 
-func goto_combat() -> void:
-	get_tree().change_scene_to_file(SCENE_COMBAT)
+## Advance onto a map node and open the screen that resolves it.
+func enter_node(node_id: int) -> void:
+	var reachable := false
+	for opt in run.options():
+		if int(opt["id"]) == node_id:
+			reachable = true
+			break
+	if not reachable:
+		push_warning("[Game] refused unreachable node %d" % node_id)
+		return
+
+	var node: Dictionary = run.advance_to(node_id)
+	run_changed.emit()
+	match String(node["type"]):
+		"combat", "elite", "boss":
+			pending_enemy = StringName(node.get("enemy", &"scout_drone"))
+			pending_node_id = node_id
+			get_tree().change_scene_to_file(SCENE_COMBAT)
+		"shop":
+			get_tree().change_scene_to_file(SCENE_SHOP)
+		"chest":
+			get_tree().change_scene_to_file(SCENE_CHEST)
+		_:
+			# start (and any unknown type) just returns to the map.
+			goto_map()
 
 ## Called by the combat screen once the fight is resolved.
 func finish_combat(c: CombatController) -> void:
 	last_combat = c
 	run.finish_combat(c)
-	if c.victory and is_final_fight():
+	var node := MapGenerator.node_at(run.map, pending_node_id) if pending_node_id >= 0 \
+		else {"type": "combat"}
+	var ntype := String(node.get("type", "combat"))
+	if c.victory and ntype == "elite":
+		run.elites_killed += 1
+	if c.victory and ntype == "boss":
 		run.boss_killed = true
-	if not run.alive or (c.victory and is_final_fight()):
+	if not run.alive or (c.victory and ntype == "boss"):
 		_end_run()
 		return
-	# Build the payout before advancing, so it reflects the enemy just beaten.
-	pending_reward = RewardPool.build(run, meta, Database.enemy(current_enemy()))
-	fight_index += 1
+	# Build the payout before leaving, so it reflects the enemy just beaten.
+	pending_reward = RewardPool.build(run, meta, Database.enemy(pending_enemy))
 	run_changed.emit()
-	# Winning gives hardware; the salvage yard afterwards is where cards get cut.
 	get_tree().change_scene_to_file(SCENE_REWARD)
 
 ## Called by the reward screen once a part is taken or skipped.
 func after_reward() -> void:
-	get_tree().change_scene_to_file(SCENE_INTERMISSION)
+	goto_map()
+
+func after_shop() -> void:
+	goto_map()
+
+func after_chest() -> void:
+	goto_map()
 
 func _end_run() -> void:
 	run.sector = 3 if run.boss_killed else 2

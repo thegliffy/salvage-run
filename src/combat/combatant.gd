@@ -18,6 +18,9 @@ var evasion: int = 0
 var energy: int = 0
 var max_energy: int = 3
 var draw_per_turn: int = 5
+## Per-turn subsystem auto-repair. Enemies get this by default; the player
+## only gets it from a rare improvement (see system_regen on ShipProfile).
+var system_regen: int = 0
 
 var systems: Dictionary = {}    # StringName -> ShipSystem
 var statuses: Dictionary = {}   # StringName -> int stacks
@@ -34,8 +37,10 @@ static func from_profile(prof: ShipProfile) -> Combatant:
 	c.evasion = prof.evasion
 	c.max_energy = prof.power
 	c.draw_per_turn = prof.draw_per_turn
+	c.system_regen = prof.system_regen
 	for sd in prof.systems:
 		var s := ShipSystem.from_dict(sd)
+		s.auto_repair = c.system_regen
 		c.systems[s.id] = s
 	return c
 
@@ -49,8 +54,10 @@ static func from_enemy(def: EnemyDef) -> Combatant:
 	c.shield = def.shield
 	c.shield_regen = def.shield_regen
 	c.evasion = def.evasion
+	c.system_regen = def.system_regen
 	for sd in def.systems:
 		var s := ShipSystem.from_dict(sd)
+		s.auto_repair = c.system_regen
 		c.systems[s.id] = s
 	return c
 
@@ -119,7 +126,9 @@ func status(id: StringName) -> int:
 
 func tick_systems() -> void:
 	for sid in systems:
-		systems[sid].tick_suppression()
+		var s: ShipSystem = systems[sid]
+		s.tick_suppression()
+		s.tick_auto_repair()
 
 func snapshot() -> Dictionary:
 	var sys := {}

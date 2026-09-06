@@ -29,12 +29,16 @@ func _ready() -> void:
 
 	var v: Dictionary = Game.last_valuation
 	var won: bool = v.get("boss_killed", false)
-	var title := UITheme.label("SHIP SOLD" if won else "WRECK RECOVERED",
-		30, UITheme.GOOD if won else UITheme.WARN, "Black")
+	var title := UITheme.label("DELIVERED TO THE YARD" if won else "WRECK TOWED IN",
+		28, UITheme.GOOD if won else UITheme.WARN, "Black")
 	col.add_child(title)
 	col.add_child(UITheme.label(
-		"You survived and sold her whole." if won
-		else "What was left of her was worth something.", 14, UITheme.TEXT_DIM))
+		"You stole her, flew her, and sold her for salvage." if won
+		else "Not every theft comes back whole — the yard still pays for scrap.",
+		14, UITheme.TEXT_DIM))
+	col.add_child(UITheme.label(
+		"Salvage unlocks new parts for the next run — and bigger ships to steal.",
+		13, UITheme.TEXT_FAINT))
 	col.add_child(UITheme.spacer(14))
 
 	_lines = VBoxContainer.new()
@@ -42,7 +46,7 @@ func _ready() -> void:
 	col.add_child(_lines)
 
 	col.add_child(UITheme.spacer(16))
-	var back := UITheme.button("  BACK TO TITLE  ")
+	var back := UITheme.button("  FIND ANOTHER SHIP  ")
 	back.pressed.connect(func(): Game.goto_title())
 	col.add_child(back)
 

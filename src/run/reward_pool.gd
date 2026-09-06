@@ -119,6 +119,21 @@ static func jettison(run: RunState, inst: PartInstance) -> String:
 	EventBus.part_jettisoned.emit(id)
 	return ""
 
+## Skip the part offer and patch the hull instead. Returns HP actually restored.
+const SKIP_REPAIR_FRAC := 0.15
+
+static func skip_repair_amount(run: RunState) -> int:
+	var cap := int(ceil(float(run.profile.max_hull) * SKIP_REPAIR_FRAC))
+	var room := maxi(0, run.profile.max_hull - run.hull_carryover)
+	return mini(cap, room)
+
+static func skip_for_repair(run: RunState) -> int:
+	var heal := skip_repair_amount(run)
+	if heal <= 0:
+		return 0
+	run.hull_carryover = mini(run.profile.max_hull, run.hull_carryover + heal)
+	return heal
+
 # --- Improvements ------------------------------------------------------------
 
 ## Mini-bosses drop a common or uncommon improvement; sector bosses a rare one.
@@ -134,3 +149,47 @@ static func _roll_improvement(enemy_tier: int) -> ImprovementDef:
 	if pool.is_empty():
 		return null
 	return Rng.pick(&"reward", pool)
+
+## Chest nodes: a random improvement the ship does not already have.
+static func chest_improvement(run: RunState) -> ImprovementDef:
+	var pool: Array = []
+	for iid in Database.improvements:
+		if run.ship.improvements.find(iid) == -1:
+			pool.append(Database.improvements[iid])
+	if pool.is_empty():
+		for iid in Database.improvements:
+			pool.append(Database.improvements[iid])
+	if pool.is_empty():
+		return null
+	return Rng.pick(&"reward", pool)
+
+## Shop stock: a few parts priced at their base value.
+static func shop_stock(run: RunState, meta: MetaState, count: int = 3) -> Array:
+	var pool: Array = meta.available_parts()
+	if pool.is_empty():
+		return []
+	var weights: Dictionary = {}
+	for i in pool.size():
+		var def: PartDef = pool[i]
+		var w := 1.0
+		if run.ship.free_slots(def.slot) > 0:
+			w *= 2.0
+		if _already_installed(run, def):
+			w *= 0.4
+		weights[i] = w
+	var chosen: Array = []
+	var guard := 0
+	while chosen.size() < mini(count, pool.size()) and guard < 80:
+		guard += 1
+		var idx = Rng.weighted(&"shop", weights)
+		if idx == null:
+			break
+		weights.erase(idx)
+		var def2: PartDef = pool[int(idx)]
+		chosen.append({
+			"def": def2,
+			"price": def2.base_value,
+			"can_install": run.ship.free_slots(def2.slot) > 0,
+			"replaces": _weakest_in_slot(run, def2.slot),
+		})
+	return chosen

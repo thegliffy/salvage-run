@@ -2,10 +2,9 @@ class_name SystemView
 extends PanelContainer
 ## One targetable subsystem row.
 ##
-## This is the most important widget in the game: the whole combat design is
-## "which subsystem do I shoot". It shows integrity, whether the system is
-## offline or suppressed, and -- crucially -- flags when it is the source of the
-## enemy's telegraphed shot, because destroying that cancels the attack.
+## Soft enemy systems are temporary control targets: knock them offline to
+## silence a shot for a turn, then they auto-repair if left alone. Hull is
+## always a legal alternative for finishing the fight.
 
 signal clicked(system_id: StringName)
 

@@ -10,7 +10,7 @@
       {
         "id": "weapons",
         "name": "Pulse Gun",
-        "integrity": 6
+        "integrity": 5
       },
       {
         "id": "engines",
@@ -47,7 +47,8 @@
     "reward": {
       "credits": 35
     },
-    "portrait": "a_09_t.png"
+    "portrait": "a_09_t.png",
+    "system_regen": 2
   },
   "raider": {
     "name": "Raider",
@@ -60,17 +61,17 @@
       {
         "id": "weapons",
         "name": "Autocannon",
-        "integrity": 9
+        "integrity": 5
       },
       {
         "id": "shields",
         "name": "Shield Emitter",
-        "integrity": 7
+        "integrity": 5
       },
       {
         "id": "engines",
         "name": "Burners",
-        "integrity": 6
+        "integrity": 5
       }
     ],
     "intents": [
@@ -115,7 +116,8 @@
     "reward": {
       "credits": 55
     },
-    "portrait": "a_02_t.png"
+    "portrait": "a_02_t.png",
+    "system_regen": 2
   },
   "gunship": {
     "name": "Gunship",
@@ -128,22 +130,22 @@
       {
         "id": "weapons",
         "name": "Twin Batteries",
-        "integrity": 12
+        "integrity": 5
       },
       {
         "id": "shields",
         "name": "Shield Array",
-        "integrity": 10
+        "integrity": 5
       },
       {
         "id": "sensors",
         "name": "Fire Control",
-        "integrity": 6
+        "integrity": 5
       },
       {
         "id": "engines",
         "name": "Main Drive",
-        "integrity": 8
+        "integrity": 5
       }
     ],
     "intents": [
@@ -191,7 +193,8 @@
     "reward": {
       "credits": 90
     },
-    "portrait": "k_04_t.png"
+    "portrait": "k_04_t.png",
+    "system_regen": 2
   },
   "dreadnought": {
     "name": "Dreadnought \"Gravekeeper\"",
@@ -204,22 +207,22 @@
       {
         "id": "weapons",
         "name": "Spinal Lance",
-        "integrity": 18
+        "integrity": 5
       },
       {
         "id": "shields",
         "name": "Layered Screens",
-        "integrity": 16
+        "integrity": 5
       },
       {
         "id": "sensors",
         "name": "Targeting Core",
-        "integrity": 10
+        "integrity": 5
       },
       {
         "id": "reactor",
         "name": "Fusion Core",
-        "integrity": 14
+        "integrity": 5
       }
     ],
     "intents": [
@@ -282,6 +285,7 @@
     "reward": {
       "credits": 200
     },
-    "portrait": "f_07_t.png"
+    "portrait": "f_07_t.png",
+    "system_regen": 2
   }
 }

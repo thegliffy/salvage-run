@@ -2,9 +2,9 @@ class_name EnemyDef
 extends RefCounted
 ## An enemy ship: a set of subsystems plus a telegraphed intent pool.
 ##
-## Intents declare `requires_system`. If the player destroys that subsystem
-## before the enemy turn, the intent FIZZLES. That single rule is what makes
-## subsystem targeting a real decision rather than flavored damage.
+## Intents declare `requires_system`. An offline system cannot fire; damaged
+## systems hit softer. Soft systems (low HP + auto-repair) are optional control
+## targets — the player can always shoot the hull instead.
 
 var id: StringName
 var name: String
@@ -17,6 +17,10 @@ var systems: Array = []    # [{id, name, integrity, ...}]
 var intents: Array = []    # [{id, requires_system, weight, effects, telegraph}]
 var reward: Dictionary = {}
 var portrait: String = ""   # filename under res://assets/portraits/
+## Enemy subsystems auto-repair this much at the start of their turn when
+## they were not damaged since the previous tick. Soft systems (low HP +
+## regen) are temporary soft targets, not a mandatory first gate.
+var system_regen: int = 2
 
 func from_dict(def_id: StringName, d: Dictionary) -> String:
 	id = def_id
@@ -28,6 +32,7 @@ func from_dict(def_id: StringName, d: Dictionary) -> String:
 	shield = int(d.get("shield", 0))
 	shield_regen = int(d.get("shield_regen", 0))
 	evasion = int(d.get("evasion", 0))
+	system_regen = int(d.get("system_regen", 2))
 	systems = d.get("systems", [])
 	if systems.is_empty():
 		return "enemy must define at least one system"
@@ -40,7 +45,7 @@ func from_dict(def_id: StringName, d: Dictionary) -> String:
 
 func has_system(sid: StringName) -> bool:
 	if sid == &"":
-		return true  # intent with no system requirement never fizzles
+		return true  # intent with no system requirement is never offline
 	for s in systems:
 		if StringName(s.get("id", "")) == sid:
 			return true
