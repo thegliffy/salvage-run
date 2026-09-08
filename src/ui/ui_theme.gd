@@ -22,6 +22,7 @@ const TEXT          := Color("dce6f0")
 const TEXT_DIM      := Color("7f8fa3")
 const TEXT_FAINT    := Color("4d5a6b")
 const RARE          := Color("ce93d8")
+const VIRUS         := Color("9ccc65")   # lime: hull virus stacks
 const INK_WARN      := Color("2a1d16")
 const INK_GOOD      := Color("16241a")
 const INK_HOSTILE   := Color("2a1416")
@@ -336,6 +337,7 @@ const KEYWORD_BLURB := {
 	&"exhaust": "Leaves the run after you play it — not discarded.",
 	&"retain": "Stays in hand when you end the turn.",
 	&"overload": "Pays a bigger effect if you can afford the extra energy.",
+	&"virus": "On their turn start they take 1 hull per counter, then lose 1 counter.",
 }
 
 ## Attach a themed tooltip. First line is the title; a `---` line becomes a rule.

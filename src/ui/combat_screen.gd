@@ -13,6 +13,7 @@ var _enemy_name: Label
 var _enemy_hull: ProgressBar
 var _enemy_hull_txt: Label
 var _enemy_shield: Label
+var _enemy_virus: Label
 var _intent_panel: PanelContainer
 var _intent_prefix: Label
 var _intent_name: Label
@@ -239,6 +240,8 @@ func _build_enemy_panel() -> Control:
 	hull_row.add_child(_enemy_hull_txt)
 	_enemy_shield = UITheme.label("", 13, UITheme.SHIELD, "SemiBold")
 	hull_row.add_child(_enemy_shield)
+	_enemy_virus = UITheme.label("", 13, UITheme.VIRUS, "Bold")
+	hull_row.add_child(_enemy_virus)
 
 	col.add_child(_build_intent_banner())
 
@@ -432,9 +435,12 @@ func _refresh() -> void:
 	_enemy_hull.value = e.hull
 	_enemy_hull_txt.text = "%d/%d" % [e.hull, e.max_hull]
 	_set_shield_label(_enemy_shield, e)
-	UITheme.tip(_hull_target,
-		"HULL\n%d / %d  ·  primary finish target\n---\nShoot the hull to win. Subsystems are optional control — they auto-repair if left alone." % [
-			e.hull, e.max_hull])
+	_set_virus_label(_enemy_virus, e)
+	var hull_tip := "HULL\n%d / %d  ·  primary finish target\n---\nShoot the hull to win. Subsystems are optional control — they auto-repair if left alone." % [
+		e.hull, e.max_hull]
+	if e.virus() > 0:
+		hull_tip += "\n\nVIRUS ×%d — at the start of their turn they take 1 hull per counter, then lose 1 counter." % e.virus()
+	UITheme.tip(_hull_target, hull_tip)
 	UITheme.tip(_enemy_name, "%s\n---\nEnemy ship. The amber banner is the next shot." % e.display_name)
 
 	_refresh_intent()
@@ -613,6 +619,19 @@ func _refresh_intent() -> void:
 ## Shield as current/max. Overshield (current > max) still shows on the same
 ## readout so a temporary surge is obvious. A ship with no capacity and no live
 ## overshield hides the label entirely.
+func _set_virus_label(label: Label, c: Combatant) -> void:
+	if label == null or c == null:
+		return
+	var stacks := c.virus()
+	if stacks <= 0:
+		label.text = ""
+		label.tooltip_text = ""
+		return
+	label.text = "VIRUS ×%d" % stacks
+	label.add_theme_color_override("font_color", UITheme.VIRUS)
+	UITheme.tip(label,
+		"Virus\n×%d on the hull\n---\nAt the start of their turn they take 1 hull per counter, then lose 1 counter. Shields and evasion do not stop it." % stacks)
+
 func _set_shield_label(label: Label, c: Combatant) -> void:
 	if c.max_shield <= 0 and c.shield <= 0:
 		label.text = ""
@@ -840,6 +859,25 @@ func _on_effect(event: Dictionary) -> void:
 		"suppress":
 			line = "  %s %s suppressed %d turn(s)" % [event["target"], event["system"], event["turns"]]
 			colour = UITheme.WARN
+		"virus_apply":
+			line = "  %s infected +%d virus (%d)" % [
+				event["target"], int(event.get("amount", 0)), int(event.get("virus", 0))]
+			colour = UITheme.VIRUS
+		"virus_tick":
+			line = "  %s virus deals %d hull (%d left)" % [
+				event["target"], int(event.get("amount", 0)), int(event.get("hull_left", 0))]
+			colour = UITheme.VIRUS
+		"virus_decay":
+			line = "  %s virus decays to %d" % [event["target"], int(event.get("virus", 0))]
+			colour = UITheme.VIRUS
+		"virus_double":
+			if bool(event.get("noop", false)):
+				line = "  %s virus is 0 — nothing to double" % event["target"]
+				colour = UITheme.TEXT_DIM
+			else:
+				line = "  %s virus doubles %d → %d" % [
+					event["target"], int(event.get("from", 0)), int(event.get("to", 0))]
+				colour = UITheme.VIRUS
 		"drones":
 			var times := int(event.get("times", 1))
 			if times > 1:

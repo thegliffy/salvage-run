@@ -5,6 +5,9 @@ extends RefCounted
 ## Built from a ShipProfile (player) or an EnemyDef (enemy) so both sides obey
 ## identical rules. If the player can knock out a weapons system, so can the AI.
 
+## Hull-side DoT. Stacks live on the combatant, not a subsystem.
+const STATUS_VIRUS := &"virus"
+
 var display_name: String = "Ship"
 var is_player: bool = false
 
@@ -134,6 +137,23 @@ func add_status(id: StringName, stacks: int) -> void:
 
 func status(id: StringName) -> int:
 	return int(statuses.get(id, 0))
+
+func virus() -> int:
+	return status(STATUS_VIRUS)
+
+func add_virus(stacks: int) -> int:
+	add_status(STATUS_VIRUS, stacks)
+	return virus()
+
+## Infected combatant's turn start: deal 1 hull per counter, then lose 1.
+## Direct hull — skips evasion and shields. Empty dict if there is nothing to tick.
+func tick_virus() -> Dictionary:
+	var stacks := virus()
+	if stacks <= 0:
+		return {}
+	hull = maxi(0, hull - stacks)
+	add_status(STATUS_VIRUS, -1)
+	return {"damage": stacks, "hull_left": hull, "virus": virus()}
 
 func tick_systems() -> void:
 	for sid in systems:

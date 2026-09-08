@@ -103,6 +103,27 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 			who.add_status(StringName(op.get("status", "")), amount)
 			_emit({"type": "status", "target": who.display_name,
 				"status": op.get("status", ""), "stacks": amount})
+		"apply_virus":
+			# Counters live on the combatant's hull, not a subsystem.
+			if opponent == null:
+				_emit({"type": "no_target", "op": kind})
+			else:
+				var n := amount if amount > 0 else 1
+				opponent.add_virus(n)
+				_emit({"type": "virus_apply", "target": opponent.display_name,
+					"amount": n, "virus": opponent.virus()})
+		"double_virus":
+			if opponent == null:
+				_emit({"type": "no_target", "op": kind})
+			else:
+				var cur := opponent.virus()
+				if cur <= 0:
+					_emit({"type": "virus_double", "target": opponent.display_name,
+						"from": 0, "to": 0, "noop": true})
+				else:
+					opponent.add_virus(cur)
+					_emit({"type": "virus_double", "target": opponent.display_name,
+						"from": cur, "to": opponent.virus(), "noop": false})
 		"credits":
 			combat.pending_credits += amount
 			_emit({"type": "credits", "amount": amount})

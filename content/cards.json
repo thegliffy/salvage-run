@@ -1252,5 +1252,63 @@
       ]
     },
     "icon": "red_r_06.png"
+  },
+  "computer_spike": {
+    "name": "Computer Spike",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 1,
+    "target": "enemy_system",
+    "text": "Suppress a target system for 2 turns. Apply 1 virus to the enemy.",
+    "effects": [
+      {
+        "op": "suppress_system",
+        "turns": 2
+      },
+      {
+        "op": "apply_virus",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "Suppress a target system for 3 turns. Apply 2 virus to the enemy.",
+      "effects": [
+        {
+          "op": "suppress_system",
+          "turns": 3
+        },
+        {
+          "op": "apply_virus",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "blue_b_04.png"
+  },
+  "firewall_bypass": {
+    "name": "Firewall Bypass",
+    "kind": "tech",
+    "rarity": "uncommon",
+    "cost": 0,
+    "target": "none",
+    "text": "Double the enemy's virus counters.",
+    "effects": [
+      {
+        "op": "double_virus"
+      }
+    ],
+    "upgrade": {
+      "text": "Double the enemy's virus counters. Apply 1 virus.",
+      "effects": [
+        {
+          "op": "double_virus"
+        },
+        {
+          "op": "apply_virus",
+          "amount": 1
+        }
+      ]
+    },
+    "icon": "blue_b_13.png"
   }
 }

@@ -126,6 +126,31 @@
     "slot": "weapon",
     "power_gen": 0
   },
+  "signal_injector": {
+    "name": "Signal Injector",
+    "system": "weapons",
+    "tier": 2,
+    "flavor": "Jams a payload through their comms. The hull starts counting down.",
+    "integrity": 8,
+    "power_draw": 2,
+    "mass": 2,
+    "icon": "signal_injector.png",
+    "grants": [
+      "computer_spike",
+      "computer_spike",
+      "firewall_bypass"
+    ],
+    "base_value": 115,
+    "unlock_cost": 180,
+    "synergy": {
+      "bonus": {
+        "power": 1
+      },
+      "requires_system": "sensors"
+    },
+    "slot": "weapon",
+    "power_gen": 0
+  },
   "repair_bay": {
     "name": "Repair Bay",
     "system": "support",

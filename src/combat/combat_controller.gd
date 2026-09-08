@@ -75,6 +75,12 @@ func begin_player_turn() -> void:
 	phase = Phase.PLAYER
 	cards_played_this_turn = 0
 	player.energy = player.max_energy
+	# Virus ticks on the infected combatant's turn start (poison analog).
+	# Player virus lives here; enemy virus ticks in _run_enemy_turn. Do not
+	# also tick the opponent — that would double-fire.
+	_tick_virus(player)
+	if phase == Phase.DONE:
+		return
 	player.tick_systems()
 	# Overshield expires at the start of your turn, then regen fills toward cap.
 	# Super Capacitor skips the drop for the player only. Regen still fills
@@ -213,6 +219,11 @@ func _run_enemy_turn() -> void:
 		return
 	phase = Phase.ENEMY
 	EventBus.turn_began.emit(&"enemy")
+	# Enemy virus fires here, before they act, so a lethal tick can win the
+	# fight without a shot. Not also ticked at player-turn start.
+	_tick_virus(enemy)
+	if phase == Phase.DONE:
+		return
 	enemy.tick_systems()
 	enemy.clear_overshield()
 	enemy.shield = mini(enemy.max_shield, enemy.shield + enemy.effective_shield_regen())
@@ -232,6 +243,34 @@ func _run_enemy_turn() -> void:
 	brain.choose_intent()
 	EventBus.turn_ended.emit(&"enemy")
 	begin_player_turn()
+
+## Damage then decay on `who`. No-ops when they have no virus. Emits
+## virus_tick then virus_decay so the combat log can show both steps.
+func _tick_virus(who: Combatant) -> void:
+	if who == null or phase == Phase.DONE:
+		return
+	var result := who.tick_virus()
+	if result.is_empty():
+		return
+	var dealt := int(result["damage"])
+	EventBus.hull_damaged.emit(who, dealt)
+	var tick_ev := {
+		"type": "virus_tick",
+		"target": who.display_name,
+		"amount": dealt,
+		"hull_left": int(result["hull_left"]),
+		"virus": int(result["virus"]),
+	}
+	log_event(tick_ev)
+	EventBus.effect_resolved.emit(tick_ev)
+	var decay_ev := {
+		"type": "virus_decay",
+		"target": who.display_name,
+		"virus": int(result["virus"]),
+	}
+	log_event(decay_ev)
+	EventBus.effect_resolved.emit(decay_ev)
+	_check_end()
 
 func _fire_improvement_triggers(when: StringName) -> void:
 	if phase != Phase.PLAYER or player == null:
