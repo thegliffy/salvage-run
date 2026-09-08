@@ -85,6 +85,20 @@ func _test_content() -> void:
 	_check("card parses upgrade block", laser != null and not laser.upgrade_effects.is_empty())
 	_eq("upgraded laser hits harder",
 		int(laser.effects_for(true)[0]["amount"]) > int(laser.effects_for(false)[0]["amount"]), true)
+	var burst: PartDef = Database.part(&"burst_laser")
+	_eq("part icon defaults to <id>.png", burst.icon, "burst_laser.png")
+	var blank_icon: PackedStringArray = []
+	for pid in Database.parts:
+		if Database.parts[pid].icon == "":
+			blank_icon.append(String(pid))
+	_check("every part has an icon filename", blank_icon.is_empty(), str(blank_icon))
+	var ov := PartDef.new()
+	_eq("explicit part icon is kept", ov.from_dict(&"test_mod", {
+		"name": "Test", "slot": "utility", "icon": "other.png",
+	}), "")
+	_eq("explicit part icon wins over default", ov.icon, "other.png")
+	_check("missing module PNG is null-safe",
+		UITheme.art("res://assets/modules/not_a_real_part.png") == null)
 
 func _test_loadout() -> void:
 	print("loadout (typed slots)")
@@ -563,6 +577,9 @@ func _test_strip() -> void:
 	var opts := SalvageYard.options(run)
 	_eq("every mount on every part is offered", opts.size(), 3 * 3)
 	_check("options carry a value cost", int(opts[0]["value_cost"]) > 0)
+	_eq("first strip credit cost is 40", int(opts[0]["credit_cost"]),
+		SalvageYard.STRIP_CREDIT_BASE)
+	_eq("cannot afford first strip with 0 credits", opts[0]["can_afford"], false)
 
 	# Cut the weapon's third mount. The starter carries no status-kind dud any
 	# more (its reactor is gone), so the interesting strip is a real tradeoff
@@ -576,10 +593,24 @@ func _test_strip() -> void:
 	_check("the weapon's third mount is available to cut", target_inst != null)
 
 	var value_before: int = target_inst.sale_value()
+	_check("strip refused without credits",
+		SalvageYard.strip(run, target_inst, target_index) != "")
+	_eq("credits unchanged on refuse", run.credits, 0)
+	_check("part not stripped on refuse", not target_inst.is_stripped())
+	_eq("deck unchanged on refuse", run.profile.deck.size(), deck_before)
+
+	run.add_credits(SalvageYard.STRIP_CREDIT_BASE)
+	opts = SalvageYard.options(run)
+	_eq("can afford after funding", opts[0]["can_afford"], true)
+	var credits_before: int = run.credits
 	_eq("strip succeeds", SalvageYard.strip(run, target_inst, target_index), "")
 	_eq("deck is one card lighter", run.profile.deck.size(), deck_before - 1)
 	_check("the stripped card is gone", not run.profile.deck.has(&"overheat"))
-	_check("strip costs sale value", target_inst.sale_value() < value_before)
+	_eq("strip debit first cost", run.credits,
+		credits_before - SalvageYard.STRIP_CREDIT_BASE)
+	_check("strip still cuts sale value", target_inst.sale_value() < value_before)
+	_eq("sale penalty is 25%", target_inst.sale_value(),
+		int(round(float(value_before) * (1.0 - PartInstance.STRIP_VALUE_PENALTY))))
 
 	# THE regression that matters: the deck is derived, so a strip that is not
 	# stored on the part gets silently undone by the next ship change.
@@ -593,18 +624,43 @@ func _test_strip() -> void:
 	# One strip per part, enforced by the type rather than by price.
 	_check("part reports itself stripped", target_inst.is_stripped())
 	_check("part cannot be stripped twice", not target_inst.can_strip())
-	_check("second strip is refused", SalvageYard.strip(run, target_inst, 0) != "")
+	_eq("second strip on same mount names the part, not credits",
+		SalvageYard.strip(run, target_inst, 0).contains("stripped"), true)
 	for o in SalvageYard.options(run):
 		if o["part"] == target_inst:
 			_check("stripped part offers no further mounts", false)
 	_check("stripped part drops out of the options list", true)
 
+	# Cost scales with installed stripped mounts: 40, then 65.
+	_eq("second strip costs 65", SalvageYard.credit_cost(run),
+		SalvageYard.STRIP_CREDIT_BASE + SalvageYard.STRIP_CREDIT_STEP)
+	var other: PartInstance = null
+	for inst in run.ship.parts:
+		if inst.can_strip():
+			other = inst
+			break
+	_check("another mount is still strippable", other != null)
+	_check("second strip refused until funded",
+		SalvageYard.strip(run, other, 0) != "")
+	_eq("credits stay 0 after unaffordable second strip", run.credits, 0)
+	run.add_credits(SalvageYard.credit_cost(run))
+	var second_cost := SalvageYard.credit_cost(run)
+	var credits_mid: int = run.credits
+	_eq("second strip succeeds", SalvageYard.strip(run, other, 0), "")
+	_eq("second strip debit 65", run.credits, credits_mid - second_cost)
+
 	# Thinning has a floor: you can never cut past two thirds.
 	var floor_run := RunState.new()
 	floor_run.start(StarterShips.salvager(), 32)
+	var triple := SalvageYard.STRIP_CREDIT_BASE \
+		+ (SalvageYard.STRIP_CREDIT_BASE + SalvageYard.STRIP_CREDIT_STEP) \
+		+ (SalvageYard.STRIP_CREDIT_BASE + SalvageYard.STRIP_CREDIT_STEP * 2)
+	floor_run.add_credits(triple)
+	var floor_credits: int = floor_run.credits
 	for inst in floor_run.ship.parts:
 		SalvageYard.strip(floor_run, inst, 0)
 	_eq("every part stripped once", floor_run.profile.deck.size(), 6)
+	_eq("three strips cost 40+65+90", floor_run.credits, floor_credits - triple)
 	var still_strippable := 0
 	for inst in floor_run.ship.parts:
 		if inst.can_strip():
@@ -735,6 +791,15 @@ func _test_ui_copy() -> void:
 	_check("power tip mentions energy", UITheme.power_tip(bud).contains("energy"))
 	var part: PartDef = ship.parts[0].def
 	_check("part tip names the part", UITheme.part_tip(part).contains(part.name))
+	var mod_icon := UITheme.module_icon(part, 80)
+	_check("module icon is a TextureRect", mod_icon is TextureRect)
+	_eq("module icon keep-aspect", mod_icon.stretch_mode,
+		TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	if mod_icon.texture != null:
+		_eq("module icon class size at 720p", int(mod_icon.custom_minimum_size.x), 80)
+	else:
+		_check("module icon hides when PNG is missing", not mod_icon.visible)
+	mod_icon.free()
 	var popup := UITheme.make_tooltip("Title\n---\nBody line")
 	_check("themed tooltip builds a control", popup is Control)
 	popup.free()
@@ -1190,6 +1255,8 @@ var _sim_meta: MetaState = null
 ## the sim just needs the mechanic exercised so deck size reflects it.
 func _auto_strip(run: RunState) -> void:
 	for o in SalvageYard.options(run):
+		if not bool(o.get("can_afford", false)):
+			continue
 		var card: CardDef = Database.card(o["card_id"])
 		if card != null and card.kind == &"status":
 			SalvageYard.strip(run, o["part"], o["index"])

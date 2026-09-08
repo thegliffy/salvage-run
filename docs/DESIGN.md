@@ -138,13 +138,20 @@ answer is to make the animation wait on the event, not the reverse.
 ## 8. Card removal: strip a mount
 
 Every part grants **three** cards, and each part can have **exactly one** of them
-stripped, permanently, for the rest of the run. The service lives at salvage /
-store nodes. It is paid for in the ship's eventual sale value, not credits.
+stripped, permanently, for the rest of the run. The service lives at the store.
+It costs **run credits** that scale with how many mounts you've already stripped
+this run, and it still cuts that part's **sale value** by 25%.
+
+**Credit formula.** `40 + 25 × strips_already_done`, where `strips_already_done`
+is the count of currently installed parts with `is_stripped()` before this
+strip. First strip 40, second 65, third 90. The store refuses (and disables the
+buttons) if `run.credits` cannot cover it. Charge lives in `SalvageYard.strip()`
+so every caller — shop UI, leftover salvage screen, sim — hits the same path.
 
 **Why one per part:** thinning is capped by construction. A ship can never fall
-below two thirds of its cards, so there is no escalating price table and no
-degenerate five-card deck. The limit is a rule the player can see rather than a
-curve they discover by running out of money.
+below two thirds of its cards, so there is no degenerate five-card deck. The
+limit is a rule the player can see. The escalating credit cost is the *soft*
+pressure against stripping every mount, not a substitute for that floor.
 
 **Why it must live on `PartInstance`:** the deck is *derived*. `compile()`
 rebuilds `ShipProfile.deck` from part grants on every ship change, so a removal
@@ -153,11 +160,13 @@ anything. `PartInstance.stripped_index` is the only sanctioned place, and
 `compile()` reads `granted_cards()` rather than `def.grants` to honour it. There
 is a test for exactly this.
 
-**Why sale value rather than credits:** credits would make removal compete with
-buying parts, which is a duller tension and one the game already has. Paying in
-sale value trades meta-progression for run strength, and the cost surfaces on the
-end-of-run receipt — the one screen where the player is already reading
-consequences.
+**Why credits *and* sale value:** credits make thinning compete with buying
+parts — the same purse, two uses, a real mid-run choice. The 25% sale-value
+penalty still hits meta-progression and still surfaces on the end-of-run
+receipt, so you are also cutting up the ship you intend to sell. Paying only
+in sale value made strips free during the run; paying only in credits would
+let a rich run thin the deck with no yard consequence. Both costs are load-
+bearing.
 
 **Content shape.** The three cards are a designed package, not three copies:
 

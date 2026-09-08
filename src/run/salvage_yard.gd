@@ -1,23 +1,41 @@
 class_name SalvageYard
 extends RefCounted
-## The strip service offered at salvage nodes.
+## The strip service offered at the store.
 ##
-## Removal is deliberately housed here rather than at shops. Salvage nodes are
-## more common (~2 a sector against ~1.5 shops), and cutting cards out of a
-## mount at a scrapyard is what a scrapyard is for. Shops are for buying.
-##
-## The player pays in the ship's eventual sale value, not credits: stripping is
-## a trade of meta-progression for run strength, and the cost lands on the
-## end-of-run receipt where the lesson is legible.
+## Stripping used to live on dedicated salvage nodes. Those are gone; the
+## store is where you both spend credits and thin the deck. One card per
+## mount, permanently. Paid in run credits (scaling with strips already
+## done this run) and in that part's eventual sale value.
+
+const STRIP_CREDIT_BASE := 40
+const STRIP_CREDIT_STEP := 25
+
+## Installed parts already stripped this run. Drives the next credit cost.
+static func strips_done(run: RunState) -> int:
+	var n := 0
+	for inst in run.ship.parts:
+		if inst.is_stripped():
+			n += 1
+	return n
+
+## `40 + 25 * strips_already_done` — counted before this strip.
+static func credit_cost(run: RunState) -> int:
+	return STRIP_CREDIT_BASE + STRIP_CREDIT_STEP * strips_done(run)
+
+static func sale_delta(inst: PartInstance) -> int:
+	if inst == null or inst.is_stripped():
+		return 0
+	return inst.sale_value() - _value_after_strip(inst)
 
 ## Every strip currently available, one entry per removable card.
-## UI renders these directly; each carries the value it will cost.
+## UI renders these directly; each carries credit cost and sale-value delta.
 static func options(run: RunState) -> Array:
+	var cost := credit_cost(run)
 	var out: Array = []
 	for inst in run.ship.parts:
 		if not inst.can_strip():
 			continue
-		var before: int = inst.sale_value()
+		var delta: int = sale_delta(inst)
 		for i in inst.def.grants.size():
 			var card: CardDef = Database.card(inst.def.grants[i])
 			if card == null:
@@ -29,7 +47,9 @@ static func options(run: RunState) -> Array:
 				"card_id": inst.def.grants[i],
 				"card_name": card.name,
 				"card_text": card.text_for(inst.upgraded),
-				"value_cost": before - _value_after_strip(inst),
+				"value_cost": delta,
+				"credit_cost": cost,
+				"can_afford": run.credits >= cost,
 			})
 	return out
 
@@ -41,13 +61,22 @@ static func _value_after_strip(inst: PartInstance) -> int:
 	probe.stripped_index = 0
 	return probe.sale_value()
 
-## Perform a strip. Returns "" on success, or a player-facing refusal.
+## Perform a strip. Charges credits, then cuts the card. Returns "" on
+## success, or a player-facing refusal. Does not charge on refusal.
 static func strip(run: RunState, inst: PartInstance, index: int) -> String:
 	if not run.ship.parts.has(inst):
 		return "that part is not installed"
+	# Mount rules before money, so "already stripped" is not "need 65 credits".
+	if inst.is_stripped() or inst.def.grants.size() <= 1 \
+			or index < 0 or index >= inst.def.grants.size():
+		return inst.strip(index)
+	var cost := credit_cost(run)
+	if run.credits < cost:
+		return "need %d credits (have %d)" % [cost, run.credits]
 	var err: String = inst.strip(index)
 	if err != "":
 		return err
+	run.add_credits(-cost)
 	# Recompile immediately so the deck the player sees is the deck they get.
 	run.recompile()
 	EventBus.part_stripped.emit(inst.def.id, index)

@@ -19,7 +19,7 @@ What exists, and the order the rest should be built in.
 - [x] Ship status overlay (slots, power budget, deck, painted ship view)
 - [x] Power-budget / deficit UI on rewards and ship status
 - [x] Ship valuation with itemised receipt
-- [x] Card removal: three-card part packages, one strip per part, paid in sale value
+- [x] Card removal: three-card part packages, one strip per part, credits + sale penalty
 - [x] Meta state: salvage currency, part unlocks, save/load with migrations
 - [x] Title-screen Salvage Yard (meta unlock shop)
 - [x] Headless test suite (215 tests) and balance simulator with a content-aware
@@ -38,8 +38,8 @@ What exists, and the order the rest should be built in.
    sits around 31 cards / 15 parts / 4 enemies / 14 improvements.
 4. **Starter-hull unlocks.** Give early meta a visible power curve without
    abandoning additive pool unlocks.
-5. **Audio, art, juice.** Redistributable card icons / portraits now ship
-   (see ASSETS.md); remaining polish is audio and juice.
+5. **Audio, art, juice.** Redistributable card icons / portraits / module
+   icons now ship (see ASSETS.md); remaining polish is audio and juice.
 6. **Steam integration.** Achievements and cloud saves via GodotSteam. See
    SHIPPING.md.
 7. **Android input and layout pass.** Safe areas, notches, back-button handling.

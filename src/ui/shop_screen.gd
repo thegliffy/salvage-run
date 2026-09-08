@@ -47,7 +47,8 @@ func _build() -> void:
 	cred_box.add_child(_credits)
 	head.add_child(cred_box)
 
-	col.add_child(UITheme.label("Buy a part — or strip one card from a mount (paid in sale value).",
+	col.add_child(UITheme.label(
+		"Buy a part — or strip one card from a mount. Strips cost credits, and cut sale value.",
 		14, UITheme.TEXT_DIM))
 	col.add_child(UITheme.spacer(4))
 
@@ -68,7 +69,8 @@ func _build() -> void:
 
 	body.add_child(UITheme.spacer(6))
 	body.add_child(UITheme.label("STRIP A CARD", 16, UITheme.TEXT, "Bold"))
-	body.add_child(UITheme.label("One card per part, permanent. Lowers what that part sells for.",
+	body.add_child(UITheme.label(
+		"One card per part, permanent. Costs credits (40, then 65, 90…) and cuts sale value by 25%.",
 		12, UITheme.TEXT_FAINT))
 	_strip_list = VBoxContainer.new()
 	_strip_list.add_theme_constant_override("separation", 6)
@@ -82,7 +84,7 @@ func _build() -> void:
 func _refresh() -> void:
 	var run: RunState = Game.run
 	_credits.text = "CREDITS  %d" % run.credits
-	UITheme.tip(_credits, "Credits\n%d\n---\nSpent here on parts. Leftovers convert 1:1 at the sale." % run.credits)
+	UITheme.tip(_credits, "Credits\n%d\n---\nSpent here on parts and strips. Leftovers convert 1:1 at the sale." % run.credits)
 
 	for c in _list.get_children():
 		c.queue_free()
@@ -117,6 +119,8 @@ func _offer_row(offer: Dictionary) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	wrap.add_child(row)
+
+	row.add_child(UITheme.module_icon(def, UITheme.MODULE_ICON_COMPACT))
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -191,14 +195,29 @@ func _offer_row(offer: Dictionary) -> Control:
 	return wrap
 
 func _strip_row(inst: PartInstance) -> Control:
+	var run: RunState = Game.run
+	var cost := SalvageYard.credit_cost(run)
+	var can_afford := run.credits >= cost
+	var delta := SalvageYard.sale_delta(inst)
 	var row := UITheme.box(UITheme.PANEL, Color(0, 0, 0, 0), 0, 3, 10)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
 	row.add_child(h)
 	var name := UITheme.label(inst.def.name, 15, UITheme.TEXT, "SemiBold")
-	UITheme.tip(name, UITheme.part_tip(inst.def,
-		"Stripping cuts sale value by 25% and removes one card for the rest of the run."))
+	if inst.can_strip():
+		UITheme.tip(name, UITheme.part_tip(inst.def,
+			"Strip costs %d credits and cuts sale value by 25%% (−%d)." % [cost, delta]))
+	else:
+		UITheme.tip(name, UITheme.part_tip(inst.def,
+			"Already stripped. Sale value is 25% lower."))
 	h.add_child(name)
+
+	if inst.can_strip():
+		var price := UITheme.label("%d credits" % cost,
+			13, UITheme.TEXT_FAINT if not can_afford else UITheme.WARN, "SemiBold")
+		if delta > 0:
+			UITheme.tip(price, "%d credits now. −%d sale value at the yard." % [cost, delta])
+		h.add_child(price)
 
 	for i in inst.def.grants.size():
 		var cd: CardDef = Database.card(inst.def.grants[i])
@@ -209,12 +228,18 @@ func _strip_row(inst: PartInstance) -> Control:
 			UITheme.PANEL_RAISED if stripped_this else UITheme.HOSTILE)
 		b.add_theme_color_override("font_color",
 			UITheme.TEXT_FAINT if stripped_this else UITheme.BG)
-		b.disabled = stripped_this or not inst.can_strip()
+		b.disabled = stripped_this or not inst.can_strip() or not can_afford
 		if stripped_this:
 			b.text = "✖ " + cd.name
 			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd)) + "\n---\nAlready stripped from this mount.")
+		elif not inst.can_strip():
+			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd)) + "\n---\nThis mount is already stripped.")
+		elif not can_afford:
+			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd))
+				+ "\n---\nNeed %d credits (have %d)." % [cost, run.credits])
 		else:
-			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd)) + "\n---\nStrip this card. Paid in sale value, not credits.")
+			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd))
+				+ "\n---\nStrip this card for %d credits. Also cuts this part's sale value by 25%%." % cost)
 		var idx := i
 		b.pressed.connect(func():
 			SalvageYard.strip(Game.run, inst, idx)

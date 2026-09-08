@@ -58,10 +58,11 @@ Or the exported Linux build:
 ```
 
 > **Note on art.** Redistributable card icons (`assets/icons/`, Game-icons
-> tinted by kind) and painted enemy portraits (`assets/portraits/`) ship with
-> the repo. Optional commercially licensed packs must not be redistributed —
-> see [docs/ASSETS.md](docs/ASSETS.md). Cards still fall back to flat
-> kind-coloured blocks if a file is missing.
+> tinted by kind), painted enemy portraits (`assets/portraits/`), and module
+> icons (`assets/modules/`, filenames = part ids) ship with the repo. Optional
+> commercially licensed packs must not be redistributed — see
+> [docs/ASSETS.md](docs/ASSETS.md). Missing files fall back rather than
+> erroring (`UITheme.art()`).
 
 **How to play.** Click a card. Hull-targeting attacks want the enemy **HULL**
 bar; system cards want a subsystem. Soft systems are optional control —
@@ -163,10 +164,10 @@ an installed part: the slot frees up and all three of its cards leave the deck.
 ### Trimming the deck
 
 Each part can have exactly **one** of its three cards stripped, permanently, at a
-salvage yard / store. Because the cap is one per part, a ship can never fall
-below two thirds of its cards — so there is no escalating purge price. Strips are
-paid for in the ship's **sale value**: you are cutting up the thing you intend
-to sell.
+store. The first strip costs **40 credits**, then 65, 90, … (`40 + 25 ×` mounts
+already stripped this run). Stripping also cuts that part's **sale value** by
+25%. Because the cap is one per part, a ship can never fall below two thirds of
+its cards.
 
 ### Meta unlocks
 
@@ -237,6 +238,7 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 | `assets/ships/` | Painted hull art used by `ShipView` |
 | `assets/icons/` | Redistributable tinted card icons (`cards.json` `icon`) |
 | `assets/portraits/` | Redistributable enemy portraits (`enemies.json` `portrait`) |
+| `assets/modules/` | Part / module icons (`parts.json` `icon`, default `<part_id>.png`) |
 | `docs/ui-shots/` | README screenshots |
 | `tests/` | Headless test suite and balance simulator |
 
