@@ -177,6 +177,32 @@ func _test_content() -> void:
 		rare_ids.append(imp3.id)
 	_check("freeburn relays is in the rare pool", rare_ids.has(&"freeburn_relays"))
 
+	var capacitor: ImprovementDef = Database.improvement(&"super_capacitor")
+	_check("super capacitor exists", capacitor != null)
+	if capacitor != null:
+		_eq("super capacitor rarity", capacitor.rarity, &"rare")
+		_eq("super capacitor text", capacitor.text, "Overshield no longer expires.")
+		_check("super capacitor keep_overshield flag", capacitor.flags.has(&"keep_overshield"))
+	var codes: ImprovementDef = Database.improvement(&"discount_codes")
+	_check("discount codes exists", codes != null)
+	if codes != null:
+		_eq("discount codes rarity", codes.rarity, &"uncommon")
+		_eq("discount codes text", codes.text, "Shop prices are 50% off.")
+		_check("discount codes shop_half_price flag", codes.flags.has(&"shop_half_price"))
+	_check("super capacitor is in the rare pool", rare_ids.has(&"super_capacitor"))
+	_check("discount codes is in the uncommon pool", uncommon_ids.has(&"discount_codes"))
+
+	var flag_only := ImprovementDef.new()
+	_eq("flag-only improvement is accepted", flag_only.from_dict(&"flaggy", {
+		"name": "Flaggy",
+		"flags": ["keep_overshield"],
+	}), "")
+	var bad_flag := ImprovementDef.new()
+	_check("unknown flag is rejected", bad_flag.from_dict(&"badflag", {
+		"name": "Bad Flag",
+		"flags": ["on_tuesdays"],
+	}) != "")
+
 func _test_loadout() -> void:
 	print("loadout (typed slots)")
 	var g := ShipLoadout.new("Test")
@@ -613,6 +639,30 @@ func _test_overshield() -> void:
 	c.player.shield_regen = 2
 	c.begin_player_turn()
 	_eq("regen applies after overshield drop", c.player.shield, 4)
+
+	# Super Capacitor: player overshield persists across the turn boundary.
+	var cap_ship := StarterShips.tank()
+	cap_ship.add_improvement(&"super_capacitor")
+	var cap := CombatController.new()
+	cap.setup(cap_ship.compile(), Database.enemy(&"raider"), cap_ship)
+	_check("super capacitor compiles keep_overshield", cap.player.keep_overshield)
+	cap.player.shield_regen = 0
+	var cap_max: int = cap.player.max_shield
+	cap.player.shield = cap_max + 6
+	_eq("super capacitor starts with overshield", cap.player.overshield(), 6)
+	cap.begin_player_turn()
+	_eq("super capacitor keeps overshield across a turn", cap.player.overshield(), 6)
+	_eq("super capacitor keeps excess shield", cap.player.shield, cap_max + 6)
+
+	# Enemy overshield still expires even with the player improvement.
+	cap.enemy.max_shield = 4
+	cap.enemy.shield = 9
+	cap.enemy.shield_regen = 0
+	cap.enemy.clear_overshield()
+	_eq("enemy overshield helper still clears", cap.enemy.overshield(), 0)
+	cap.enemy.shield = 9
+	cap.end_player_turn()
+	_eq("enemy overshield still expires with super capacitor", cap.enemy.overshield(), 0)
 
 func _test_shield_dump() -> void:
 	print("shield dump")
@@ -1115,6 +1165,19 @@ func _test_ship_status_overlay() -> void:
 	_check("overlay shows freeburn text", blob.contains("Whenever you play a 0-cost card, gain 1 energy."))
 	_check("overlay names Paradox Engine", blob.contains("Paradox Engine"))
 	_check("overlay shows paradox text", blob.contains("Whenever your hand is empty, draw a card."))
+
+	run.ship.add_improvement(&"super_capacitor")
+	run.ship.add_improvement(&"discount_codes")
+	var host4 := Control.new()
+	host4.custom_minimum_size = Vector2(1280, 720)
+	add_child(host4)
+	ShipStatusOverlay.open(host4, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host4))
+	_check("overlay names Super Capacitor", blob.contains("Super Capacitor"))
+	_check("overlay shows super capacitor text", blob.contains("Overshield no longer expires."))
+	_check("overlay names Discount Codes", blob.contains("Discount Codes"))
+	_check("overlay shows discount codes text", blob.contains("Shop prices are 50% off."))
+	host4.free()
 	host3.free()
 
 	host.free()
@@ -1301,6 +1364,27 @@ func _test_improvement_triggers() -> void:
 	_eq("hopper+paradox exhaust plays", both.play_card(both_ex), "")
 	_eq("hopper refill stops paradox", both.deck.hand.size(), 1)
 	_eq("paradox did not draw a second card", both.deck.draw_pile.size(), 1)
+
+	# --- Discount Codes: shop part prices halved; strips unchanged. ---
+	var shop_run := RunState.new()
+	shop_run.start(StarterShips.salvager(), 21)
+	var laser_def: PartDef = Database.part(&"burst_laser")
+	_eq("full shop price", RewardPool.shop_price(shop_run, laser_def.base_value),
+		laser_def.base_value)
+	shop_run.ship.add_improvement(&"discount_codes")
+	_eq("discounted shop price is half", RewardPool.shop_price(shop_run, laser_def.base_value),
+		laser_def.base_value / 2)
+	_eq("odd shop price floors", RewardPool.shop_price(shop_run, 55), 27)
+	_eq("strip cost is not a shop price", SalvageYard.credit_cost(shop_run), 40)
+	var shop_meta := MetaState.new()
+	shop_meta.grant_starting_unlocks()
+	var stock: Array = RewardPool.shop_stock(shop_run, shop_meta, 1)
+	_check("shop stock with discount is non-empty", not stock.is_empty())
+	if not stock.is_empty():
+		var offer: Dictionary = stock[0]
+		var def3: PartDef = offer["def"]
+		_eq("shop stock uses the discounted price", int(offer["price"]),
+			RewardPool.shop_price(shop_run, def3.base_value))
 
 func _combat_with_improvement(imp_id: StringName) -> CombatController:
 	var ship := StarterShips.salvager()

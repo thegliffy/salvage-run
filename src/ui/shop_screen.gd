@@ -139,7 +139,10 @@ func _offer_row(offer: Dictionary) -> Control:
 		cost_bits.append("−%d power" % def.power_draw)
 	cost_bits.append("%d mass" % def.mass)
 	info.add_child(UITheme.label("  ·  ".join(cost_bits), 11, UITheme.TEXT_FAINT))
-	info.add_child(UITheme.label("%d credits" % price,
+	var price_label := "%d credits" % price
+	if Game.run.ship.has_flag(&"shop_half_price"):
+		price_label = "%d credits  (50%% off)" % price
+	info.add_child(UITheme.label(price_label,
 		13, UITheme.TEXT_FAINT if not can_afford else UITheme.WARN, "SemiBold"))
 
 	if def.flavor != "":
@@ -162,7 +165,10 @@ func _offer_row(offer: Dictionary) -> Control:
 		UITheme.tip(chip, UITheme.card_tip(CardInstance.create(cd)))
 		cards.add_child(chip)
 
-	UITheme.tip(wrap, UITheme.part_tip(def, "%d credits" % price))
+	var price_tip := "%d credits" % price
+	if Game.run.ship.has_flag(&"shop_half_price"):
+		price_tip = "%d credits (50%% off — Discount Codes)" % price
+	UITheme.tip(wrap, UITheme.part_tip(def, price_tip))
 
 	var buy := UITheme.button("  BUY  ", UITheme.GOOD)
 	buy.disabled = not can_afford

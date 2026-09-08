@@ -57,6 +57,12 @@ func add_improvement(id: StringName) -> bool:
 	EventBus.improvement_installed.emit(id)
 	return true
 
+func has_flag(flag: StringName) -> bool:
+	for imp in improvement_defs():
+		if imp.flags.has(flag):
+			return true
+	return false
+
 func improvement_defs() -> Array:
 	var out: Array = []
 	for iid in improvements:
@@ -196,6 +202,9 @@ func compile() -> ShipProfile:
 		prof.system_regen += int(imp.stats.get("system_regen", 0))
 		for t in imp.triggers:
 			prof.triggers.append((t as Dictionary).duplicate())
+		for f in imp.flags:
+			if not prof.flags.has(f):
+				prof.flags.append(f)
 
 	prof.evasion = maxi(0, prof.evasion - int(floor(total_mass / 4.0)))
 	prof.systems = systems_acc.values()

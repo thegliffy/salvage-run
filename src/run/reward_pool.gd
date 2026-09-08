@@ -177,6 +177,13 @@ static func chest_improvement(run: RunState) -> ImprovementDef:
 		return null
 	return Rng.pick(&"reward", pool)
 
+## In-run store part price. Discount Codes halves it (integer floor).
+## Strip costs and sale penalties are not shop prices.
+static func shop_price(run: RunState, base: int) -> int:
+	if run != null and run.ship != null and run.ship.has_flag(&"shop_half_price"):
+		return int(base) / 2
+	return int(base)
+
 ## Shop stock: a few parts priced at their base value.
 static func shop_stock(run: RunState, meta: MetaState, count: int = 3) -> Array:
 	var pool: Array = meta.available_parts()
@@ -202,7 +209,7 @@ static func shop_stock(run: RunState, meta: MetaState, count: int = 3) -> Array:
 		var def2: PartDef = pool[int(idx)]
 		chosen.append({
 			"def": def2,
-			"price": def2.base_value,
+			"price": shop_price(run, def2.base_value),
 			"can_install": run.ship.free_slots(def2.slot) > 0,
 			"replaces": _weakest_in_slot(run, def2.slot),
 		})

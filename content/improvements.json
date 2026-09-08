@@ -71,5 +71,15 @@
     "name": "Paradox Engine", "rarity": "uncommon",
     "text": "Whenever your hand is empty, draw a card.",
     "triggers": [{"when": "hand_empty", "op": "draw", "amount": 1}]
+  },
+  "super_capacitor": {
+    "name": "Super Capacitor", "rarity": "rare",
+    "text": "Overshield no longer expires.",
+    "flags": ["keep_overshield"]
+  },
+  "discount_codes": {
+    "name": "Discount Codes", "rarity": "uncommon",
+    "text": "Shop prices are 50% off.",
+    "flags": ["shop_half_price"]
   }
 }

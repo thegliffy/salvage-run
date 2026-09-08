@@ -620,15 +620,19 @@ func _set_shield_label(label: Label, c: Combatant) -> void:
 		return
 	label.text = "◆ %d/%d" % [c.shield, c.max_shield]
 	var over := c.overshield()
+	var over_rule := "Overshield does not expire." if c.keep_overshield \
+		else "Overshield expires at the start of your next turn."
 	if over > 0:
 		label.add_theme_color_override("font_color", UITheme.WARN)
-		UITheme.tip(label, "Shields\n%d / %d  (+%d overshield)\n---\nAbsorbs damage first. Overshield expires at the start of your next turn. Regen +%d / turn into capacity." % [
-			c.shield, c.max_shield, over, c.shield_regen])
+		UITheme.tip(label, "Shields\n%d / %d  (+%d overshield)\n---\nAbsorbs damage first. %s Regen +%d / turn into capacity." % [
+			c.shield, c.max_shield, over, over_rule, c.shield_regen])
 	else:
 		label.add_theme_color_override("font_color",
 			UITheme.SHIELD if c.shield > 0 else UITheme.TEXT_FAINT)
-		UITheme.tip(label, "Shields\n%d / %d\n---\nAbsorbs incoming damage first. Gain above capacity becomes overshield until your next turn. Regen +%d / turn while the shield system is up." % [
-			c.shield, c.max_shield, c.shield_regen])
+		var pending := "Overshield does not expire." if c.keep_overshield \
+			else "Gain above capacity becomes overshield until your next turn."
+		UITheme.tip(label, "Shields\n%d / %d\n---\nAbsorbs incoming damage first. %s Regen +%d / turn while the shield system is up." % [
+			c.shield, c.max_shield, pending, c.shield_regen])
 
 func _rebuild_hand() -> void:
 	# Playing a card refreshes the screen, so this can re-enter while an

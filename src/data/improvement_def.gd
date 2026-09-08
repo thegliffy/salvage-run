@@ -19,6 +19,11 @@ const TRIGGER_OPS := {
 	&"energy": true,
 }
 
+const KNOWN_FLAGS := {
+	&"keep_overshield": true,
+	&"shop_half_price": true,
+}
+
 var id: StringName
 var name: String
 var text: String
@@ -27,6 +32,8 @@ var stats: Dictionary = {}   # hull, power, draw, evasion, shield, shield_regen
 var slots: Dictionary = {}   # weapon, hull, utility
 ## Combat hooks: [{when: StringName, op: StringName, amount: int}, ...]
 var triggers: Array = []
+## Named passives compiled onto the ship (keep_overshield, shop_half_price).
+var flags: Array[StringName] = []
 
 func from_dict(def_id: StringName, d: Dictionary) -> String:
 	id = def_id
@@ -40,7 +47,10 @@ func from_dict(def_id: StringName, d: Dictionary) -> String:
 	var err := _parse_triggers(d.get("triggers", []))
 	if err != "":
 		return err
-	if stats.is_empty() and slots.is_empty() and triggers.is_empty():
+	err = _parse_flags(d.get("flags", []))
+	if err != "":
+		return err
+	if stats.is_empty() and slots.is_empty() and triggers.is_empty() and flags.is_empty():
 		return "does nothing"
 	return ""
 
@@ -67,4 +77,18 @@ func _parse_triggers(raw) -> String:
 			"op": op,
 			"amount": amount,
 		})
+	return ""
+
+func _parse_flags(raw) -> String:
+	flags = []
+	if raw == null:
+		return ""
+	if typeof(raw) != TYPE_ARRAY:
+		return "'flags' must be an array"
+	for f in raw:
+		var flag := StringName(str(f))
+		if not KNOWN_FLAGS.has(flag):
+			return "unknown flag '%s'" % String(flag)
+		if not flags.has(flag):
+			flags.append(flag)
 	return ""
