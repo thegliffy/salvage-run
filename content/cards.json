@@ -1256,7 +1256,7 @@
   "computer_spike": {
     "name": "Computer Spike",
     "kind": "tech",
-    "rarity": "common",
+    "rarity": "uncommon",
     "cost": 1,
     "target": "enemy_system",
     "text": "Suppress a target system for 2 turns. Apply 1 virus to the enemy.",

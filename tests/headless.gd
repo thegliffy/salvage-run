@@ -1898,8 +1898,22 @@ func _test_virus() -> void:
 	_eq("signal_injector mass", inj.mass, 2)
 	_eq("signal_injector integrity", inj.integrity, 8)
 	_eq("signal_injector power_draw", inj.power_draw, 2)
-	_eq("signal_injector base_value", inj.base_value, 115)
-	_eq("signal_injector unlock_cost", inj.unlock_cost, 180)
+	_eq("signal_injector base_value", inj.base_value, 120)
+	_eq("signal_injector unlock_cost", inj.unlock_cost, 200)
+	_eq("signal_injector payout rarity is uncommon",
+		RewardPool.RARITY_BY_TIER[inj.tier], &"uncommon")
+	_check("signal_injector is yard-gated, not a starter", inj.unlock_cost > 0)
+	var emp: PartDef = Database.part(&"emp_projector")
+	var rack: PartDef = Database.part(&"missile_rack")
+	var rail: PartDef = Database.part(&"aegis_rail")
+	var rare_gun: PartDef = Database.part(&"capacitor_cannon")
+	_eq("signal_injector value matches EMP peer", inj.base_value, emp.base_value)
+	_eq("signal_injector unlock matches EMP peer", inj.unlock_cost, emp.unlock_cost)
+	_check("signal_injector value is in the tier-2 weapon band",
+		inj.base_value >= mini(rack.base_value, rail.base_value)
+		and inj.base_value <= maxi(rack.base_value, rail.base_value))
+	_check("signal_injector unlock is below rare weapons",
+		inj.unlock_cost < rare_gun.unlock_cost)
 	_eq("signal_injector icon filename", inj.icon, "signal_injector.png")
 	_eq("signal_injector grants 3 cards", inj.grants.size(), 3)
 	_eq("signal_injector grants 2 computer_spike", inj.grants.count(&"computer_spike"), 2)
@@ -1935,7 +1949,7 @@ func _test_virus() -> void:
 
 	var spike_def: CardDef = Database.card(&"computer_spike")
 	_eq("computer_spike kind is tech", spike_def.kind, &"tech")
-	_eq("computer_spike rarity", spike_def.rarity, &"common")
+	_eq("computer_spike rarity", spike_def.rarity, &"uncommon")
 	_eq("computer_spike cost", spike_def.cost, 1)
 	_eq("computer_spike target", spike_def.target, CardDef.Target.ENEMY_SYSTEM)
 	_eq("computer_spike suppress", _op_amt(&"computer_spike", false, "suppress_system"), 2)

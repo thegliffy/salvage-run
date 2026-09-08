@@ -140,8 +140,8 @@
       "computer_spike",
       "firewall_bypass"
     ],
-    "base_value": 115,
-    "unlock_cost": 180,
+    "base_value": 120,
+    "unlock_cost": 200,
     "synergy": {
       "bonus": {
         "power": 1
