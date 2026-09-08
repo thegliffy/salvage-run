@@ -105,9 +105,13 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 			continue
 		col.add_child(UITheme.label("! " + w, 13, UITheme.WARN, "SemiBold"))
 
-	# Loadout first: nested inner scrolls used to clip hull / utility / improvements
-	# to a sliver under the ship sketch. One outer scroll, both columns size to
-	# content, so equipped parts and improvements are on the same wheel.
+	# Improvements sit under the stats so an empty or installed list is on the
+	# first screen — they used to hang off the bottom of a nested slots scroll.
+	col.add_child(_improvements_block(run))
+
+	# Loadout first: nested inner scrolls used to clip hull / utility to a
+	# sliver under the ship sketch. One outer scroll, both columns size to
+	# content, so equipped parts stay on the same wheel as the deck.
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 16)
 	col.add_child(body)
@@ -123,9 +127,6 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 		11, UITheme.TEXT_FAINT))
 	for slot in ShipLoadout.SLOT_TYPES:
 		slots_col.add_child(_slot_block(run, slot))
-
-	slots_col.add_child(UITheme.spacer(2))
-	slots_col.add_child(_improvements_block(run))
 
 	var deck_col := VBoxContainer.new()
 	deck_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -314,14 +315,17 @@ static func _slot_block(run: RunState, slot: StringName) -> Control:
 		UITheme.WARN if full else UITheme.TEXT_DIM, "SemiBold"))
 	if full:
 		head.add_child(UITheme.label("FULL", 11, UITheme.WARN, "Bold"))
-
-	for inst in used:
-		col.add_child(_part_row(inst))
-	var empty := cap - used.size()
-	if empty > 0:
-		col.add_child(UITheme.label(
+	else:
+		var empty := cap - used.size()
+		head.add_child(UITheme.label(
 			"1 empty mount" if empty == 1 else "%d empty mounts" % empty,
-			12, UITheme.TEXT_FAINT))
+			11, UITheme.TEXT_FAINT))
+
+	if used.is_empty():
+		col.add_child(UITheme.label("nothing equipped", 12, UITheme.TEXT_FAINT))
+	else:
+		for inst in used:
+			col.add_child(_part_row(inst))
 	return wrap
 
 static func _part_row(inst: PartInstance) -> Control:
@@ -362,9 +366,9 @@ static func _part_row(inst: PartInstance) -> Control:
 static func _improvements_block(run: RunState) -> Control:
 	var wrap := ThemedPanel.new()
 	wrap.add_theme_stylebox_override("panel", UITheme.panel(
-		UITheme.PANEL_RAISED, UITheme.ACCENT_DIM, 1, 4, 10))
+		UITheme.PANEL_RAISED, UITheme.ACCENT_DIM, 1, 4, 8))
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 6)
+	col.add_theme_constant_override("separation", 4)
 	wrap.add_child(col)
 
 	var head := HBoxContainer.new()
@@ -375,14 +379,9 @@ static func _improvements_block(run: RunState) -> Control:
 		UITheme.TEXT_DIM, "SemiBold"))
 
 	if run.ship.improvements.is_empty():
-		col.add_child(UITheme.label("No improvements yet", 13, UITheme.TEXT_FAINT, "SemiBold"))
-		var hint := UITheme.label(
-			"Mini-bosses and chests install these. They fill no slot and add no cards.",
-			11, UITheme.TEXT_FAINT)
-		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		col.add_child(hint)
+		head.add_child(UITheme.label("No improvements yet", 13, UITheme.TEXT_FAINT, "SemiBold"))
 		UITheme.tip(wrap,
-			"Improvements\nNone installed\n---\nPermanent ship upgrades from mini-bosses and chests. No slot, no cards.")
+			"Improvements\nNone installed\n---\nMini-bosses and chests install these. They fill no slot and add no cards.")
 		return wrap
 
 	for iid in run.ship.improvements:
@@ -394,23 +393,16 @@ static func _improvements_block(run: RunState) -> Control:
 
 static func _improvement_row(imp: ImprovementDef) -> Control:
 	var colour: Color = UITheme.rarity_colour(imp.rarity)
-	var row := ThemedPanel.new()
-	row.add_theme_stylebox_override("panel", UITheme.panel(
-		UITheme.PANEL, colour, 1, 3, 6))
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 1)
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(col)
-	var title := HBoxContainer.new()
-	title.add_theme_constant_override("separation", 8)
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(title)
-	title.add_child(UITheme.label(imp.name, 13, UITheme.TEXT, "SemiBold"))
-	title.add_child(UITheme.label(String(imp.rarity).to_upper(), 10, colour, "Bold"))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.add_child(UITheme.label(imp.name, 13, UITheme.TEXT, "SemiBold"))
 	if imp.text != "":
-		var effect := UITheme.label(imp.text, 12, UITheme.TEXT)
-		effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		col.add_child(effect)
+		var effect := UITheme.label("—  %s" % imp.text, 12, UITheme.TEXT)
+		effect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		effect.autowrap_mode = TextServer.AUTOWRAP_OFF
+		row.add_child(effect)
+	row.add_child(UITheme.label(String(imp.rarity).to_upper(), 10, colour, "Bold"))
 	UITheme.tip(row, "%s\n%s\n---\nInstalled ship improvement. Fills no slot and grants no cards." % [
 		imp.name, imp.text if imp.text != "" else String(imp.rarity).capitalize()])
 	return row
