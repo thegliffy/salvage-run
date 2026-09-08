@@ -41,9 +41,12 @@ const RARITY_COLOUR := {
 }
 
 const MODULE_ART_DIR := "res://assets/modules/"
+const DRONE_SLOT_DIR := "res://assets/ui/drone_slots/"
 ## Design size at 720p; canvas_items stretch scales this with the window.
 const MODULE_ICON_SIZE := 80
 const MODULE_ICON_COMPACT := 64
+## Combat header drone bays. Slot chips are 128px; this is the on-screen size.
+const DRONE_SLOT_SIZE := 48
 
 static func font(weight: String = "Regular") -> FontFile:
 	return load("res://assets/fonts/Exo-%s.ttf" % weight)
@@ -308,6 +311,17 @@ static func module_icon(def: PartDef, px: int = MODULE_ICON_SIZE) -> TextureRect
 	else:
 		tex.visible = false
 	return tex
+
+## Combat bay chip: empty ring, attack (red), or shield (blue). Null when the
+## PNG is missing so combat can fall back to StyleBox circles.
+static func drone_slot_texture(kind: StringName) -> Texture2D:
+	var file := "drone_slot_empty.png"
+	match kind:
+		&"attack":
+			file = "drone_slot_attack.png"
+		&"shield":
+			file = "drone_slot_shield.png"
+	return art(DRONE_SLOT_DIR + file)
 
 static func spacer(h: int = 8) -> Control:
 	var c := Control.new()

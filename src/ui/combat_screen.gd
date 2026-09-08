@@ -356,15 +356,29 @@ func _build_hand_row() -> Control:
 func _build_drone_bay() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.visible = false
 	_drone_rings.clear()
 	for i in 2:
-		var ring := PanelContainer.new()
-		ring.custom_minimum_size = Vector2(40, 40)
-		UITheme.touch(ring, 40)
+		var ring := _make_drone_ring()
 		row.add_child(ring)
 		_drone_rings.append(ring)
 	return row
+
+func _make_drone_ring() -> PanelContainer:
+	var ring := PanelContainer.new()
+	var px := UITheme.DRONE_SLOT_SIZE
+	ring.custom_minimum_size = Vector2(px, px)
+	UITheme.touch(ring, px)
+	var chip := TextureRect.new()
+	chip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	chip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	ring.add_child(chip)
+	ring.set_meta("chip", chip)
+	return ring
 
 func _pile_box(caption: String, border: Color = UITheme.ACCENT_DIM) -> PanelContainer:
 	var box := ThemedPanel.new()
@@ -478,9 +492,7 @@ func _refresh_drone_bay() -> void:
 	if n <= 0:
 		return
 	while _drone_rings.size() < n:
-		var ring := PanelContainer.new()
-		ring.custom_minimum_size = Vector2(40, 40)
-		UITheme.touch(ring, 40)
+		var ring := _make_drone_ring()
 		_drone_bay.add_child(ring)
 		_drone_rings.append(ring)
 	for i in _drone_rings.size():
@@ -494,15 +506,26 @@ func _refresh_drone_bay() -> void:
 
 func _style_drone_ring(ring: PanelContainer, drone: Dictionary) -> void:
 	var kind := StringName(drone.get("type", &""))
+	var chip: TextureRect = ring.get_meta("chip")
+	var tex := UITheme.drone_slot_texture(kind)
+	if tex != null:
+		chip.texture = tex
+		chip.visible = true
+		# Chip already paints the ring / orb; keep the panel hole transparent.
+		ring.add_theme_stylebox_override("panel",
+			UITheme.panel(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0))
+		return
+	chip.texture = null
+	chip.visible = false
 	if kind == &"attack":
 		ring.add_theme_stylebox_override("panel",
-			UITheme.panel(UITheme.HOSTILE, UITheme.HOSTILE.lightened(0.2), 2, 20, 0))
+			UITheme.panel(UITheme.HOSTILE, UITheme.HOSTILE.lightened(0.2), 2, 24, 0))
 	elif kind == &"shield":
 		ring.add_theme_stylebox_override("panel",
-			UITheme.panel(UITheme.ACCENT, UITheme.ACCENT.lightened(0.2), 2, 20, 0))
+			UITheme.panel(UITheme.ACCENT, UITheme.ACCENT.lightened(0.2), 2, 24, 0))
 	else:
 		ring.add_theme_stylebox_override("panel",
-			UITheme.panel(Color(0, 0, 0, 0), UITheme.TEXT_FAINT, 2, 20, 0))
+			UITheme.panel(Color(0, 0, 0, 0), UITheme.TEXT_FAINT, 2, 24, 0))
 
 func _drone_bay_tip() -> String:
 	var bits: PackedStringArray = ["DRONE BAYS"]

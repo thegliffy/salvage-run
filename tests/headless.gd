@@ -1128,6 +1128,23 @@ func _test_drones() -> void:
 		_check("drone_launcher.png wired when present", icon.visible)
 	icon.free()
 
+	var empty_chip := UITheme.drone_slot_texture(&"")
+	var atk_chip := UITheme.drone_slot_texture(&"attack")
+	var sh_chip := UITheme.drone_slot_texture(&"shield")
+	_check("empty drone slot art is Texture2D or null",
+		empty_chip == null or empty_chip is Texture2D)
+	_check("attack drone slot art is Texture2D or null",
+		atk_chip == null or atk_chip is Texture2D)
+	_check("shield drone slot art is Texture2D or null",
+		sh_chip == null or sh_chip is Texture2D)
+	if empty_chip != null:
+		_check("empty drone slot chip wired when present", empty_chip is Texture2D)
+		_check("attack drone slot chip wired when present", atk_chip != null)
+		_check("shield drone slot chip wired when present", sh_chip != null)
+	else:
+		_check("missing drone slot chips return null",
+			atk_chip == null and sh_chip == null)
+
 	var c := CombatController.new()
 	c.setup(ship.compile(), Database.enemy(&"scout_drone"), ship)
 	_eq("combat copied two drone slots", c.drone_slots, 2)
