@@ -49,7 +49,7 @@ func set_cards(instances: Array, energy: int, cost_of: Callable = Callable()) ->
 	for inst in instances:
 		var v := CardView.new()
 		v.setup(inst)
-		var shown := inst.cost()
+		var shown: int = inst.cost()
 		if cost_of.is_valid():
 			shown = int(cost_of.call(inst))
 		v.set_playable(shown <= energy, energy, shown)
