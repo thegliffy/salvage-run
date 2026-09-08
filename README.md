@@ -1,6 +1,6 @@
 # Salvage Run
 
-**v0.21** · by **thegliffy**
+**v0.22** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
 across three sectors to the final boss, then sell what you built for salvage
@@ -40,13 +40,13 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.21-win64.zip` from the
-[v0.21 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.21),
+**Windows:** download `SalvageRun-v0.22-win64.zip` from the
+[v0.22 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.22),
 unzip, run `SalvageRun.exe`. Single self-contained executable — no installer,
 no separate data files.
 
-**Linux:** download `SalvageRun-v0.21-linux64.zip` from the same
-[v0.21 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.21),
+**Linux:** download `SalvageRun-v0.22-linux64.zip` from the same
+[v0.22 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.22),
 unzip, run `./salvage-run.x86_64`.
 
 **From source:**
@@ -98,15 +98,17 @@ improvements, jettison, card stripping, run-end appraisal, meta unlock shop
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-### What's new in v0.21
+### What's new in v0.22
 
-- Reward-screen UI **fills the window** (offer tiles expand instead of sitting
-  at content size)
-- **DECK** view on the reward and map screens
-- Combat **draw-pile / discard** counts are visible
-- **Drone redesign:** launch via cards (**Launch Attack Drone**, **Launch Shield
-  Charger**, **Overcharge** = double activate). Combat shows two empty bay
-  circles that fill red / blue. Drone Launcher module art and bay UI chips.
+- **UI fit:** every screen layouts into the live viewport (map columns,
+  title / sale / reward / shop) so nothing clips at 1280×720 / 960×540
+- **Static Coil:** uncommon (tier-2) utility — 2× Afterburner + Static Buildup
+  (damage = 2× cards played this turn; upgrade 3×)
+- **Unique card icons** for launch drones, Overcharge Drones, Static Buildup,
+  Ion Haze, and Thermal Vent
+- **SHIP STATUS** shows equipped parts, improvements (or empty state), and a
+  scrollable deck; combat **DECK** sits next to SHIP
+- **SELF-DESTRUCT:** confirm scuttle → wreck sale (40% recovery)
 
 ---
 
