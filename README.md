@@ -1,6 +1,6 @@
 # Salvage Run
 
-**v0.20** · by **thegliffy**
+**v0.21** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
 across three sectors to the final boss, then sell what you built for salvage
@@ -13,7 +13,7 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-384 tests passing · playable PC demo
+421 tests passing · playable PC demo
 ```
 
 ---
@@ -40,13 +40,13 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.20-win64.zip` from the
-[v0.20 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.20),
+**Windows:** download `SalvageRun-v0.21-win64.zip` from the
+[v0.21 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.21),
 unzip, run `SalvageRun.exe`. Single self-contained executable — no installer,
 no separate data files.
 
-**Linux:** download `SalvageRun-v0.20-linux64.zip` from the same
-[v0.20 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.20),
+**Linux:** download `SalvageRun-v0.21-linux64.zip` from the same
+[v0.21 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.21),
 unzip, run `./salvage-run.x86_64`.
 
 **From source:**
@@ -77,7 +77,8 @@ The amber banner is the enemy's next attack and names the subsystem that fires
 it. Cards that need no target play on a single click.
 
 **SHIP** (combat) / **SHIP STATUS** (map) opens the full loadout: slots, power
-budget, deck, and the painted ship view.
+budget, deck, and the painted ship view. **DECK** on the reward and map screens
+lists the compiled deck.
 
 ## Status: playable PC demo
 
@@ -93,17 +94,15 @@ improvements, jettison, card stripping, run-end appraisal, meta unlock shop
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-### What's new in v0.20
+### What's new in v0.21
 
-- **Module icons** on reward tiles, shop rows, and the Salvage Yard
-- Window stretch is **`expand`** so the UI fills the window instead of letterboxing
-- **Strip costs credits** in-run (`40 + 25 ×` mounts already stripped), plus the
-  existing sale-value penalty
-- **Card rebalance** (Burst Laser, Plasma Cycler, Missile Rack, Power Relay, and
-  related shared cards)
-- Run is **three sectors of ~10 stops** plus a true final boss
-- Unlockable **Shepherd** hull (1 weapon / 3 hull / 6 utility, Deflector Mk I,
-  Drone Launcher with two empty bays you fill by playing launch cards) at **650 salvage**
+- Reward-screen UI **fills the window** (offer tiles expand instead of sitting
+  at content size)
+- **DECK** view on the reward and map screens
+- Combat **draw-pile / discard** counts are visible
+- **Drone redesign:** launch via cards (**Launch Attack Drone**, **Launch Shield
+  Charger**, **Overcharge** = double activate). Combat shows two empty bay
+  circles that fill red / blue. Drone Launcher module art and bay UI chips.
 
 ---
 
@@ -114,13 +113,14 @@ You never edit your deck directly. You edit your **ship**.
 The hull has typed slots. **Brawler** is the default — **4 weapon, 3 hull, 4
 utility**. **Tank** starts with 3 weapon slots and a Deflector (shields).
 **Shepherd** is **1 weapon / 3 hull / 6 utility**, with a Deflector and a
-Drone Launcher (2 drones tick each player turn: Attack / Repair / Screen).
+Drone Launcher (two empty bays you fill by playing launch cards).
 Each installed part grants three cards. Bolt on a Missile Rack and
 `Breach Missile` enters your deck; jettison that part and its cards leave
 with it. Deckbuilding and ship building are the same action.
 
-Protocol cards set the Shepherd's drone wing: play Attack, Repair, or Screen
-and both drones follow that pattern at the start of each of your turns.
+Launch Attack Drone (red) or Launch Shield Charger (blue) fills an empty bay;
+Overcharge activates occupied drones twice immediately. Combat shows two bay
+circles at the top of the screen.
 
 Nothing limits how much you carry except the slots. What limits *what* you carry
 is three soft costs:
