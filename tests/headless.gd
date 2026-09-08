@@ -1567,13 +1567,13 @@ func _test_common_improvements() -> void:
 	var own := CardInstance.create(Database.card(&"overheat"))
 	bleed.deck.hand.append(own)
 	bleed.player.energy = 9
+	bleed.player.shield = 0
 	bleed.enemy.evasion = 0
 	bleed.enemy.shield = 0
 	var bh2: int = bleed.player.hull
-	var sh2: int = bleed.player.shield
 	_eq("bleed valve overheat plays", bleed.play_card(own, &"hull"), "")
 	_eq("overheat still self-damages with bleed valve", bleed.player.hull, bh2 - 3)
-	_eq("overheat also trips bleed valve", bleed.player.shield, sh2 + 1)
+	_eq("overheat also trips bleed valve", bleed.player.shield, 1)
 
 	# Probe Tip: first virus application this combat is +1; later applies are raw.
 	var tip := _combat_with_improvement(&"probe_tip")
