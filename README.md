@@ -76,9 +76,10 @@ left alone. You can always just shoot the hull.
 The amber banner is the enemy's next attack and names the subsystem that fires
 it. Cards that need no target play on a single click.
 
-**SHIP** (combat) / **SHIP STATUS** (map) opens the full loadout: slots, power
-budget, deck, and the painted ship view. **DECK** on the reward and map screens
-lists the compiled deck.
+**SHIP** (combat) / **SHIP STATUS** (map) opens the full loadout: equipped parts
+by slot (including empty mounts), installed improvements, power budget, deck,
+and the painted ship view. **DECK** on the reward and map screens lists the
+compiled deck.
 
 ## Status: playable PC demo
 

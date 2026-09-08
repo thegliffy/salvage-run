@@ -45,6 +45,7 @@ var _fx_layer: Control
 var _pending_draw: int = 0
 var _hand_epoch: int = 0
 var _ship_stats: Label
+var _loadout_line: Label
 var _deficit_host: PanelContainer
 var _deficit: Label
 var _drone_bay: HBoxContainer
@@ -124,7 +125,7 @@ func _build() -> void:
 	_banner = UITheme.label(_fight_banner(), 13, UITheme.TEXT_DIM, "SemiBold")
 	head.add_child(_banner)
 	var ship_btn := UITheme.ghost_button("  SHIP  ")
-	UITheme.tip(ship_btn, "Ship status\n---\nSlots, power budget, deck, and the painted hull.")
+	UITheme.tip(ship_btn, "Ship status\n---\nEquipped parts, installed improvements, power budget, and deck.")
 	ship_btn.pressed.connect(_open_ship_status)
 	head.add_child(ship_btn)
 
@@ -294,6 +295,9 @@ func _build_side_panel() -> Control:
 	_deficit_host.add_child(_deficit)
 	_ship_stats = UITheme.label("", 11, UITheme.TEXT_FAINT)
 	pcol.add_child(_ship_stats)
+	_loadout_line = UITheme.label("", 11, UITheme.TEXT_DIM, "SemiBold")
+	_loadout_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pcol.add_child(_loadout_line)
 
 	_player_systems = VBoxContainer.new()
 	_player_systems.add_theme_constant_override("separation", 4)
@@ -459,6 +463,9 @@ func _refresh() -> void:
 		prof.evasion, prof.shield_regen, bud["draw"], bud["output"], prof.deck.size()]
 	_ship_stats.text = stats
 	_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
+	_loadout_line.text = ShipStatusOverlay.loadout_strip(Game.run.ship)
+	UITheme.tip(_loadout_line,
+		"Loadout\n%s\n---\nSHIP opens every equipped part and installed improvement." % _loadout_line.text)
 	var deficit_n := int(bud["deficit"])
 	if deficit_n > 0:
 		_deficit_host.visible = true
