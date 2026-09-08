@@ -14,7 +14,7 @@ What exists, and the order the rest should be built in.
 - [x] Soft subsystem targeting + hull as primary target; telegraphed intents
 - [x] Damage pipeline: evasion → shields → subsystem → hull
 - [x] Persistent part wear written back from combat
-- [x] Sector map (StS-style layered DAG, ~15 stops, ~70/10/10/10 mix)
+- [x] Sector map (3 acts × ~10 stops + boss, ~70/10/10/10 mix)
 - [x] Map / combat / shop / chest / reward / sale screens
 - [x] Ship status overlay (slots, power budget, deck, painted ship view)
 - [x] Power-budget / deficit UI on rewards and ship status
@@ -27,9 +27,9 @@ What exists, and the order the rest should be built in.
 
 ## Next
 
-1. **Balance / stalls.** ~37% win rate on 200 sim runs; a large share of losses
-   are turn-guard stalls on shield-regenerating enemies. Fix shield stripping /
-   regen first, then dead content the histogram names.
+1. **Balance / stalls.** The sim now walks the live 3×10 map; watch
+   shield-regen stalls on gunship / dreadnought, then dead content the
+   histogram names.
 2. **Run save/resume.** Critical for Android — the OS kills the process whenever
    it likes. `SaveSystem` currently persists meta only. Run saves need
    write-on-every-transition with the same atomic temp-then-rename approach.
@@ -47,7 +47,8 @@ What exists, and the order the rest should be built in.
 ## Polish backlog (not blockers)
 
 - Quieter scene-exit disconnect logging if engine quirks remain after mitigations
-- Enemy scaling with map depth (matters more as content grows)
+- Enemy scaling with map depth (regulars already shift scout → raider by
+  sector; a deeper roster can wait)
 - Touch hitboxes ≥ 48dp on subsystem / hull targets
 
 ## Deliberately not doing yet

@@ -5,19 +5,19 @@
     "rarity": "starter",
     "cost": 1,
     "target": "enemy_system",
-    "text": "Deal 6 damage to a target system.",
+    "text": "Deal 5 damage to a target system.",
     "effects": [
       {
         "op": "damage_system",
-        "amount": 6
+        "amount": 5
       }
     ],
     "upgrade": {
-      "text": "Deal 9 damage to a target system.",
+      "text": "Deal 7 damage to a target system.",
       "effects": [
         {
           "op": "damage_system",
-          "amount": 9
+          "amount": 7
         }
       ]
     },
@@ -29,24 +29,24 @@
     "rarity": "common",
     "cost": 2,
     "target": "enemy_system",
-    "text": "Deal 8 damage to a target system. Ignores shields.",
+    "text": "Deal 5 damage to a target system. Ignores shields.",
     "keywords": [
       "pierce"
     ],
     "effects": [
       {
         "op": "damage_system",
-        "amount": 8,
+        "amount": 5,
         "pierce": true,
         "homing": true
       }
     ],
     "upgrade": {
-      "text": "Deal 12 damage to a target system. Ignores shields.",
+      "text": "Deal 8 damage to a target system. Ignores shields.",
       "effects": [
         {
           "op": "damage_system",
-          "amount": 12,
+          "amount": 8,
           "pierce": true,
           "homing": true
         }
@@ -127,11 +127,12 @@
       }
     ],
     "upgrade": {
-      "text": "Gain 3 energy. Exhaust.",
+      "text": "Gain 2 energy.",
+      "keywords": [],
       "effects": [
         {
           "op": "energy",
-          "amount": 3
+          "amount": 2
         }
       ]
     },
@@ -369,7 +370,10 @@
     "rarity": "starter",
     "cost": 1,
     "target": "none",
-    "text": "Gain 1 energy. Take 3 hull damage.",
+    "text": "Gain 1 energy. Take 3 hull damage. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
     "effects": [
       {
         "op": "energy",
@@ -381,7 +385,7 @@
       }
     ],
     "upgrade": {
-      "text": "Gain 1 energy. Take 1 hull damage.",
+      "text": "Gain 1 energy. Take 1 hull damage. Exhaust.",
       "effects": [
         {
           "op": "energy",
@@ -481,11 +485,11 @@
     "rarity": "common",
     "cost": 1,
     "target": "enemy_system",
-    "text": "Deal 10 damage to a target system. Take 3 hull damage.",
+    "text": "Deal 8 damage to a target system. Take 3 hull damage.",
     "effects": [
       {
         "op": "damage_system",
-        "amount": 10
+        "amount": 8
       },
       {
         "op": "damage_self_hull",
@@ -493,11 +497,11 @@
       }
     ],
     "upgrade": {
-      "text": "Deal 14 damage to a target system. Take 3 hull damage.",
+      "text": "Deal 10 damage to a target system. Take 3 hull damage.",
       "effects": [
         {
           "op": "damage_system",
-          "amount": 14
+          "amount": 10
         },
         {
           "op": "damage_self_hull",
@@ -639,27 +643,27 @@
     "rarity": "uncommon",
     "cost": 2,
     "target": "enemy_system",
-    "text": "Deal 5 damage to a target system twice.",
+    "text": "Deal 3 damage to a target system twice.",
     "effects": [
       {
         "op": "damage_system",
-        "amount": 5
+        "amount": 3
       },
       {
         "op": "damage_system",
-        "amount": 5
+        "amount": 3
       }
     ],
     "upgrade": {
-      "text": "Deal 7 damage to a target system twice.",
+      "text": "Deal 5 damage to a target system twice.",
       "effects": [
         {
           "op": "damage_system",
-          "amount": 7
+          "amount": 5
         },
         {
           "op": "damage_system",
-          "amount": 7
+          "amount": 5
         }
       ]
     },
@@ -682,11 +686,12 @@
       }
     ],
     "upgrade": {
-      "text": "Draw 3 cards. Exhaust.",
+      "text": "Draw 2 cards.",
+      "keywords": [],
       "effects": [
         {
           "op": "draw",
-          "amount": 3
+          "amount": 2
         }
       ]
     },
@@ -823,12 +828,11 @@
     "rarity": "rare",
     "cost": 2,
     "target": "enemy_ship",
-    "text": "Deal 12 hull damage. Cannot be dodged.",
+    "text": "Deal 12 hull damage.",
     "effects": [
       {
         "op": "damage_hull",
-        "amount": 12,
-        "homing": true
+        "amount": 12
       }
     ],
     "upgrade": {
@@ -903,9 +907,9 @@
     "name": "Plasma Bolt",
     "kind": "attack",
     "rarity": "common",
-    "cost": 1,
+    "cost": 2,
     "target": "enemy_system",
-    "text": "Deal 5 damage to a target system. Gain 3 shield.",
+    "text": "Deal 5 damage to a target system. Gain 3 shield. Gain 1 energy.",
     "effects": [
       {
         "op": "damage_system",
@@ -914,10 +918,14 @@
       {
         "op": "shield",
         "amount": 3
+      },
+      {
+        "op": "energy",
+        "amount": 1
       }
     ],
     "upgrade": {
-      "text": "Deal 8 damage to a target system. Gain 4 shield.",
+      "text": "Deal 8 damage to a target system. Gain 4 shield. Gain 1 energy.",
       "effects": [
         {
           "op": "damage_system",
@@ -926,6 +934,10 @@
         {
           "op": "shield",
           "amount": 4
+        },
+        {
+          "op": "energy",
+          "amount": 1
         }
       ]
     },
@@ -935,13 +947,13 @@
     "name": "Ion Haze",
     "kind": "status",
     "rarity": "common",
-    "cost": 1,
-    "target": "none",
-    "text": "Gain 4 shield. Take 2 hull damage.",
+    "cost": 0,
+    "target": "enemy_system",
+    "text": "Deal 2 damage to a target system. Take 2 hull damage.",
     "effects": [
       {
-        "op": "shield",
-        "amount": 4
+        "op": "damage_system",
+        "amount": 2
       },
       {
         "op": "damage_self_hull",
@@ -949,15 +961,15 @@
       }
     ],
     "upgrade": {
-      "text": "Gain 6 shield. Take 1 hull damage.",
+      "text": "Deal 4 damage to a target system. Take 2 hull damage.",
       "effects": [
         {
-          "op": "shield",
-          "amount": 6
+          "op": "damage_system",
+          "amount": 4
         },
         {
           "op": "damage_self_hull",
-          "amount": 1
+          "amount": 2
         }
       ]
     },

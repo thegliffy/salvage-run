@@ -3,7 +3,8 @@ extends RefCounted
 ## What a victory pays out.
 ##
 ## Winning gives HARDWARE, not cards: the deck is downstream of the ship, so a
-## part is the card reward. Scaling by enemy tier:
+## part is the card reward. Scaling by node type (regular / elite / boss), not
+## just the enemy's hull tier, so a sector-1 gunship boss still pays like a boss:
 ##
 ##   regular    credits + a part offer
 ##   mini-boss  credits + a part offer + a common/uncommon improvement
@@ -24,8 +25,9 @@ static func _tier_band(enemy_tier: int) -> Array[int]:
 		2: return [2, 1]
 		_: return [3, 2]
 
-static func build(run: RunState, meta: MetaState, enemy: EnemyDef) -> Dictionary:
-	var tier: int = enemy.tier
+static func build(run: RunState, meta: MetaState, enemy: EnemyDef,
+		node_type: String = "") -> Dictionary:
+	var tier: int = _payout_tier(enemy.tier, node_type)
 	return {
 		"tier": tier,
 		"credits": int(enemy.reward.get("credits", 0)),
@@ -33,6 +35,18 @@ static func build(run: RunState, meta: MetaState, enemy: EnemyDef) -> Dictionary
 		"improvement": _roll_improvement(tier),
 		"allow_jettison": not run.ship.parts.is_empty(),
 	}
+
+## Node type wins when present so a weaker act-1 boss still pays rare loot.
+static func _payout_tier(enemy_tier: int, node_type: String) -> int:
+	match node_type:
+		"boss":
+			return 3
+		"elite":
+			return 2
+		"combat":
+			return 1
+		_:
+			return enemy_tier
 
 # --- Parts -------------------------------------------------------------------
 

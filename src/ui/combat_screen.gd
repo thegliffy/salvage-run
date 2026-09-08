@@ -69,13 +69,17 @@ func _fight_banner() -> String:
 	var ntype := String(node.get("type", "combat"))
 	var layer := int(node.get("layer", 0))
 	var stops := int(Game.run.map.get("stops", MapGenerator.STOPS_BEFORE_BOSS))
+	var sector := Game.run.sector
+	var of := MapGenerator.SECTOR_COUNT
 	match ntype:
 		"boss":
-			return "SECTOR BOSS"
+			if Game.run.is_final_sector():
+				return "FINAL BOSS"
+			return "SECTOR BOSS  ·  sector %d / %d" % [sector, of]
 		"elite":
-			return "MINI-BOSS  ·  stop %d / %d" % [layer, stops]
+			return "MINI-BOSS  ·  sector %d / %d  ·  stop %d / %d" % [sector, of, layer, stops]
 		_:
-			return "FIGHT  ·  stop %d / %d" % [layer, stops]
+			return "FIGHT  ·  sector %d / %d  ·  stop %d / %d" % [sector, of, layer, stops]
 
 func _exit_tree() -> void:
 	_close_ship_status()

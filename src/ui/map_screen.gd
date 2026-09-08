@@ -54,7 +54,8 @@ func _build() -> void:
 	head_row.add_theme_constant_override("separation", 14)
 	head_col.add_child(head_row)
 	head_row.add_child(UITheme.chrome_mark())
-	head_row.add_child(UITheme.label("SECTOR MAP", 18, UITheme.TEXT, "Bold"))
+	head_row.add_child(UITheme.label("SECTOR %d OF %d" % [
+		Game.run.sector, MapGenerator.SECTOR_COUNT], 18, UITheme.TEXT, "Bold"))
 	_status = UITheme.label("", 13, UITheme.TEXT_DIM, "SemiBold")
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head_row.add_child(_status)
@@ -67,12 +68,15 @@ func _build() -> void:
 	var legend := HBoxContainer.new()
 	legend.add_theme_constant_override("separation", 8)
 	head_col.add_child(legend)
+	var boss_blurb := "Final boss. Win and sell the ship." \
+		if Game.run.is_final_sector() \
+		else "Sector boss. Win to enter the next sector."
 	for pair in [
 		["FIGHT", TYPE_COLOUR["combat"], "Regular combat — credits and a part offer."],
 		["MINI-BOSS", TYPE_COLOUR["elite"], "Elite fight — harder, pays an improvement."],
 		["STORE", TYPE_COLOUR["shop"], "Buy parts or strip a card from a mount."],
 		["CHEST", TYPE_COLOUR["chest"], "Free ship improvement. No slot, no cards."],
-		["BOSS", TYPE_COLOUR["boss"], "Sector boss. Win and sell the ship."],
+		["BOSS" if not Game.run.is_final_sector() else "FINAL", TYPE_COLOUR["boss"], boss_blurb],
 	]:
 		var badge := UITheme.badge(String(pair[0]), pair[1] as Color)
 		UITheme.tip(badge, "%s\n---\n%s" % [pair[0], pair[2]])
@@ -147,7 +151,7 @@ func _rebuild() -> void:
 	var cur := MapGenerator.node_at(map, run.current_node)
 	_status.text = "HULL %d/%d    CREDITS %d    DECK %d    AT %s" % [
 		run.hull_carryover, run.profile.max_hull, run.credits,
-		run.profile.deck.size(), MapGenerator.label_for(String(cur["type"]))]
+		run.profile.deck.size(), MapGenerator.label_for(String(cur["type"]), run.sector)]
 	UITheme.tip(_status, "Run status\nhull %d/%d · credits %d · deck %d\n---\nSHIP STATUS opens the full loadout, power budget, and deck." % [
 		run.hull_carryover, run.profile.max_hull, run.credits, run.profile.deck.size()])
 
@@ -225,7 +229,7 @@ func _make_node(node: Dictionary, can_enter: bool) -> Control:
 		here.size = Vector2((NODE_R + 10) * 2, 16)
 		wrap.add_child(here)
 
-	var tag := UITheme.label(MapGenerator.label_for(ntype), 11,
+	var tag := UITheme.label(MapGenerator.label_for(ntype, Game.run.sector), 11,
 		colour if (can_enter or is_here or visited) else UITheme.TEXT_FAINT,
 		"Black" if ntype == "boss" else "Bold")
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -246,7 +250,7 @@ func _glyph(ntype: String) -> String:
 
 func _tooltip(node: Dictionary, can_enter: bool, is_here: bool, visited: bool) -> String:
 	var ntype := String(node["type"])
-	var title := MapGenerator.label_for(ntype)
+	var title := MapGenerator.label_for(ntype, Game.run.sector)
 	var bits: PackedStringArray = [title]
 	var enemy_id := StringName(node.get("enemy", &""))
 	if enemy_id != &"":
@@ -262,11 +266,15 @@ func _tooltip(node: Dictionary, can_enter: bool, is_here: bool, visited: bool) -
 		"chest":
 			bits.append("A ship improvement — no slot, no cards.")
 		"start":
-			bits.append("Sector entry. Pick a linked node to the right.")
+			bits.append("Sector %d of %d. Pick a linked node to the right." % [
+				Game.run.sector, MapGenerator.SECTOR_COUNT])
 		"elite":
 			bits.append("Harder fight. Better rewards, including an improvement.")
 		"boss":
-			bits.append("Sector boss. Win and the ship goes to sale.")
+			if Game.run.is_final_sector():
+				bits.append("Final boss. Win and the ship goes to sale.")
+			else:
+				bits.append("Sector boss. Win to enter sector %d." % (Game.run.sector + 1))
 		_:
 			bits.append("Combat. Credits and a part offer on a win.")
 	if is_here:

@@ -94,7 +94,7 @@ static func appraise(run: RunState) -> Dictionary:
 
 	var total := int(round(float(subtotal) * mult))
 
-	var mult_label := "Sector %d" % run.sector
+	var mult_label := "Sector %d of %d" % [run.sector, MapGenerator.SECTOR_COUNT]
 	if run.boss_killed:
 		mult_label += " + boss"
 	if not run.alive:

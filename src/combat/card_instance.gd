@@ -30,4 +30,4 @@ func display_name() -> String:
 	return def.name + ("+" if upgraded else "")
 
 func has_keyword(k: StringName) -> bool:
-	return def.has_keyword(k)
+	return def.has_keyword(k, upgraded)
