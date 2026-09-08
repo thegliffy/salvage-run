@@ -40,13 +40,14 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.20-win64.zip` from
-[Releases](https://github.com/thegliffy/salvage-run/releases), unzip, run
-`SalvageRun.exe`. Single self-contained executable — no installer, no separate
-data files.
+**Windows:** download `SalvageRun-v0.20-win64.zip` from the
+[v0.20 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.20),
+unzip, run `SalvageRun.exe`. Single self-contained executable — no installer,
+no separate data files.
 
-**Linux:** download `SalvageRun-v0.20-linux64.zip`, unzip, run
-`./salvage-run.x86_64`.
+**Linux:** download `SalvageRun-v0.20-linux64.zip` from the same
+[v0.20 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.20),
+unzip, run `./salvage-run.x86_64`.
 
 **From source:**
 
@@ -110,10 +111,16 @@ integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 You never edit your deck directly. You edit your **ship**.
 
-The hull has typed slots — **4 weapon, 3 hull, 4 utility** (Tank starts with 3
-weapon slots). Each installed part grants three cards. Bolt on a Missile Rack
-and `Breach Missile` enters your deck; jettison that part and its cards leave
+The hull has typed slots. **Brawler** is the default — **4 weapon, 3 hull, 4
+utility**. **Tank** starts with 3 weapon slots and a Deflector (shields).
+**Shepherd** is **1 weapon / 3 hull / 6 utility**, with a Deflector and a
+Drone Launcher (2 drones tick each player turn: Attack / Repair / Screen).
+Each installed part grants three cards. Bolt on a Missile Rack and
+`Breach Missile` enters your deck; jettison that part and its cards leave
 with it. Deckbuilding and ship building are the same action.
+
+Protocol cards set the Shepherd's drone wing: play Attack, Repair, or Screen
+and both drones follow that pattern at the start of each of your turns.
 
 Nothing limits how much you carry except the slots. What limits *what* you carry
 is three soft costs:
@@ -181,9 +188,10 @@ its cards.
 Between runs, the title screen's **Salvage Yard** spends salvage to unlock parts
 into the reward pool and new starter hulls. Unlocks do not hand you the part —
 they make it eligible to appear on the next theft. The **Brawler** starts free;
-the **Tank** is the first hull unlock (450 salvage, above any part). Starter
-weapons begin unlocked (Burst Laser); uncommon/rare weapons cost salvage
-(Missile Rack 150, EMP Projector 200, Carrion Lance 400, …).
+the **Tank** is the first hull unlock (450 salvage, above any part), then
+**Shepherd** at 650. Starter weapons begin unlocked (Burst Laser);
+uncommon/rare weapons cost salvage (Missile Rack 150, EMP Projector 200,
+Carrion Lance 400, …).
 
 ### The sale
 
@@ -248,6 +256,11 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 | `assets/modules/` | Part / module icons (`parts.json` `icon`, default `<part_id>.png`) |
 | `docs/ui-shots/` | README screenshots |
 | `tests/` | Headless test suite and balance simulator |
+
+## Credits
+
+**thegliffy** created Salvage Run. Full asset and licence credits:
+[CREDITS.md](CREDITS.md).
 
 ## Docs
 
