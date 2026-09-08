@@ -249,7 +249,10 @@ func _run_enemy_turn() -> void:
 func _tick_virus(who: Combatant) -> void:
 	if who == null or phase == Phase.DONE:
 		return
-	var result := who.tick_virus()
+	# Persistent Strain is on the player ship: virus they put on the enemy
+	# still ticks for hull, but does not decay. Player-side virus still decays.
+	var persist := (not who.is_player) and player != null and player.virus_no_decay
+	var result := who.tick_virus(persist)
 	if result.is_empty():
 		return
 	var dealt := int(result["damage"])
@@ -267,6 +270,7 @@ func _tick_virus(who: Combatant) -> void:
 		"type": "virus_decay",
 		"target": who.display_name,
 		"virus": int(result["virus"]),
+		"persisted": persist,
 	}
 	log_event(decay_ev)
 	EventBus.effect_resolved.emit(decay_ev)

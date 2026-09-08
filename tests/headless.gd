@@ -193,6 +193,14 @@ func _test_content() -> void:
 	_check("super capacitor is in the rare pool", rare_ids.has(&"super_capacitor"))
 	_check("discount codes is in the uncommon pool", uncommon_ids.has(&"discount_codes"))
 
+	var strain: ImprovementDef = Database.improvement(&"persistent_strain")
+	_check("persistent strain exists", strain != null)
+	if strain != null:
+		_eq("persistent strain rarity", strain.rarity, &"uncommon")
+		_eq("persistent strain text", strain.text, "Virus counters no longer decay.")
+		_check("persistent strain virus_no_decay flag", strain.flags.has(&"virus_no_decay"))
+	_check("persistent strain is in the uncommon pool", uncommon_ids.has(&"persistent_strain"))
+
 	var flag_only := ImprovementDef.new()
 	_eq("flag-only improvement is accepted", flag_only.from_dict(&"flaggy", {
 		"name": "Flaggy",
@@ -1190,6 +1198,15 @@ func _test_ship_status_overlay() -> void:
 	_check("overlay shows super capacitor text", blob.contains("Overshield no longer expires."))
 	_check("overlay names Discount Codes", blob.contains("Discount Codes"))
 	_check("overlay shows discount codes text", blob.contains("Shop prices are 50% off."))
+	run.ship.add_improvement(&"persistent_strain")
+	var host5 := Control.new()
+	host5.custom_minimum_size = Vector2(1280, 720)
+	add_child(host5)
+	ShipStatusOverlay.open(host5, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host5))
+	_check("overlay names Persistent Strain", blob.contains("Persistent Strain"))
+	_check("overlay shows persistent strain text", blob.contains("Virus counters no longer decay."))
+	host5.free()
 	host4.free()
 	host3.free()
 
@@ -2178,6 +2195,27 @@ func _test_virus() -> void:
 	_eq("payload_dump deals no system damage", sys8_after, sys8)
 	_check("payload_dump exhausted", c8.deck.exhaust_pile.has(dump))
 	_check("payload_dump apply logged", _has_event(c8, "virus_apply"))
+
+	# Persistent Strain: damage still ticks, enemy counters do not decay.
+	var hold := _combat_with_improvement(&"persistent_strain")
+	_check("persistent strain compiles virus_no_decay", hold.player.virus_no_decay)
+	_check("enemy does not inherit virus_no_decay", not hold.enemy.virus_no_decay)
+	hold.enemy.evasion = 0
+	hold.enemy.shield = 0
+	hold.enemy.add_virus(3)
+	var hull_h: int = hold.enemy.hull
+	hold.end_player_turn()
+	_eq("persistent strain still deals 1 hull per counter", hold.enemy.hull, hull_h - 3)
+	_eq("persistent strain does not decay enemy virus", hold.enemy.virus(), 3)
+	var hold_ev := _find_event(hold, "virus_decay")
+	_check("persistent strain logged a hold", bool(hold_ev.get("persisted", false)))
+
+	# Player-side virus still decays — the flag is "virus you put on them".
+	hold.player.add_virus(2)
+	var ph_hold: int = hold.player.hull
+	hold.begin_player_turn()
+	_eq("player virus still damages with persistent strain", hold.player.hull, ph_hold - 2)
+	_eq("player virus still decays with persistent strain", hold.player.virus(), 1)
 
 func _has_event(c: CombatController, kind: String) -> bool:
 	return not _find_event(c, kind).is_empty()

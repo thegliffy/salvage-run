@@ -439,7 +439,10 @@ func _refresh() -> void:
 	var hull_tip := "HULL\n%d / %d  ·  primary finish target\n---\nShoot the hull to win. Subsystems are optional control — they auto-repair if left alone." % [
 		e.hull, e.max_hull]
 	if e.virus() > 0:
-		hull_tip += "\n\nVIRUS ×%d — at the start of their turn they take 1 hull per counter, then lose 1 counter." % e.virus()
+		if combat.player.virus_no_decay:
+			hull_tip += "\n\nVIRUS ×%d — at the start of their turn they take 1 hull per counter. Persistent Strain: counters do not decay." % e.virus()
+		else:
+			hull_tip += "\n\nVIRUS ×%d — at the start of their turn they take 1 hull per counter, then lose 1 counter." % e.virus()
 	UITheme.tip(_hull_target, hull_tip)
 	UITheme.tip(_enemy_name, "%s\n---\nEnemy ship. The amber banner is the next shot." % e.display_name)
 
@@ -629,8 +632,12 @@ func _set_virus_label(label: Label, c: Combatant) -> void:
 		return
 	label.text = "VIRUS ×%d" % stacks
 	label.add_theme_color_override("font_color", UITheme.VIRUS)
+	var decay := "Persistent Strain: counters do not decay." \
+		if combat != null and combat.player != null and combat.player.virus_no_decay \
+		else "then lose 1 counter."
 	UITheme.tip(label,
-		"Virus\n×%d on the hull\n---\nAt the start of their turn they take 1 hull per counter, then lose 1 counter. Shields and evasion do not stop it." % stacks)
+		"Virus\n×%d on the hull\n---\nAt the start of their turn they take 1 hull per counter, %s Shields and evasion do not stop it." % [
+			stacks, decay])
 
 func _set_shield_label(label: Label, c: Combatant) -> void:
 	if c.max_shield <= 0 and c.shield <= 0:
@@ -868,7 +875,10 @@ func _on_effect(event: Dictionary) -> void:
 				event["target"], int(event.get("amount", 0)), int(event.get("hull_left", 0))]
 			colour = UITheme.VIRUS
 		"virus_decay":
-			line = "  %s virus decays to %d" % [event["target"], int(event.get("virus", 0))]
+			if bool(event.get("persisted", false)):
+				line = "  %s virus holds at %d" % [event["target"], int(event.get("virus", 0))]
+			else:
+				line = "  %s virus decays to %d" % [event["target"], int(event.get("virus", 0))]
 			colour = UITheme.VIRUS
 		"virus_double":
 			if bool(event.get("noop", false)):

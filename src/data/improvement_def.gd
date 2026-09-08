@@ -22,6 +22,7 @@ const TRIGGER_OPS := {
 const KNOWN_FLAGS := {
 	&"keep_overshield": true,
 	&"shop_half_price": true,
+	&"virus_no_decay": true,
 }
 
 var id: StringName
@@ -32,7 +33,8 @@ var stats: Dictionary = {}   # hull, power, draw, evasion, shield, shield_regen
 var slots: Dictionary = {}   # weapon, hull, utility
 ## Combat hooks: [{when: StringName, op: StringName, amount: int}, ...]
 var triggers: Array = []
-## Named passives compiled onto the ship (keep_overshield, shop_half_price).
+## Named passives compiled onto the ship (keep_overshield, shop_half_price,
+## virus_no_decay).
 var flags: Array[StringName] = []
 
 func from_dict(def_id: StringName, d: Dictionary) -> String:

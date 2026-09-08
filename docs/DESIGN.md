@@ -107,7 +107,9 @@ before they act, so a lethal tick can win the fight without a shot. The
 opponent is not also ticked on the other side's turn (no double-tick).
 Signal Injector (`signal_injector`, uncommon / tier 2) is the first part that
 applies it. Contagion Array (`contagion_array`, rare / tier 3) is the heavy
-follow-up and reuses Firewall Bypass.
+follow-up and reuses Firewall Bypass. Persistent Strain (`persistent_strain`,
+uncommon improvement, flag `virus_no_decay`) keeps the damage tick but skips
+decay on virus the player applied to the enemy — Super Capacitor's flag pattern.
 
 ## 4. Damage pipeline
 

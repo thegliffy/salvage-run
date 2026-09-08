@@ -81,5 +81,10 @@
     "name": "Discount Codes", "rarity": "uncommon",
     "text": "Shop prices are 50% off.",
     "flags": ["shop_half_price"]
+  },
+  "persistent_strain": {
+    "name": "Persistent Strain", "rarity": "uncommon",
+    "text": "Virus counters no longer decay.",
+    "flags": ["virus_no_decay"]
   }
 }

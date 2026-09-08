@@ -26,6 +26,8 @@ var draw_per_turn: int = 5
 var system_regen: int = 0
 ## Super Capacitor: excess shield above max stays at the start of your turn.
 var keep_overshield: bool = false
+## Persistent Strain: virus the player applied to enemies does not decay.
+var virus_no_decay: bool = false
 
 var systems: Dictionary = {}    # StringName -> ShipSystem
 var statuses: Dictionary = {}   # StringName -> int stacks
@@ -44,6 +46,7 @@ static func from_profile(prof: ShipProfile) -> Combatant:
 	c.draw_per_turn = prof.draw_per_turn
 	c.system_regen = prof.system_regen
 	c.keep_overshield = prof.has_flag(&"keep_overshield")
+	c.virus_no_decay = prof.has_flag(&"virus_no_decay")
 	for sd in prof.systems:
 		var s := ShipSystem.from_dict(sd)
 		s.auto_repair = c.system_regen
@@ -145,15 +148,18 @@ func add_virus(stacks: int) -> int:
 	add_status(STATUS_VIRUS, stacks)
 	return virus()
 
-## Infected combatant's turn start: deal 1 hull per counter, then lose 1.
+## Infected combatant's turn start: deal 1 hull per counter, then lose 1
+## unless `no_decay` (Persistent Strain: player's virus on enemies holds).
 ## Direct hull — skips evasion and shields. Empty dict if there is nothing to tick.
-func tick_virus() -> Dictionary:
+func tick_virus(no_decay: bool = false) -> Dictionary:
 	var stacks := virus()
 	if stacks <= 0:
 		return {}
 	hull = maxi(0, hull - stacks)
-	add_status(STATUS_VIRUS, -1)
-	return {"damage": stacks, "hull_left": hull, "virus": virus()}
+	if not no_decay:
+		add_status(STATUS_VIRUS, -1)
+	return {"damage": stacks, "hull_left": hull, "virus": virus(),
+		"persisted": no_decay}
 
 func tick_systems() -> void:
 	for sid in systems:

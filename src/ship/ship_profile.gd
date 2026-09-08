@@ -25,7 +25,7 @@ var deck: Array[StringName] = []    # card ids
 var warnings: Array[String] = []    # e.g. "power deficit", surfaced in shipyard
 ## Compiled improvement combat hooks. Combat reads these, not the loadout.
 var triggers: Array = []            # [{when, op, amount}, ...]
-## Compiled improvement passives (keep_overshield, shop_half_price).
+## Compiled improvement passives (keep_overshield, shop_half_price, virus_no_decay).
 var flags: Array[StringName] = []
 
 func has_flag(flag: StringName) -> bool:
