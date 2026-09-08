@@ -1151,76 +1151,80 @@
     },
     "icon": "violet_p_02.png"
   },
-  "drone_attack": {
-    "name": "Attack Pattern",
-    "kind": "tech",
+  "launch_attack_drone": {
+    "name": "Launch Attack Drone",
+    "kind": "attack",
     "rarity": "starter",
     "cost": 1,
     "target": "none",
-    "text": "Both drones Attack. Each deals 2 damage to a random enemy system at the start of your turn.",
+    "text": "Fill an empty drone bay as Attack (red). Attack drones deal 2 homing damage to a random enemy system at the start of your turn. Cannot launch if both bays are full.",
     "effects": [
       {
-        "op": "set_drone_mode",
-        "mode": "attack"
+        "op": "launch_drone",
+        "mode": "attack",
+        "amount": 2
       }
     ],
     "upgrade": {
-      "text": "Both drones Attack. Each deals 2 damage to a random enemy system at the start of your turn.",
+      "text": "Fill an empty drone bay as Attack (red). Attack drones deal 3 homing damage to a random enemy system at the start of your turn. Cannot launch if both bays are full.",
       "effects": [
         {
-          "op": "set_drone_mode",
-          "mode": "attack"
+          "op": "launch_drone",
+          "mode": "attack",
+          "amount": 3
         }
       ]
     },
-    "icon": "blue_b_03.png"
+    "icon": "red_gr_03.png"
   },
-  "drone_repair": {
-    "name": "Repair Pattern",
+  "launch_shield_drone": {
+    "name": "Launch Shield Charger Drone",
     "kind": "tech",
     "rarity": "starter",
     "cost": 1,
     "target": "none",
-    "text": "Both drones Repair. Each repairs 2 hull at the start of your turn.",
+    "text": "Fill an empty drone bay as Shield (blue). Shield drones gain 2 shield at the start of your turn. Cannot launch if both bays are full.",
     "effects": [
       {
-        "op": "set_drone_mode",
-        "mode": "repair"
+        "op": "launch_drone",
+        "mode": "shield",
+        "amount": 2
       }
     ],
     "upgrade": {
-      "text": "Both drones Repair. Each repairs 2 hull at the start of your turn.",
+      "text": "Fill an empty drone bay as Shield (blue). Shield drones gain 3 shield at the start of your turn. Cannot launch if both bays are full.",
       "effects": [
         {
-          "op": "set_drone_mode",
-          "mode": "repair"
-        }
-      ]
-    },
-    "icon": "blue_b_05.png"
-  },
-  "drone_screen": {
-    "name": "Screen Pattern",
-    "kind": "tech",
-    "rarity": "starter",
-    "cost": 1,
-    "target": "none",
-    "text": "Both drones Screen. Each gains 2 shield at the start of your turn.",
-    "effects": [
-      {
-        "op": "set_drone_mode",
-        "mode": "shield"
-      }
-    ],
-    "upgrade": {
-      "text": "Both drones Screen. Each gains 2 shield at the start of your turn.",
-      "effects": [
-        {
-          "op": "set_drone_mode",
-          "mode": "shield"
+          "op": "launch_drone",
+          "mode": "shield",
+          "amount": 3
         }
       ]
     },
     "icon": "blue_b_01.png"
+  },
+  "overcharge_drones": {
+    "name": "Overcharge Drones",
+    "kind": "tech",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
+    "text": "Occupied drones activate twice this turn.",
+    "effects": [
+      {
+        "op": "overcharge_drones",
+        "amount": 2
+      }
+    ],
+    "upgrade": {
+      "text": "Occupied drones activate three times this turn.",
+      "effects": [
+        {
+          "op": "overcharge_drones",
+          "amount": 3
+        }
+      ]
+    },
+    "icon": "blue_b_05.png"
   }
 }

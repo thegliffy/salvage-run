@@ -106,11 +106,19 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 		"credits":
 			combat.pending_credits += amount
 			_emit({"type": "credits", "amount": amount})
-		"set_drone_mode":
+		"launch_drone":
 			var mode := StringName(op.get("mode", "attack"))
-			combat.drone_mode = mode
-			_emit({"type": "drone_mode", "mode": String(mode),
-				"count": combat.drone_slots})
+			var err := combat.launch_drone(mode, amount if amount > 0 else CombatController.DRONE_ATTACK)
+			if err != "":
+				_emit({"type": "no_target", "op": kind, "reason": err})
+			else:
+				_emit({"type": "drone_launch", "mode": String(mode),
+					"count": combat.drones.size(), "slots": combat.drone_slots})
+		"overcharge_drones":
+			var times := amount if amount > 0 else 2
+			combat._tick_drones(times)
+			_emit({"type": "drone_overcharge", "times": times,
+				"count": combat.drones.size()})
 		_:
 			push_warning("[EffectResolver] unknown op '%s'" % kind)
 

@@ -17,6 +17,7 @@ const BLURB := {
 	&"reactor": "powers their systems",
 	&"support": "repairs & utility",
 	&"armor": "soaks hull damage",
+	&"drones": "empty bays you launch into",
 }
 
 var system_id: StringName

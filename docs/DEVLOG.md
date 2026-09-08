@@ -407,6 +407,7 @@ finale. Valuation uses the sector you actually reached. The sim walks those
 maps instead of a canned 7-fight ladder.
 
 **Shepherd** hull (unlock 650): 1 weapon / 3 hull / 6 utility, Deflector Mk I,
-and a Drone Launcher. Two drones tick at the start of your turn after shield
-regen (Attack 2 / Repair 2 / Screen 2). Protocol cards set the wing's standing
-order. Offline `drones` subsystem silences them.
+and a Drone Launcher. Two **empty** bays; launch Attack (red) or Shield Charger
+(blue) with cards. Occupied drones tick once at the start of your turn after
+shield regen and before the draw. Overcharge activates occupied drones twice
+this turn. Offline `drones` subsystem silences them.

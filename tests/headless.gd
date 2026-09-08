@@ -177,6 +177,10 @@ func _test_compile() -> void:
 	_eq("shepherd has two drone slots", shep.drone_slots, 2)
 	_eq("shepherd deflector is 10 shield", shep.max_shield, 10)
 	_check("shepherd starts with the Drone Launcher", shep.has_system(&"drones"))
+	_check("shepherd deck launches attack drones", shep.deck.has(&"launch_attack_drone"))
+	_check("shepherd deck launches shield drones", shep.deck.has(&"launch_shield_drone"))
+	_check("shepherd deck overcharges drones", shep.deck.has(&"overcharge_drones"))
+	_check("old drone protocol cards are gone", not shep.deck.has(&"drone_attack"))
 	_check("shepherd stays in its power budget", shep.warnings.is_empty(), str(shep.warnings))
 	_eq("shepherd deck is 3 parts x 3 cards", shep.deck.size(), 9)
 
@@ -840,6 +844,19 @@ func _test_ui_copy() -> void:
 	var silenced := UITheme.intent_style(true)
 	_check("offline intent uses dim border", silenced.border_color == UITheme.TEXT_DIM)
 	_eq("offline intent border width", silenced.border_width_top, 1)
+	var grouped := ShipStatusOverlay.tally_deck(prof.deck)
+	_check("deck tally is non-empty", not grouped.is_empty())
+	var tally_total := 0
+	var saw_dup := false
+	for entry in grouped:
+		tally_total += int(entry["count"])
+		if int(entry["count"]) > 1:
+			saw_dup = true
+	_eq("deck tally sums to compiled size", tally_total, prof.deck.size())
+	_check("starter deck has a duplicate card", saw_dup)
+	_eq("tally keeps first-seen order", grouped[0]["id"], prof.deck[0])
+	var empty_tally := ShipStatusOverlay.tally_deck([])
+	_eq("empty deck tallies to nothing", empty_tally.size(), 0)
 	var def_panel := UITheme.deficit_panel(2, "cuts energy every fight.")
 	_check("deficit panel builds", def_panel is PanelContainer)
 	def_panel.free()
@@ -1029,6 +1046,13 @@ func _test_card_balance() -> void:
 	_eq("vulture_strike hull", _op_amt(&"vulture_strike", false, "damage_hull"), 5)
 	_eq("shield_dump+ bonus", _op_amt(&"shield_dump", true, "damage_system"), 8)
 
+	_eq("launch attack drone amount", _op_amt(&"launch_attack_drone", false, "launch_drone"), 2)
+	_eq("launch attack drone+ amount", _op_amt(&"launch_attack_drone", true, "launch_drone"), 3)
+	_eq("launch shield drone amount", _op_amt(&"launch_shield_drone", false, "launch_drone"), 2)
+	_eq("overcharge drones times", _op_amt(&"overcharge_drones", false, "overcharge_drones"), 2)
+	_eq("overcharge drones+ times", _op_amt(&"overcharge_drones", true, "overcharge_drones"), 3)
+	_check("old protocol attack card is gone", Database.card(&"drone_attack") == null)
+
 	# Playing the upgraded energy card must discard, not exhaust.
 	Rng.seed_run(3)
 	var c := CombatController.new()
@@ -1094,42 +1118,94 @@ func _test_drones() -> void:
 	print("drones")
 	Rng.seed_run(21)
 	var ship := StarterShips.shepherd()
+	var launcher: PartDef = Database.part(&"drone_launcher")
+	_eq("drone_launcher default icon filename", launcher.icon, "drone_launcher.png")
+	var icon := UITheme.module_icon(launcher)
+	_check("drone launcher icon is a TextureRect", icon is TextureRect)
+	if icon.texture == null:
+		_check("missing drone_launcher.png hides the TextureRect", not icon.visible)
+	else:
+		_check("drone_launcher.png wired when present", icon.visible)
+	icon.free()
+
 	var c := CombatController.new()
 	c.setup(ship.compile(), Database.enemy(&"scout_drone"), ship)
 	_eq("combat copied two drone slots", c.drone_slots, 2)
-	_eq("drones default to attack", c.drone_mode, &"attack")
+	_eq("bays start empty", c.drones.size(), 0)
 	var total := 0
 	for sid in c.enemy.systems:
 		total += c.enemy.systems[sid].integrity
-	# 2 drones × 2 homing damage on turn 1, before the player plays.
-	_eq("attack drones chip 4 integrity on turn start", total, 6)
+	_eq("empty bays deal no turn-1 damage", total, 10)
 
-	var proto := CardInstance.create(Database.card(&"drone_repair"))
-	c.deck.hand.append(proto)
 	c.player.energy = 9
-	_eq("repair pattern plays", c.play_card(proto), "")
-	_eq("wing switches to repair", c.drone_mode, &"repair")
+	var atk := CardInstance.create(Database.card(&"launch_attack_drone"))
+	c.deck.hand.append(atk)
+	_eq("launch attack plays", c.play_card(atk), "")
+	_eq("one bay occupied", c.drones.size(), 1)
+	_eq("occupied bay is attack", c.drones[0]["type"], &"attack")
+	_eq("attack drone deals 2", int(c.drones[0]["amount"]), 2)
 
-	var screen := CardInstance.create(Database.card(&"drone_screen"))
-	c.deck.hand.append(screen)
-	_eq("screen pattern plays", c.play_card(screen), "")
-	_eq("wing switches to screen", c.drone_mode, &"shield")
+	var atk2 := CardInstance.create(Database.card(&"launch_attack_drone"))
+	c.deck.hand.append(atk2)
+	_eq("second launch plays", c.play_card(atk2), "")
+	_eq("both bays occupied", c.drones.size(), 2)
 
-	# Offline drones subsystem silences the wing.
-	c.drone_mode = &"attack"
-	var ds: ShipSystem = c.player.system(&"drones")
+	var energy_before := c.player.energy
+	var atk3 := CardInstance.create(Database.card(&"launch_attack_drone"))
+	c.deck.hand.append(atk3)
+	_eq("third launch refused when full", c.play_card(atk3), "drone bays are full")
+	_check("refused launch stays in hand", c.deck.hand.has(atk3))
+	_eq("refused launch spends no energy", c.player.energy, energy_before)
+
+	var oc := CardInstance.create(Database.card(&"overcharge_drones"))
+	c.deck.hand.append(oc)
+	_eq("overcharge plays", c.play_card(oc), "")
+	var dealt := 0
+	for e in c.events:
+		var et := String(e.get("type", ""))
+		if et == "system_damage" or et == "hull_damage":
+			dealt += int(e.get("amount", 0))
+	# 2 attack drones × 2 activations × 2 homing. Overflow may spill to hull.
+	_eq("overcharge deals 8 this turn", dealt, 8)
+
+	var c2 := CombatController.new()
+	c2.setup(ship.compile(), Database.enemy(&"scout_drone"), ship)
+	c2.player.energy = 9
+	var oc_empty := CardInstance.create(Database.card(&"overcharge_drones"))
+	c2.deck.hand.append(oc_empty)
+	_eq("overcharge with empty bays refused", c2.play_card(oc_empty), "no drones launched")
+
+	var sh := CardInstance.create(Database.card(&"launch_shield_drone"))
+	c2.deck.hand.append(sh)
+	_eq("launch shield plays", c2.play_card(sh), "")
+	_eq("shield bay is blue type", c2.drones[0]["type"], &"shield")
+	var shield_before: int = c2.player.shield
+	c2._tick_drones()
+	_eq("shield drone ticks +2", c2.player.shield, shield_before + 2)
+
+	# Offline drones subsystem silences occupied bays.
+	var c3 := CombatController.new()
+	c3.setup(ship.compile(), Database.enemy(&"scout_drone"), ship)
+	c3.player.energy = 9
+	var atk_off := CardInstance.create(Database.card(&"launch_attack_drone"))
+	c3.deck.hand.append(atk_off)
+	_eq("launch before offline", c3.play_card(atk_off), "")
+	var ds: ShipSystem = c3.player.system(&"drones")
 	_check("shepherd has a drones subsystem", ds != null)
 	ds.take_damage(ds.max_integrity)
-	var hull_before: int = c.enemy.hull
+	var hull_before: int = c3.enemy.hull
 	var sys_before := 0
-	for sid2 in c.enemy.systems:
-		sys_before += c.enemy.systems[sid2].integrity
-	c._tick_drones()
+	for sid2 in c3.enemy.systems:
+		sys_before += c3.enemy.systems[sid2].integrity
+	c3._tick_drones()
 	var sys_after := 0
-	for sid3 in c.enemy.systems:
-		sys_after += c.enemy.systems[sid3].integrity
-	_eq("offline drones deal no hull", c.enemy.hull, hull_before)
+	for sid3 in c3.enemy.systems:
+		sys_after += c3.enemy.systems[sid3].integrity
+	_eq("offline drones deal no hull", c3.enemy.hull, hull_before)
 	_eq("offline drones deal no system damage", sys_after, sys_before)
+	var oc_off := CardInstance.create(Database.card(&"overcharge_drones"))
+	c3.deck.hand.append(oc_off)
+	_eq("overcharge refused while offline", c3.play_card(oc_off), "drone launcher is offline")
 
 # --- Balance simulator -------------------------------------------------------
 
@@ -1455,9 +1531,28 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 				score -= amount * W_SELF_HARM
 			"credits":
 				score += amount * W_CREDITS
-			"set_drone_mode":
-				# Standing order is already Attack; switching is a small tempo play.
-				score += 1.5
+			"launch_drone":
+				if c.drones.size() >= c.drone_slots:
+					score -= 50.0
+				else:
+					score += 5.0
+					var mode := StringName(op.get("mode", "attack"))
+					if mode == &"shield":
+						score += amount * W_SHIELD
+					else:
+						score += amount * W_SYSTEM_DAMAGE * 2.0
+			"overcharge_drones":
+				if c.drones.is_empty():
+					score -= 50.0
+				else:
+					var reps := amount if amount > 0 else 2
+					for d in c.drones:
+						var kind := StringName(d.get("type", &"attack"))
+						var amt := int(d.get("amount", 2))
+						if kind == &"shield":
+							score += amt * W_SHIELD * reps
+						else:
+							score += amt * W_SYSTEM_DAMAGE * 2.0 * reps
 	return score
 
 func _worst_own_system(c: CombatController) -> StringName:

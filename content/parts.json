@@ -385,7 +385,7 @@
     "name": "Drone Launcher",
     "system": "drones",
     "tier": 1,
-    "flavor": "Two small hulls that never ask why. You just tell them what to be.",
+    "flavor": "Two empty bays. You launch what you need — they don't come pre-loaded.",
     "integrity": 6,
     "power_draw": 1,
     "mass": 2,
@@ -393,9 +393,9 @@
       "drone_slots": 2
     },
     "grants": [
-      "drone_attack",
-      "drone_repair",
-      "drone_screen"
+      "launch_attack_drone",
+      "launch_shield_drone",
+      "overcharge_drones"
     ],
     "base_value": 70,
     "unlock_cost": 0,

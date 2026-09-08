@@ -77,6 +77,24 @@ do — buying a quiet turn — without forcing that path every fight.
 - The `0.5 + 0.5 * efficiency` curve in `scaled_effects()`
 - Player system regen (rare improvement only — Damage Control Nanites)
 
+**Drone bays.** The Drone Launcher grants two **empty** slots, not a pre-filled
+wing. Combat starts vacant. Launch cards fill a bay as Attack (red) or Shield
+(blue); Overcharge makes occupied drones activate twice immediately. Launch is
+refused when both bays are full. Offline `drones` silences ticks and overcharge.
+
+**Tick phase** (`CombatController.begin_player_turn`), in order:
+
+1. Energy refills to max
+2. Subsystems tick (auto-repair, suppress clocks)
+3. Overshield expires
+4. Shield regen fills toward capacity
+5. **Occupied drones activate once each** — Attack deals homing system damage;
+   Shield gains shield (excess is overshield)
+6. Draw for the turn
+
+Drones launched this turn sit until the **next** start-of-turn tick, unless you
+Overcharge them the same turn.
+
 ## 4. Damage pipeline
 
 One path, in `EffectResolver._deal_damage()`:

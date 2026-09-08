@@ -96,6 +96,7 @@ the part ids in `content/parts.json`. `PartDef` defaults `icon` to
 | `salvage_arm.png` | Salvage Arm |
 | `repair_bay.png` | Repair Bay |
 | `overcharge_rig.png` | Overcharge Rig |
+| `drone_launcher.png` | Drone Launcher (optional until the asset is dropped in; `UITheme.module_icon()` hides the hole when the PNG is missing) |
 
 `UITheme.module_icon()` draws these keep-aspect on reward / shop / unlock
 offer rows (~64–96px at 720p). Missing files return null and hide the

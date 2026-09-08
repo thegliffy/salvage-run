@@ -151,15 +151,104 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	deck_col.add_child(UITheme.label("DECK  (%d)" % prof.deck.size(), 15, UITheme.TEXT, "Bold"))
 	deck_col.add_child(UITheme.label("Hover a card to read it.", 11, UITheme.TEXT_FAINT))
 
+	for entry in tally_deck(prof.deck):
+		deck_col.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
+
+	var close_foot := UITheme.ghost_button("  CLOSE  ")
+	close_foot.pressed.connect(on_close)
+	col.add_child(close_foot)
+
+## First-seen order with duplicate counts. The run deck is derived from the
+## ship, so this is the list combat will shuffle.
+static func tally_deck(deck: Array) -> Array:
 	var counts: Dictionary = {}
 	var order: Array[StringName] = []
-	for cid in prof.deck:
-		if not counts.has(cid):
-			counts[cid] = 0
-			order.append(cid)
-		counts[cid] += 1
-	for cid in order:
-		deck_col.add_child(_deck_row(cid, int(counts[cid]), preview_layer, on_close))
+	for cid in deck:
+		var id := cid as StringName
+		if not counts.has(id):
+			counts[id] = 0
+			order.append(id)
+		counts[id] += 1
+	var out: Array = []
+	for id in order:
+		out.append({"id": id, "count": int(counts[id])})
+	return out
+
+## Focused deck list for the reward and map screens. Same rows and card
+## preview as the ship-status panel; dismiss with CLOSE or a click on the dim.
+static func open_deck(host: Control, preview_layer: Control, on_close: Callable) -> void:
+	for c in host.get_children():
+		c.queue_free()
+	host.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.72)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed:
+			on_close.call())
+	host.add_child(dim)
+
+	var centre := CenterContainer.new()
+	centre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	host.add_child(centre)
+
+	var panel := PanelContainer.new()
+	var vp := host.get_viewport_rect().size
+	panel.custom_minimum_size = Vector2(
+		minf(560.0, vp.x - 48.0),
+		minf(640.0, vp.y - 48.0))
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.add_theme_stylebox_override("panel",
+		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 18))
+	centre.add_child(panel)
+
+	var outer := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		outer.add_theme_constant_override("margin_" + side, 16)
+	panel.add_child(outer)
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 10)
+	outer.add_child(col)
+
+	var run: RunState = Game.run
+	var deck: Array = run.profile.deck
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 16)
+	col.add_child(head)
+	head.add_child(UITheme.label("DECK  (%d)" % deck.size(), 24, UITheme.ACCENT, "Black"))
+	head.add_child(UITheme.expand())
+	var close := UITheme.ghost_button("  CLOSE  ")
+	close.pressed.connect(on_close)
+	head.add_child(close)
+
+	col.add_child(UITheme.label(
+		"Cards compiled from installed parts. Duplicates share a count. Hover a row to read the card.",
+		13, UITheme.TEXT_DIM, "SemiBold"))
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(scroll)
+
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 4)
+	scroll.add_child(list)
+
+	if deck.is_empty():
+		list.add_child(UITheme.label("No cards — the ship is empty.", 13, UITheme.TEXT_FAINT))
+	else:
+		for entry in tally_deck(deck):
+			list.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
 
 	var close_foot := UITheme.ghost_button("  CLOSE  ")
 	close_foot.pressed.connect(on_close)
