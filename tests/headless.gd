@@ -104,6 +104,29 @@ func _test_content() -> void:
 	_eq("explicit part icon wins over default", ov.icon, "other.png")
 	_check("missing module PNG is null-safe",
 		UITheme.art("res://assets/modules/not_a_real_part.png") == null)
+	var unique_icons := {
+		&"launch_shield_drone": "blue_b_20.png",
+		&"overcharge_drones": "blue_b_21.png",
+		&"launch_attack_drone": "red_gr_10.png",
+		&"static_buildup": "red_r_06.png",
+		&"ion_haze": "violet_p_05.png",
+		&"thermal_vent": "violet_p_06.png",
+	}
+	for cid in unique_icons:
+		var card: CardDef = Database.card(cid)
+		_check("%s exists" % String(cid), card != null)
+		if card == null:
+			continue
+		_eq("%s icon file" % String(cid), card.icon, unique_icons[cid])
+		var sharers: PackedStringArray = []
+		for other_id in Database.cards:
+			if other_id == cid:
+				continue
+			if Database.cards[other_id].icon == card.icon:
+				sharers.append(String(other_id))
+		_check("%s icon is unique" % String(cid), sharers.is_empty(), str(sharers))
+		_check("%s icon PNG exists" % String(cid),
+			FileAccess.file_exists("res://assets/icons/" + card.icon))
 
 func _test_loadout() -> void:
 	print("loadout (typed slots)")

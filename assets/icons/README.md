@@ -14,7 +14,13 @@ red_gr_06.png
 red_gr_07.png
 red_gr_08.png
 red_gr_09.png
+red_gr_10.png
 red_r_01.png
+red_r_02.png
+red_r_03.png
+red_r_04.png
+red_r_05.png
+red_r_06.png
 blue_b_01.png
 blue_b_02.png
 blue_b_03.png
@@ -32,12 +38,18 @@ blue_b_14.png
 blue_b_15.png
 blue_b_16.png
 blue_b_17.png
+blue_b_18.png
+blue_b_19.png
+blue_b_20.png
+blue_b_21.png
 green_g_01.png
 green_g_02.png
 violet_p_01.png
 violet_p_02.png
 violet_p_03.png
 violet_p_04.png
+violet_p_05.png
+violet_p_06.png
 ```
 
 Optional commercially licensed packs go in `commercial/` (gitignored) and must

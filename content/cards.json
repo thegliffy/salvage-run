@@ -973,7 +973,7 @@
         }
       ]
     },
-    "icon": "violet_p_01.png"
+    "icon": "violet_p_05.png"
   },
   "banked_charge": {
     "name": "Banked Charge",
@@ -1149,7 +1149,7 @@
         }
       ]
     },
-    "icon": "violet_p_02.png"
+    "icon": "violet_p_06.png"
   },
   "launch_attack_drone": {
     "name": "Launch Attack Drone",
@@ -1175,7 +1175,7 @@
         }
       ]
     },
-    "icon": "red_gr_03.png"
+    "icon": "red_gr_10.png"
   },
   "launch_shield_drone": {
     "name": "Launch Shield Charger Drone",
@@ -1201,7 +1201,7 @@
         }
       ]
     },
-    "icon": "blue_b_01.png"
+    "icon": "blue_b_20.png"
   },
   "overcharge_drones": {
     "name": "Overcharge Drones",
@@ -1225,7 +1225,7 @@
         }
       ]
     },
-    "icon": "blue_b_05.png"
+    "icon": "blue_b_21.png"
   },
   "static_buildup": {
     "name": "Static Buildup",
@@ -1251,6 +1251,6 @@
         }
       ]
     },
-    "icon": "red_gr_04.png"
+    "icon": "red_r_06.png"
   }
 }
