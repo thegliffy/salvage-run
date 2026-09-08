@@ -1,14 +1,19 @@
+class_name MapScreen
 extends Control
 ## Sector map: left-to-right layered DAG, Slay-the-Spire style.
 ##
 ## The player stands on the current node and may only enter a node linked from
 ## it. Visited nodes stay lit so the path taken is readable at a glance.
+##
+## Column/row spacing is derived from the live viewport so every layer (start +
+## stops + boss) stays on screen. Fixed 116px columns overflowed 1280×720 once
+## the map grew to 12 layers.
 
-const COL_W := 116.0
-const ROW_H := 92.0
-const NODE_R := 24.0
-const PAD_X := 48.0
-const PAD_Y := 56.0
+const COL_W_DESIGN := 116.0
+const ROW_H_DESIGN := 92.0
+const NODE_R_DESIGN := 24.0
+const PAD_X_DESIGN := 48.0
+const PAD_Y_DESIGN := 56.0
 
 const TYPE_COLOUR := {
 	"start": UITheme.TEXT_DIM,
@@ -25,9 +30,16 @@ var _status: Label
 var _positions: Dictionary = {}  # node_id -> Vector2 centre in canvas space
 var _overlay_host: Control
 var _preview_layer: Control
+var _col_w: float = COL_W_DESIGN
+var _row_h: float = ROW_H_DESIGN
+var _node_r: float = NODE_R_DESIGN
+var _pad_x: float = PAD_X_DESIGN
+var _pad_y: float = PAD_Y_DESIGN
+var _rebuild_gen: int = 0
 
 func _ready() -> void:
 	_build()
+	_scroll.resized.connect(_rebuild)
 	_rebuild()
 
 func _build() -> void:
@@ -91,6 +103,7 @@ func _build() -> void:
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	root.add_child(_scroll)
 
 	_canvas = Control.new()
@@ -110,7 +123,32 @@ func _build() -> void:
 	_preview_layer.z_index = 30
 	add_child(_preview_layer)
 
+## Column width, row height, padding, and node radius that pack `layers` ×
+## `max_slots` into `avail` without overflowing. Used by the screen and tests.
+static func layout_metrics(layers: int, max_slots: int, avail: Vector2) -> Dictionary:
+	var n_layers := maxi(layers, 1)
+	var n_slots := maxi(max_slots, 1)
+	var pad_x := minf(PAD_X_DESIGN, maxf(16.0, avail.x * 0.03))
+	var pad_y := minf(PAD_Y_DESIGN, maxf(16.0, avail.y * 0.08))
+	var inner_w := maxf(1.0, avail.x - pad_x * 2.0)
+	var inner_h := maxf(1.0, avail.y - pad_y * 2.0)
+	var col_w := inner_w / float(n_layers)
+	var row_h := inner_h / float(n_slots)
+	var node_r := clampf(minf(col_w, row_h) * 0.26, 14.0, NODE_R_DESIGN)
+	return {
+		"col_w": col_w,
+		"row_h": row_h,
+		"pad_x": pad_x,
+		"pad_y": pad_y,
+		"node_r": node_r,
+		"canvas_w": avail.x,
+		"canvas_h": avail.y,
+	}
+
+
 func _rebuild() -> void:
+	_rebuild_gen += 1
+	var gen := _rebuild_gen
 	for c in _canvas.get_children():
 		c.queue_free()
 	_positions.clear()
@@ -123,9 +161,22 @@ func _rebuild() -> void:
 	for row in by_layer:
 		max_slots = maxi(max_slots, row.size())
 
-	var canvas_w := PAD_X * 2.0 + COL_W * float(layers)
-	var canvas_h := PAD_Y * 2.0 + ROW_H * float(max_slots)
-	_canvas.custom_minimum_size = Vector2(canvas_w, maxf(canvas_h, size.y - 80.0))
+	# First layout pass can report a 0×0 scroll view; wait one frame.
+	if _scroll.size.x < 8.0 or _scroll.size.y < 8.0:
+		await get_tree().process_frame
+		if not is_inside_tree() or gen != _rebuild_gen:
+			return
+
+	var avail := _scroll.size
+	if avail.x < 8.0 or avail.y < 8.0:
+		avail = Vector2(maxf(size.x, 1280.0), maxf(size.y - 88.0, 540.0))
+	var metrics := layout_metrics(layers, max_slots, avail)
+	_col_w = float(metrics["col_w"])
+	_row_h = float(metrics["row_h"])
+	_pad_x = float(metrics["pad_x"])
+	_pad_y = float(metrics["pad_y"])
+	_node_r = float(metrics["node_r"])
+	_canvas.custom_minimum_size = Vector2(float(metrics["canvas_w"]), float(metrics["canvas_h"]))
 
 	# Precompute centres so edges can be drawn between them.
 	for layer in range(layers):
@@ -133,9 +184,9 @@ func _rebuild() -> void:
 		var n := row.size()
 		for i in n:
 			var nid: int = row[i]
-			var x := PAD_X + COL_W * float(layer) + COL_W * 0.5
-			var span := ROW_H * float(max_slots)
-			var y := PAD_Y + span * (float(i) + 0.5) / float(n)
+			var x := _pad_x + _col_w * float(layer) + _col_w * 0.5
+			var span := _row_h * float(max_slots)
+			var y := _pad_y + span * (float(i) + 0.5) / float(n)
 			_positions[nid] = Vector2(x, y)
 
 	var edges := Control.new()
@@ -160,9 +211,10 @@ func _rebuild() -> void:
 	UITheme.tip(_status, "Run status\nhull %d/%d · credits %d · deck %d\n---\nDECK lists the compiled cards. SHIP STATUS opens the full loadout and power budget." % [
 		run.hull_carryover, run.profile.max_hull, run.credits, run.profile.deck.size()])
 
-	# Keep the current column in view.
+	# Fitted canvas matches the scroll view, so no pan is required. Keep a
+	# clamp in case a tiny window still overflows the touch-sized nodes.
 	await get_tree().process_frame
-	if not is_inside_tree():
+	if not is_inside_tree() or gen != _rebuild_gen:
 		return
 	var cur_pos: Vector2 = _positions.get(run.current_node, Vector2.ZERO)
 	_scroll.scroll_horizontal = int(maxi(0, int(cur_pos.x - _scroll.size.x * 0.35)))
@@ -189,13 +241,13 @@ func _make_node(node: Dictionary, can_enter: bool) -> Control:
 	var is_here: bool = int(node["id"]) == Game.run.current_node
 
 	var wrap := Control.new()
-	wrap.position = pos - Vector2(NODE_R + 10, NODE_R + 22)
-	wrap.custom_minimum_size = Vector2((NODE_R + 10) * 2, (NODE_R + 22) * 2 + 12)
+	wrap.position = pos - Vector2(_node_r + 10, _node_r + 22)
+	wrap.custom_minimum_size = Vector2((_node_r + 10) * 2, (_node_r + 22) * 2 + 12)
 	wrap.size = wrap.custom_minimum_size
 
 	var btn := ThemedButton.new()
 	btn.position = Vector2(10, 22)
-	btn.custom_minimum_size = Vector2(NODE_R * 2, NODE_R * 2)
+	btn.custom_minimum_size = Vector2(_node_r * 2, _node_r * 2)
 	btn.size = btn.custom_minimum_size
 	btn.text = _glyph(ntype)
 	UITheme.tip(btn, _tooltip(node, can_enter, is_here, visited))
@@ -214,12 +266,12 @@ func _make_node(node: Dictionary, can_enter: bool) -> Control:
 		fill = UITheme.PANEL
 		btn.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
 		btn.add_theme_color_override("font_disabled_color", UITheme.TEXT_FAINT)
-	btn.add_theme_stylebox_override("normal", UITheme.panel(fill, border, bw, int(NODE_R), 0))
-	btn.add_theme_stylebox_override("hover", UITheme.panel(fill.lightened(0.15), UITheme.ACCENT, 3, int(NODE_R), 0))
-	btn.add_theme_stylebox_override("pressed", UITheme.panel(fill.darkened(0.2), UITheme.ACCENT, 3, int(NODE_R), 0))
+	btn.add_theme_stylebox_override("normal", UITheme.panel(fill, border, bw, int(_node_r), 0))
+	btn.add_theme_stylebox_override("hover", UITheme.panel(fill.lightened(0.15), UITheme.ACCENT, 3, int(_node_r), 0))
+	btn.add_theme_stylebox_override("pressed", UITheme.panel(fill.darkened(0.2), UITheme.ACCENT, 3, int(_node_r), 0))
 	btn.add_theme_stylebox_override("disabled", UITheme.panel(
 		fill if visited else UITheme.PANEL,
-		Color(0, 0, 0, 0), 0, int(NODE_R), 0))
+		Color(0, 0, 0, 0), 0, int(_node_r), 0))
 
 	if can_enter:
 		var nid := int(node["id"])
@@ -231,15 +283,15 @@ func _make_node(node: Dictionary, can_enter: bool) -> Control:
 		var here := UITheme.label("YOU", 10, Color.WHITE, "Black")
 		here.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		here.position = Vector2(0, 2)
-		here.size = Vector2((NODE_R + 10) * 2, 16)
+		here.size = Vector2((_node_r + 10) * 2, 16)
 		wrap.add_child(here)
 
 	var tag := UITheme.label(MapGenerator.label_for(ntype, Game.run.sector), 11,
 		colour if (can_enter or is_here or visited) else UITheme.TEXT_FAINT,
 		"Black" if ntype == "boss" else "Bold")
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tag.position = Vector2(0, NODE_R * 2 + 24)
-	tag.size = Vector2((NODE_R + 10) * 2, 16)
+	tag.position = Vector2(0, _node_r * 2 + 24)
+	tag.size = Vector2((_node_r + 10) * 2, 16)
 	wrap.add_child(tag)
 	return wrap
 

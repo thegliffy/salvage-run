@@ -14,18 +14,34 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
-	var centre := CenterContainer.new()
-	centre.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(centre)
+	# Receipt can be taller than 720p once a wreck lists every part. Scroll the
+	# tally; pin FIND ANOTHER SHIP so it is never clipped off the bottom.
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 12)
+	add_child(margin)
+
+	var shell := VBoxContainer.new()
+	shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shell.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	shell.add_theme_constant_override("separation", 8)
+	margin.add_child(shell)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	shell.add_child(scroll)
 
 	var wrap := PanelContainer.new()
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wrap.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 26))
-	wrap.custom_minimum_size.x = 620
-	centre.add_child(wrap)
+		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 18))
+	scroll.add_child(wrap)
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
+	col.add_theme_constant_override("separation", 6)
 	wrap.add_child(col)
 
 	col.add_child(UITheme.chrome_mark())
@@ -33,7 +49,7 @@ func _ready() -> void:
 	var v: Dictionary = Game.last_valuation
 	var won: bool = v.get("boss_killed", false)
 	var title := UITheme.label("DELIVERED TO THE YARD" if won else "WRECK TOWED IN",
-		28, UITheme.GOOD if won else UITheme.WARN, "Black")
+		24, UITheme.GOOD if won else UITheme.WARN, "Black")
 	col.add_child(title)
 	col.add_child(UITheme.label("ITEMISED APPRAISAL", 12, UITheme.ACCENT, "Bold"))
 	col.add_child(UITheme.label(
@@ -43,17 +59,17 @@ func _ready() -> void:
 	col.add_child(UITheme.spacer(4))
 
 	_lines = VBoxContainer.new()
-	_lines.add_theme_constant_override("separation", 4)
+	_lines.add_theme_constant_override("separation", 3)
 	col.add_child(_lines)
 
 	_total_host = VBoxContainer.new()
-	_total_host.add_theme_constant_override("separation", 8)
+	_total_host.add_theme_constant_override("separation", 6)
 	col.add_child(_total_host)
 
-	col.add_child(UITheme.spacer(6))
 	var back := UITheme.button("  FIND ANOTHER SHIP  ")
+	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	back.pressed.connect(func(): Game.goto_title())
-	col.add_child(back)
+	shell.add_child(back)
 
 	_animate(v)
 
@@ -143,7 +159,7 @@ func _animate(v: Dictionary) -> void:
 
 	# TOTAL owns the eye — itemised lines drop back once the haul lands.
 	_lines.modulate = Color(1, 1, 1, 0.62)
-	_total_host.add_child(UITheme.spacer(20))
+	_total_host.add_child(UITheme.spacer(8))
 	var total := ThemedPanel.new()
 	total.add_theme_stylebox_override("panel",
 		UITheme.panel(UITheme.INK_GOOD, UITheme.GOOD, 2, 4, 14))

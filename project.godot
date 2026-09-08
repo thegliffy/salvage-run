@@ -26,6 +26,10 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/size/min_width=960
 window/size/min_height=540
+; canvas_items + expand: scale the 1280x720 design uniformly, then grow the
+; viewport in the leftover dimension so 16:10 / ultrawide is not letterboxed.
+; Screens must layout to the live viewport (see MapScreen.layout_metrics) —
+; expand does not shrink overflowing fixed-pixel content.
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=1
