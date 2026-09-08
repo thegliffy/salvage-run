@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Salvage Run"
 config/description="Steal a ship, fight across three sectors, sell it for salvage — unlock new parts and bigger hulls to steal next."
-config/version="0.22"
+config/version="0.23"
 run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
