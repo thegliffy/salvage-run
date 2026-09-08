@@ -406,6 +406,25 @@
     "slot": "weapon",
     "power_gen": 0
   },
+  "contagion_array": {
+    "name": "Contagion Array",
+    "system": "weapons",
+    "tier": 3,
+    "flavor": "A lattice of injectors. When it sings, the hull is already counting.",
+    "integrity": 10,
+    "power_draw": 3,
+    "mass": 3,
+    "icon": "contagion_array.png",
+    "grants": [
+      "infected_burst",
+      "payload_dump",
+      "firewall_bypass"
+    ],
+    "base_value": 210,
+    "unlock_cost": 390,
+    "slot": "weapon",
+    "power_gen": 0
+  },
   "drone_launcher": {
     "name": "Drone Launcher",
     "system": "drones",

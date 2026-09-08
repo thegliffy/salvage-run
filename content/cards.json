@@ -1310,5 +1310,67 @@
       ]
     },
     "icon": "blue_b_13.png"
+  },
+  "infected_burst": {
+    "name": "Infected Burst",
+    "kind": "attack",
+    "rarity": "rare",
+    "cost": 2,
+    "target": "enemy_system",
+    "text": "Deal 5 damage to a target system. Apply 2 virus to the enemy.",
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 5
+      },
+      {
+        "op": "apply_virus",
+        "amount": 2
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 7 damage to a target system. Apply 2 virus to the enemy.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 7
+        },
+        {
+          "op": "apply_virus",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "red_r_03.png"
+  },
+  "payload_dump": {
+    "name": "Payload Dump",
+    "kind": "tech",
+    "rarity": "rare",
+    "cost": 2,
+    "target": "none",
+    "text": "Apply 10 virus to the enemy. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "apply_virus",
+        "amount": 10
+      }
+    ],
+    "upgrade": {
+      "text": "Apply 14 virus to the enemy. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "apply_virus",
+          "amount": 14
+        }
+      ]
+    },
+    "icon": "blue_b_18.png"
   }
 }

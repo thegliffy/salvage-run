@@ -371,6 +371,8 @@ func _test_targeting_rules() -> void:
 	_check("a suppression card may not", not Database.card(&"emp_pulse").can_target_hull())
 	_check("computer spike may not target the hull",
 		not Database.card(&"computer_spike").can_target_hull())
+	_check("infected burst may (its damage still lands)",
+		Database.card(&"infected_burst").can_target_hull())
 	_check("a mixed card may (its damage still lands)",
 		Database.card(&"weak_point").can_target_hull())
 
@@ -1609,6 +1611,12 @@ func _test_card_balance() -> void:
 	_eq("computer_spike suppress", _op_amt(&"computer_spike", false, "suppress_system"), 2)
 	_eq("computer_spike virus", _op_amt(&"computer_spike", false, "apply_virus"), 1)
 	_eq("firewall_bypass cost", Database.card(&"firewall_bypass").cost, 0)
+	_eq("infected_burst cost", Database.card(&"infected_burst").cost, 2)
+	_eq("infected_burst damage", _op_amt(&"infected_burst", false, "damage_system"), 5)
+	_eq("infected_burst virus", _op_amt(&"infected_burst", false, "apply_virus"), 2)
+	_eq("infected_burst+ damage", _op_amt(&"infected_burst", true, "damage_system"), 7)
+	_eq("payload_dump virus", _op_amt(&"payload_dump", false, "apply_virus"), 10)
+	_eq("payload_dump+ virus", _op_amt(&"payload_dump", true, "apply_virus"), 14)
 
 	# Playing the upgraded energy card must discard, not exhaust.
 	Rng.seed_run(3)
@@ -2053,6 +2061,123 @@ func _test_virus() -> void:
 	c6.begin_player_turn()
 	_eq("player virus deals then decays", c6.player.hull, ph - 2)
 	_eq("player virus remaining", c6.player.virus(), 1)
+
+	var arr: PartDef = Database.part(&"contagion_array")
+	_check("contagion_array exists", arr != null)
+	_eq("contagion_array slot", arr.slot, ShipLoadout.SLOT_WEAPON)
+	_eq("contagion_array tier", arr.tier, 3)
+	_eq("contagion_array system", arr.system, &"weapons")
+	_eq("contagion_array mass", arr.mass, 3)
+	_eq("contagion_array integrity", arr.integrity, 10)
+	_eq("contagion_array power_draw", arr.power_draw, 3)
+	_eq("contagion_array base_value", arr.base_value, 210)
+	_eq("contagion_array unlock_cost", arr.unlock_cost, 390)
+	_eq("contagion_array payout rarity is rare",
+		RewardPool.RARITY_BY_TIER[arr.tier], &"rare")
+	_check("contagion_array is yard-gated, not a starter", arr.unlock_cost > 0)
+	var lance: PartDef = Database.part(&"carrion_lance")
+	var cannon: PartDef = Database.part(&"capacitor_cannon")
+	_check("contagion_array value is in the tier-3 weapon band",
+		arr.base_value >= mini(lance.base_value, cannon.base_value)
+		and arr.base_value <= maxi(lance.base_value, cannon.base_value))
+	_check("contagion_array unlock is in the tier-3 weapon band",
+		arr.unlock_cost >= mini(lance.unlock_cost, cannon.unlock_cost)
+		and arr.unlock_cost <= maxi(lance.unlock_cost, cannon.unlock_cost))
+	_eq("contagion_array icon filename", arr.icon, "contagion_array.png")
+	_eq("contagion_array grants 3 cards", arr.grants.size(), 3)
+	_eq("contagion_array grants infected_burst", arr.grants.count(&"infected_burst"), 1)
+	_eq("contagion_array grants payload_dump", arr.grants.count(&"payload_dump"), 1)
+	_eq("contagion_array reuses firewall_bypass", arr.grants.count(&"firewall_bypass"), 1)
+	_check("firewall_bypass is a single card def", Database.card(&"firewall_bypass") != null)
+
+	var rare_ship := ShipLoadout.new("Array")
+	rare_ship.capacity = {ShipLoadout.SLOT_WEAPON: 4, ShipLoadout.SLOT_HULL: 3,
+		ShipLoadout.SLOT_UTILITY: 4}
+	_check("contagion_array installs in a weapon slot", rare_ship.install(arr) != null)
+	var rare_prof := rare_ship.compile()
+	_eq("contagion compiled deck is the three grants", rare_prof.deck.size(), 3)
+	_eq("compiled infected_burst", rare_prof.deck.count(&"infected_burst"), 1)
+	_eq("compiled payload_dump", rare_prof.deck.count(&"payload_dump"), 1)
+	_eq("compiled reused firewall_bypass", rare_prof.deck.count(&"firewall_bypass"), 1)
+
+	var arr_icon := UITheme.module_icon(arr)
+	_check("contagion array icon is a TextureRect", arr_icon is TextureRect)
+	if arr_icon.texture == null:
+		_check("missing contagion_array.png hides the TextureRect", not arr_icon.visible)
+	else:
+		_check("contagion_array.png wired when present", arr_icon.visible)
+	arr_icon.free()
+
+	var rare_meta := MetaState.new()
+	rare_meta.grant_starting_unlocks()
+	_check("contagion_array starts locked", not rare_meta.is_unlocked(&"contagion_array"))
+	_check("contagion_array is in the unlock shop", rare_meta.unlockable().any(
+		func(p: PartDef): return p.id == &"contagion_array"))
+	rare_meta.salvage = arr.unlock_cost
+	_check("contagion_array unlocks", rare_meta.unlock(&"contagion_array"))
+	_check("unlocked contagion_array is in the reward pool", rare_meta.available_parts().any(
+		func(p: PartDef): return p.id == &"contagion_array"))
+
+	var burst_def: CardDef = Database.card(&"infected_burst")
+	_eq("infected_burst kind is attack", burst_def.kind, &"attack")
+	_eq("infected_burst rarity", burst_def.rarity, &"rare")
+	_eq("infected_burst cost", burst_def.cost, 2)
+	_eq("infected_burst target", burst_def.target, CardDef.Target.ENEMY_SYSTEM)
+	_eq("infected_burst damage", _op_amt(&"infected_burst", false, "damage_system"), 5)
+	_eq("infected_burst virus amount", _op_amt(&"infected_burst", false, "apply_virus"), 2)
+	_eq("infected_burst+ damage", _op_amt(&"infected_burst", true, "damage_system"), 7)
+	_eq("infected_burst+ virus stays 2", _op_amt(&"infected_burst", true, "apply_virus"), 2)
+
+	var dump_def: CardDef = Database.card(&"payload_dump")
+	_eq("payload_dump kind is tech", dump_def.kind, &"tech")
+	_eq("payload_dump rarity", dump_def.rarity, &"rare")
+	_eq("payload_dump cost", dump_def.cost, 2)
+	_eq("payload_dump target", dump_def.target, CardDef.Target.NONE)
+	_eq("payload_dump virus amount", _op_amt(&"payload_dump", false, "apply_virus"), 10)
+	_eq("payload_dump+ virus", _op_amt(&"payload_dump", true, "apply_virus"), 14)
+	_check("payload_dump exhausts", dump_def.has_keyword(&"exhaust", false))
+	_check("payload_dump+ still exhausts", dump_def.has_keyword(&"exhaust", true))
+
+	# Infected Burst: 5 system damage + 2 virus. Virus does not tick on apply.
+	Rng.seed_run(47)
+	var c7 := CombatController.new()
+	c7.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c7.enemy.evasion = 0
+	c7.enemy.shield = 0
+	c7.player.energy = 9
+	var w7: ShipSystem = c7.enemy.system(&"weapons")
+	var sys7: int = w7.integrity
+	var hull7: int = c7.enemy.hull
+	var burst := CardInstance.create(burst_def)
+	c7.deck.hand.append(burst)
+	_eq("infected_burst plays", c7.play_card(burst, &"weapons"), "")
+	_eq("infected_burst deals 5 system damage", w7.integrity, sys7 - 5)
+	_eq("infected_burst applies 2 virus", c7.enemy.virus(), 2)
+	_eq("infected_burst does not tick virus on apply", c7.enemy.hull, hull7)
+	_check("infected_burst apply logged", _has_event(c7, "virus_apply"))
+
+	# Payload Dump: 10 virus, no direct hull/system damage, exhausts.
+	Rng.seed_run(48)
+	var c8 := CombatController.new()
+	c8.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c8.enemy.evasion = 0
+	c8.enemy.shield = 0
+	c8.player.energy = 9
+	var hull8: int = c8.enemy.hull
+	var sys8 := 0
+	for sid8 in c8.enemy.systems:
+		sys8 += c8.enemy.systems[sid8].integrity
+	var dump := CardInstance.create(dump_def)
+	c8.deck.hand.append(dump)
+	_eq("payload_dump plays", c8.play_card(dump), "")
+	_eq("payload_dump applies 10 virus", c8.enemy.virus(), 10)
+	_eq("payload_dump deals no hull on apply", c8.enemy.hull, hull8)
+	var sys8_after := 0
+	for sid8b in c8.enemy.systems:
+		sys8_after += c8.enemy.systems[sid8b].integrity
+	_eq("payload_dump deals no system damage", sys8_after, sys8)
+	_check("payload_dump exhausted", c8.deck.exhaust_pile.has(dump))
+	_check("payload_dump apply logged", _has_event(c8, "virus_apply"))
 
 func _has_event(c: CombatController, kind: String) -> bool:
 	return not _find_event(c, kind).is_empty()

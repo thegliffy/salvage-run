@@ -105,7 +105,9 @@ Tick timing: **the infected combatant's turn start** — player virus in
 `begin_player_turn` after energy refill; enemy virus in `_run_enemy_turn`
 before they act, so a lethal tick can win the fight without a shot. The
 opponent is not also ticked on the other side's turn (no double-tick).
-Signal Injector (`signal_injector`) is the first part that applies it.
+Signal Injector (`signal_injector`, uncommon / tier 2) is the first part that
+applies it. Contagion Array (`contagion_array`, rare / tier 3) is the heavy
+follow-up and reuses Firewall Bypass.
 
 ## 4. Damage pipeline
 
@@ -290,7 +292,7 @@ length.
 
 `MetaState` unlocks parts into the *pool* rather than granting them directly.
 The title-screen Salvage Yard is the spend surface. Starter parts begin unlocked;
-gated weapons (Missile Rack, EMP Projector, Signal Injector, Carrion Lance, …) cost salvage.
+gated weapons (Missile Rack, EMP Projector, Signal Injector, Contagion Array, Carrion Lance, …) cost salvage.
 
 **Why additive:** more variety next run, not a flat power curve. Early unlocks
 can still feel weak — starter-hull unlocks remain an open question (§Open).
