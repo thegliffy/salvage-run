@@ -21,6 +21,7 @@ var synergy: Dictionary = {}          # {requires_system, bonus}; see ShipLoadou
 var base_value: int = 40              # credits; also drives sale valuation
 var tier: int = 1
 var unlock_cost: int = 0              # salvage cost in the meta shop; 0 = starter
+var icon: String = ""                 # filename under res://assets/modules/; default <id>.png
 
 func from_dict(def_id: StringName, d: Dictionary) -> String:
 	id = def_id
@@ -44,6 +45,9 @@ func from_dict(def_id: StringName, d: Dictionary) -> String:
 	base_value = int(d.get("base_value", 40))
 	tier = int(d.get("tier", 1))
 	unlock_cost = int(d.get("unlock_cost", 0))
+	icon = String(d.get("icon", ""))
+	if icon == "":
+		icon = "%s.png" % String(def_id)
 	return ""
 
 func is_starter() -> bool:

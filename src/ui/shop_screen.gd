@@ -118,6 +118,8 @@ func _offer_row(offer: Dictionary) -> Control:
 	row.add_theme_constant_override("separation", 14)
 	wrap.add_child(row)
 
+	row.add_child(UITheme.module_icon(def, UITheme.MODULE_ICON_COMPACT))
+
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 6)

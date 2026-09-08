@@ -40,6 +40,11 @@ const RARITY_COLOUR := {
 	&"rare": RARE,
 }
 
+const MODULE_ART_DIR := "res://assets/modules/"
+## Design size at 720p; canvas_items stretch scales this with the window.
+const MODULE_ICON_SIZE := 80
+const MODULE_ICON_COMPACT := 64
+
 static func font(weight: String = "Regular") -> FontFile:
 	return load("res://assets/fonts/Exo-%s.ttf" % weight)
 
@@ -269,13 +274,40 @@ static func condition_colour(condition: String) -> Color:
 			return TEXT_DIM
 
 ## Load optional artwork. Returns null instead of erroring when the file is
-## absent -- redistributable icons and portraits ship with the repo, but a
-## missing file (or a commercial pack that was never added) must still run.
+## absent -- redistributable icons, portraits, and module art ship with the
+## repo, but a missing file (or a commercial pack that was never added) must
+## still run.
 static func art(path: String) -> Texture2D:
 	if not ResourceLoader.exists(path):
 		return null
 	var res := load(path)
 	return res if res is Texture2D else null
+
+## Part PNG via `icon` (default `<part_id>.png`). Null when the file is absent.
+static func part_texture(def: PartDef) -> Texture2D:
+	if def == null:
+		return null
+	var file := def.icon if def.icon != "" else "%s.png" % String(def.id)
+	if file == "":
+		return null
+	return art(MODULE_ART_DIR + file)
+
+## Keep-aspect module art for offer rows. Hidden when the PNG is missing so
+## layout does not reserve an empty hole; 64–96px class size at 720p.
+static func module_icon(def: PartDef, px: int = MODULE_ICON_SIZE) -> TextureRect:
+	var tex := TextureRect.new()
+	tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tex.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tex.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var art_tex := part_texture(def)
+	tex.texture = art_tex
+	if art_tex != null:
+		tex.custom_minimum_size = Vector2(px, px)
+	else:
+		tex.visible = false
+	return tex
 
 static func spacer(h: int = 8) -> Control:
 	var c := Control.new()

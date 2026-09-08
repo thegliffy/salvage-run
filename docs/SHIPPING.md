@@ -177,14 +177,15 @@ godot --headless --path . --export-release "Android" build/salvage-run.aab
 
 ## Asset licensing
 
-Redistributable card icons (`assets/icons/`, Game-icons tinted by kind) and
-painted enemy portraits (`assets/portraits/`) **ship with this repository**.
+Redistributable card icons (`assets/icons/`, Game-icons tinted by kind),
+painted enemy portraits (`assets/portraits/`), and module icons
+(`assets/modules/`, filenames = part ids) **ship with this repository**.
 See [ASSETS.md](ASSETS.md).
 
 Commercially purchased packs remain optional and **must not be redistributed**.
-Keep them under `assets/icons/commercial/` or `assets/portraits/commercial/`
-(gitignored). Older commercial files that once sat at the top of those
-directories were stripped from git history.
+Keep them under `assets/icons/commercial/`, `assets/portraits/commercial/`, or
+`assets/modules/commercial/` (gitignored). Older commercial files that once sat
+at the top of those directories were stripped from git history.
 
 The Exo typeface is SIL OFL and travels with its licence at
 `assets/fonts/OFL.txt`. The painted hull at `assets/ships/salvager-hull.png`

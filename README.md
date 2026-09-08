@@ -58,10 +58,11 @@ Or the exported Linux build:
 ```
 
 > **Note on art.** Redistributable card icons (`assets/icons/`, Game-icons
-> tinted by kind) and painted enemy portraits (`assets/portraits/`) ship with
-> the repo. Optional commercially licensed packs must not be redistributed —
-> see [docs/ASSETS.md](docs/ASSETS.md). Cards still fall back to flat
-> kind-coloured blocks if a file is missing.
+> tinted by kind), painted enemy portraits (`assets/portraits/`), and module
+> icons (`assets/modules/`, filenames = part ids) ship with the repo. Optional
+> commercially licensed packs must not be redistributed — see
+> [docs/ASSETS.md](docs/ASSETS.md). Missing files fall back rather than
+> erroring (`UITheme.art()`).
 
 **How to play.** Click a card. Hull-targeting attacks want the enemy **HULL**
 bar; system cards want a subsystem. Soft systems are optional control —
@@ -237,6 +238,7 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 | `assets/ships/` | Painted hull art used by `ShipView` |
 | `assets/icons/` | Redistributable tinted card icons (`cards.json` `icon`) |
 | `assets/portraits/` | Redistributable enemy portraits (`enemies.json` `portrait`) |
+| `assets/modules/` | Part / module icons (`parts.json` `icon`, default `<part_id>.png`) |
 | `docs/ui-shots/` | README screenshots |
 | `tests/` | Headless test suite and balance simulator |
 

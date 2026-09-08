@@ -85,6 +85,20 @@ func _test_content() -> void:
 	_check("card parses upgrade block", laser != null and not laser.upgrade_effects.is_empty())
 	_eq("upgraded laser hits harder",
 		int(laser.effects_for(true)[0]["amount"]) > int(laser.effects_for(false)[0]["amount"]), true)
+	var burst: PartDef = Database.part(&"burst_laser")
+	_eq("part icon defaults to <id>.png", burst.icon, "burst_laser.png")
+	var blank_icon: PackedStringArray = []
+	for pid in Database.parts:
+		if Database.parts[pid].icon == "":
+			blank_icon.append(String(pid))
+	_check("every part has an icon filename", blank_icon.is_empty(), str(blank_icon))
+	var ov := PartDef.new()
+	_eq("explicit part icon is kept", ov.from_dict(&"test_mod", {
+		"name": "Test", "slot": "utility", "icon": "other.png",
+	}), "")
+	_eq("explicit part icon wins over default", ov.icon, "other.png")
+	_check("missing module PNG is null-safe",
+		UITheme.art("res://assets/modules/not_a_real_part.png") == null)
 
 func _test_loadout() -> void:
 	print("loadout (typed slots)")
@@ -735,6 +749,15 @@ func _test_ui_copy() -> void:
 	_check("power tip mentions energy", UITheme.power_tip(bud).contains("energy"))
 	var part: PartDef = ship.parts[0].def
 	_check("part tip names the part", UITheme.part_tip(part).contains(part.name))
+	var mod_icon := UITheme.module_icon(part, 80)
+	_check("module icon is a TextureRect", mod_icon is TextureRect)
+	_eq("module icon keep-aspect", mod_icon.stretch_mode,
+		TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	if mod_icon.texture != null:
+		_eq("module icon class size at 720p", int(mod_icon.custom_minimum_size.x), 80)
+	else:
+		_check("module icon hides when PNG is missing", not mod_icon.visible)
+	mod_icon.free()
 	var popup := UITheme.make_tooltip("Title\n---\nBody line")
 	_check("themed tooltip builds a control", popup is Control)
 	popup.free()

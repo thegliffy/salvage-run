@@ -236,6 +236,11 @@ func _offer_row(offer: Dictionary) -> Control:
 	badges.add_child(UITheme.badge(String(rarity).to_upper(), rarity_c))
 	badges.add_child(UITheme.badge(String(def.slot).to_upper(), UITheme.ACCENT))
 
+	# Prominent keep-aspect module art between title and body (~80px at 720p).
+	var art := UITheme.module_icon(def, UITheme.MODULE_ICON_SIZE)
+	art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_child(art)
+
 	var costs := _cost_bits(def)
 	if not costs.is_empty():
 		var cost_l := UITheme.label("  ·  ".join(costs), 11, UITheme.TEXT_FAINT)
@@ -307,6 +312,9 @@ func _jettison_row(inst: PartInstance) -> Control:
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(name_l)
 	info.add_child(UITheme.badge(String(inst.def.slot).to_upper(), UITheme.ACCENT))
+	var art := UITheme.module_icon(inst.def, UITheme.MODULE_ICON_COMPACT)
+	art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_child(art)
 	info.add_child(UITheme.label("frees slot + cards", 11, UITheme.TEXT_FAINT))
 	info.add_child(_card_chips(inst.granted_cards()))
 	var spacer := Control.new()

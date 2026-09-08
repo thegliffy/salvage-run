@@ -13,6 +13,7 @@ What `assets/` needs, what ships with this repository, and what does not.
 | `assets/ships/salvager-hull.png` | Side-view hull behind bolted-on parts (`ShipView`) | Project art — ships with the repo |
 | `assets/icons/*.png` | Card icons (`UITheme.art()` via `content/cards.json` `icon`) | Redistributable [Game-icons.net](https://game-icons.net) glyphs, tinted to kind colour (CC-BY 3.0) |
 | `assets/portraits/*.png` | Enemy portraits (`UITheme.art()` via `content/enemies.json` `portrait`) | Redistributable painted industrial ships — ships with the repo |
+| `assets/modules/*.png` | Part / module icons (`UITheme.art()` via `content/parts.json` `icon`, default `<part_id>.png`) | Project art — unified painted 3D isometric hardware; ships with the repo |
 
 Attribution: **Exo** designed by Natanael Gama. Card icons derived from
 [Game-icons.net](https://game-icons.net) (CC-BY 3.0), tinted per card kind.
@@ -23,14 +24,14 @@ procedural chassis — same pattern as `UITheme.art()` elsewhere.
 
 ## What does not ship here
 
-The **card frames**, **redistributable card icons**, and **painted enemy
-portraits** ARE included.
+The **card frames**, **redistributable card icons**, **painted enemy
+portraits**, and **module / part icons** ARE included.
 
 Commercially purchased icon or portrait packs remain **optional** and **must
 not be redistributed**. A public git repository redistributes. If you keep a
-purchased set locally, put it under `assets/icons/commercial/` or
-`assets/portraits/commercial/` — those paths stay in `.gitignore`. Do not commit
-or publish those files.
+purchased set locally, put it under `assets/icons/commercial/`,
+`assets/portraits/commercial/`, or `assets/modules/commercial/` — those paths
+stay in `.gitignore`. Do not commit or publish those files.
 
 Older commercial art that once lived at the top of `assets/icons/` and
 `assets/portraits/` was stripped from git history, not merely deleted in a later
@@ -42,9 +43,10 @@ kind colour. You lose that piece of art, not the game.
 
 ## Shipped filenames
 
-`UITheme.art()` joins these names onto `res://assets/icons/` or
-`res://assets/portraits/`. They must match `content/cards.json` `icon` and
-`content/enemies.json` `portrait` exactly.
+`UITheme.art()` joins these names onto `res://assets/icons/`,
+`res://assets/portraits/`, or `res://assets/modules/`. They must match
+`content/cards.json` `icon`, `content/enemies.json` `portrait`, and
+`content/parts.json` `icon` (or the `<part_id>.png` default) exactly.
 
 ### Card icons — 31 PNGs in `assets/icons/`
 
@@ -67,6 +69,40 @@ Painted industrial ships, square with transparency:
 | `a_02_t.png` | Raider |
 | `k_04_t.png` | Gunship |
 | `f_07_t.png` | Dreadnought |
+
+### Module icons — 18 PNGs in `assets/modules/`
+
+Unified painted 3D isometric hardware, one square PNG per part. Filenames are
+the part ids in `content/parts.json`. `PartDef` defaults `icon` to
+`<part_id>.png`; set `"icon"` in JSON only to override.
+
+| File | Part |
+|---|---|
+| `burst_laser.png` | Burst Laser |
+| `plasma_cycler.png` | Plasma Cycler |
+| `missile_rack.png` | Missile Rack |
+| `aegis_rail.png` | Aegis Rail |
+| `emp_projector.png` | EMP Projector |
+| `capacitor_cannon.png` | Capacitor Cannon |
+| `carrion_lance.png` | Carrion Lance |
+| `ablative_plating.png` | Ablative Plating |
+| `deflector_mk1.png` | Deflector Mk I |
+| `armor_plating.png` | Armor Plating |
+| `blast_doors.png` | Blast Doors |
+| `shield_capacitor.png` | Shield Capacitor |
+| `ion_thrusters.png` | Ion Thrusters |
+| `power_relay.png` | Power Relay |
+| `sensor_array.png` | Sensor Array |
+| `salvage_arm.png` | Salvage Arm |
+| `repair_bay.png` | Repair Bay |
+| `overcharge_rig.png` | Overcharge Rig |
+
+`UITheme.module_icon()` draws these keep-aspect on reward / shop / unlock
+offer rows (~64–96px at 720p). Missing files return null and hide the
+TextureRect — same `UITheme.art()` fallback as cards and portraits.
+
+Do not commit `contact_sheet.png` (gitignored); it is source reference, not a
+game asset.
 
 Godot 4 writes a sibling `.import` sidecar the first time the editor (or
 `godot --headless --import`) sees a new PNG. Commit those sidecars with the
@@ -101,6 +137,19 @@ Square PNGs with transparency, 256×256. Referenced by the `portrait` field in
 enemy's subsystem list leaves, so they should read at roughly 150–300px tall.
 
 Four are needed for the current enemy roster.
+
+### Module icons — `assets/modules/`
+
+Square PNGs with transparency; 256×256 or larger works well. Referenced by the
+`icon` field in `content/parts.json`, defaulting to `<part_id>.png`. They
+render keep-aspect (never stretch-distorted) at ~64–96px on offer rows, and
+scale with `canvas_items` stretch.
+
+Style lock: **unified painted 3D** isometric hardware. Hull and utility pieces
+may be redrawn to match the weapons; keep the same filenames.
+
+Eighteen are needed for the current part roster. A source contact sheet is
+not a game asset — leave it out of this directory (gitignored).
 
 ### Ship hull — `assets/ships/`
 

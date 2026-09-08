@@ -23,7 +23,11 @@ libsteam_api*.so
 Thumbs.db
 
 # Optional commercially licensed art — licensed for use in the game, NOT for
-# redistribution. Redistributable icons and portraits in assets/icons/ and
-# assets/portraits/ DO ship with the repository. See docs/ASSETS.md.
+# redistribution. Redistributable icons, portraits, and module art in
+# assets/icons/, assets/portraits/, and assets/modules/ DO ship with the
+# repository. See docs/ASSETS.md.
 assets/icons/commercial/
 assets/portraits/commercial/
+assets/modules/commercial/
+# Source contact sheet — not a game asset (filenames are part ids).
+assets/modules/contact_sheet.png
