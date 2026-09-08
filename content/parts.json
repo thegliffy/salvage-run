@@ -380,5 +380,26 @@
     },
     "slot": "weapon",
     "power_gen": 0
+  },
+  "drone_launcher": {
+    "name": "Drone Launcher",
+    "system": "drones",
+    "tier": 1,
+    "flavor": "Two small hulls that never ask why. You just tell them what to be.",
+    "integrity": 6,
+    "power_draw": 1,
+    "mass": 2,
+    "stats": {
+      "drone_slots": 2
+    },
+    "grants": [
+      "drone_attack",
+      "drone_repair",
+      "drone_screen"
+    ],
+    "base_value": 70,
+    "unlock_cost": 0,
+    "slot": "utility",
+    "power_gen": 0
   }
 }

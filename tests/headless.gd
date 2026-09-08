@@ -73,6 +73,7 @@ func _run_tests() -> int:
 	_test_map()
 	_test_card_balance()
 	_test_sectors()
+	_test_drones()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
 	return 1 if _failed > 0 else 0
 
@@ -151,6 +152,19 @@ func _test_compile() -> void:
 	_check("tank starts with the Deflector Mk I", tank.has_system(&"shields"))
 	_eq("tank still starts with three parts", tank_ship.parts.size(), 3)
 	_check("tank stays in its power budget", tank.warnings.is_empty(), str(tank.warnings))
+
+	var shep_ship := StarterShips.shepherd()
+	var shep := shep_ship.compile()
+	_eq("shepherd name", shep.display_name, "Shepherd")
+	_eq("shepherd has one weapon slot", shep_ship.slot_capacity(ShipLoadout.SLOT_WEAPON), 1)
+	_eq("shepherd has extra utility slots", shep_ship.slot_capacity(ShipLoadout.SLOT_UTILITY), 6)
+	_eq("shepherd keeps three hull slots", shep_ship.slot_capacity(ShipLoadout.SLOT_HULL), 3)
+	_eq("shepherd starts with three parts", shep_ship.parts.size(), 3)
+	_eq("shepherd has two drone slots", shep.drone_slots, 2)
+	_eq("shepherd deflector is 10 shield", shep.max_shield, 10)
+	_check("shepherd starts with the Drone Launcher", shep.has_system(&"drones"))
+	_check("shepherd stays in its power budget", shep.warnings.is_empty(), str(shep.warnings))
+	_eq("shepherd deck is 3 parts x 3 cards", shep.deck.size(), 9)
 
 	# Wrecked parts contribute nothing.
 	var before := prof.deck.size()
@@ -780,9 +794,11 @@ func _test_meta_progression() -> void:
 	_check("starters unlocked", meta.unlocked.size() > 0)
 	_check("brawler starts unlocked", meta.is_ship_unlocked(&"brawler"))
 	_check("tank starts locked", not meta.is_ship_unlocked(&"tank"))
+	_check("shepherd starts locked", not meta.is_ship_unlocked(&"shepherd"))
 	_check("tank is the cheapest ship unlock", meta.unlockable_ships().size() >= 1
 		and meta.unlockable_ships()[0]["id"] == &"tank")
 	_eq("tank unlock cost", StarterShips.unlock_cost(&"tank"), 450)
+	_eq("shepherd unlock cost", StarterShips.unlock_cost(&"shepherd"), 650)
 	var dearest_part := 0
 	for p in meta.unlockable():
 		dearest_part = maxi(dearest_part, p.unlock_cost)
@@ -795,6 +811,11 @@ func _test_meta_progression() -> void:
 	_eq("tank unlock spends salvage", meta.salvage, 0)
 	_check("tank now unlocked", meta.is_ship_unlocked(&"tank"))
 	_check("cannot unlock tank twice", not meta.unlock_ship(&"tank"))
+	_check("shepherd still locked after tank", not meta.is_ship_unlocked(&"shepherd"))
+	meta.salvage = StarterShips.unlock_cost(&"shepherd")
+	_check("shepherd unlock succeeds when affordable", meta.unlock_ship(&"shepherd"))
+	_eq("shepherd unlock spends salvage", meta.salvage, 0)
+	_check("shepherd now unlocked", meta.is_ship_unlocked(&"shepherd"))
 
 	_check("locked parts exist to buy", meta.unlockable().size() > 0)
 
@@ -812,6 +833,7 @@ func _test_meta_progression() -> void:
 	meta2.from_dict(d)
 	_check("save round-trip keeps unlocks", meta2.is_unlocked(target.id))
 	_check("save round-trip keeps ship unlocks", meta2.is_ship_unlocked(&"tank"))
+	_check("save round-trip keeps shepherd unlock", meta2.is_ship_unlocked(&"shepherd"))
 	_eq("save round-trip keeps salvage", meta2.salvage, meta.salvage)
 
 	# Old saves without unlocked_ships still get free starters.
@@ -819,6 +841,7 @@ func _test_meta_progression() -> void:
 	meta3.from_dict({"salvage": 0, "unlocked": []})
 	_check("legacy save still unlocks brawler", meta3.is_ship_unlocked(&"brawler"))
 	_check("legacy save keeps tank locked", not meta3.is_ship_unlocked(&"tank"))
+	_check("legacy save keeps shepherd locked", not meta3.is_ship_unlocked(&"shepherd"))
 
 func _test_map() -> void:
 	print("map")
@@ -1001,6 +1024,47 @@ func _test_sectors() -> void:
 			saw_scout_combat = true
 	_check("sector 3 regulars include raiders", saw_raider)
 	_check("sector 3 regulars are not scouts", not saw_scout_combat)
+
+func _test_drones() -> void:
+	print("drones")
+	Rng.seed_run(21)
+	var ship := StarterShips.shepherd()
+	var c := CombatController.new()
+	c.setup(ship.compile(), Database.enemy(&"scout_drone"), ship)
+	_eq("combat copied two drone slots", c.drone_slots, 2)
+	_eq("drones default to attack", c.drone_mode, &"attack")
+	var total := 0
+	for sid in c.enemy.systems:
+		total += c.enemy.systems[sid].integrity
+	# 2 drones × 2 homing damage on turn 1, before the player plays.
+	_eq("attack drones chip 4 integrity on turn start", total, 6)
+
+	var proto := CardInstance.create(Database.card(&"drone_repair"))
+	c.deck.hand.append(proto)
+	c.player.energy = 9
+	_eq("repair pattern plays", c.play_card(proto), "")
+	_eq("wing switches to repair", c.drone_mode, &"repair")
+
+	var screen := CardInstance.create(Database.card(&"drone_screen"))
+	c.deck.hand.append(screen)
+	_eq("screen pattern plays", c.play_card(screen), "")
+	_eq("wing switches to screen", c.drone_mode, &"shield")
+
+	# Offline drones subsystem silences the wing.
+	c.drone_mode = &"attack"
+	var ds: ShipSystem = c.player.system(&"drones")
+	_check("shepherd has a drones subsystem", ds != null)
+	ds.take_damage(ds.max_integrity)
+	var hull_before: int = c.enemy.hull
+	var sys_before := 0
+	for sid2 in c.enemy.systems:
+		sys_before += c.enemy.systems[sid2].integrity
+	c._tick_drones()
+	var sys_after := 0
+	for sid3 in c.enemy.systems:
+		sys_after += c.enemy.systems[sid3].integrity
+	_eq("offline drones deal no hull", c.enemy.hull, hull_before)
+	_eq("offline drones deal no system damage", sys_after, sys_before)
 
 # --- Balance simulator -------------------------------------------------------
 
@@ -1326,6 +1390,9 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 				score -= amount * W_SELF_HARM
 			"credits":
 				score += amount * W_CREDITS
+			"set_drone_mode":
+				# Standing order is already Attack; switching is a small tempo play.
+				score += 1.5
 	return score
 
 func _worst_own_system(c: CombatController) -> StringName:

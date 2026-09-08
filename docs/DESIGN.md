@@ -267,9 +267,9 @@ parts to zero, which removes their cards for the rest of the run unless repaired
 That may be too swingy — a mid-run weapons loss can be unrecoverable. Options:
 partial wear instead of total, or cheap field repairs between every node.
 
-**Starter-ship unlocks.** Pool unlocks alone make the first hours feel samey.
-A small set of deliberately-strong starter hulls to steal would give a visible
-power curve without breaking the additive meta.
+**Starter-ship unlocks.** Brawler is free, Tank (450) and Shepherd (650) are
+the first hull unlocks. More hulls can still be added without breaking additive
+pool unlocks.
 
 **Balance.** The simulator now walks the live 3×10 map, so the old ~37% figure
 (a canned 7-fight ladder) is not comparable. Stalls against shield-regenerating

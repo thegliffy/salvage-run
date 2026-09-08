@@ -13,7 +13,7 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-332 tests passing · playable PC demo
+360 tests passing · playable PC demo
 ```
 
 ---
@@ -83,7 +83,7 @@ Title → salvage unlock shop → sector map (×3) → combat / shop / chest →
 the primary target and soft subsystem control, typed-slot ship loadout,
 power-budget UI, tiered rewards (skip = field repair), ship status overlay, ship
 improvements, jettison, card stripping, run-end appraisal, meta unlock shop
-(parts + hulls), overshield, Brawler / Tank starters, meta saves.
+(parts + hulls), overshield, Brawler / Tank / Shepherd starters, meta saves.
 
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).

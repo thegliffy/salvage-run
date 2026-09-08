@@ -1150,5 +1150,77 @@
       ]
     },
     "icon": "violet_p_02.png"
+  },
+  "drone_attack": {
+    "name": "Attack Pattern",
+    "kind": "tech",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
+    "text": "Both drones Attack. Each deals 2 damage to a random enemy system at the start of your turn.",
+    "effects": [
+      {
+        "op": "set_drone_mode",
+        "mode": "attack"
+      }
+    ],
+    "upgrade": {
+      "text": "Both drones Attack. Each deals 2 damage to a random enemy system at the start of your turn.",
+      "effects": [
+        {
+          "op": "set_drone_mode",
+          "mode": "attack"
+        }
+      ]
+    },
+    "icon": "blue_b_03.png"
+  },
+  "drone_repair": {
+    "name": "Repair Pattern",
+    "kind": "tech",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
+    "text": "Both drones Repair. Each repairs 2 hull at the start of your turn.",
+    "effects": [
+      {
+        "op": "set_drone_mode",
+        "mode": "repair"
+      }
+    ],
+    "upgrade": {
+      "text": "Both drones Repair. Each repairs 2 hull at the start of your turn.",
+      "effects": [
+        {
+          "op": "set_drone_mode",
+          "mode": "repair"
+        }
+      ]
+    },
+    "icon": "blue_b_05.png"
+  },
+  "drone_screen": {
+    "name": "Screen Pattern",
+    "kind": "tech",
+    "rarity": "starter",
+    "cost": 1,
+    "target": "none",
+    "text": "Both drones Screen. Each gains 2 shield at the start of your turn.",
+    "effects": [
+      {
+        "op": "set_drone_mode",
+        "mode": "shield"
+      }
+    ],
+    "upgrade": {
+      "text": "Both drones Screen. Each gains 2 shield at the start of your turn.",
+      "effects": [
+        {
+          "op": "set_drone_mode",
+          "mode": "shield"
+        }
+      ]
+    },
+    "icon": "blue_b_01.png"
   }
 }

@@ -431,6 +431,8 @@ func _refresh() -> void:
 	# is just clutter, so this line carries the regen rate only.
 	var stats := "evasion %d  ·  shield +%d/t  ·  power %d/%d  ·  deck %d" % [
 		prof.evasion, prof.shield_regen, bud["draw"], bud["output"], prof.deck.size()]
+	if combat.drone_slots > 0:
+		stats += "  ·  drones ×%d %s" % [combat.drone_slots, String(combat.drone_mode).to_upper()]
 	_ship_stats.text = stats
 	_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
 	var deficit_n := int(bud["deficit"])
@@ -721,6 +723,13 @@ func _on_effect(event: Dictionary) -> void:
 		"suppress":
 			line = "  %s %s suppressed %d turn(s)" % [event["target"], event["system"], event["turns"]]
 			colour = UITheme.WARN
+		"drones":
+			line = "  Drones ×%d %s" % [int(event.get("count", 0)),
+				String(event.get("mode", "attack")).to_upper()]
+			colour = UITheme.ACCENT
+		"drone_mode":
+			line = "  Drone wing set to %s" % String(event.get("mode", "")).to_upper()
+			colour = UITheme.ACCENT
 	if line != "":
 		_log_line(line, colour)
 

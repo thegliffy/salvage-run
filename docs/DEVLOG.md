@@ -405,3 +405,8 @@ The run is three sectors of ~10 stops + boss. Sector 1 boss is the gunship
 (still a boss payout); sector 2/3 bosses are the dreadnought; sector 3 is the
 finale. Valuation uses the sector you actually reached. The sim walks those
 maps instead of a canned 7-fight ladder.
+
+**Shepherd** hull (unlock 650): 1 weapon / 3 hull / 6 utility, Deflector Mk I,
+and a Drone Launcher. Two drones tick at the start of your turn after shield
+regen (Attack 2 / Repair 2 / Screen 2). Protocol cards set the wing's standing
+order. Offline `drones` subsystem silences them.

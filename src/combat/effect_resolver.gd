@@ -106,6 +106,11 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 		"credits":
 			combat.pending_credits += amount
 			_emit({"type": "credits", "amount": amount})
+		"set_drone_mode":
+			var mode := StringName(op.get("mode", "attack"))
+			combat.drone_mode = mode
+			_emit({"type": "drone_mode", "mode": String(mode),
+				"count": combat.drone_slots})
 		_:
 			push_warning("[EffectResolver] unknown op '%s'" % kind)
 
