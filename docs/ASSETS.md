@@ -98,6 +98,7 @@ the part ids in `content/parts.json`. `PartDef` defaults `icon` to
 | `repair_bay.png` | Repair Bay |
 | `overcharge_rig.png` | Overcharge Rig |
 | `drone_launcher.png` | Drone Launcher (`UITheme.module_icon()` hides the TextureRect if this PNG is missing) |
+| `static_coil.png` | Static Coil (Art Director; missing file hides the TextureRect the same way) |
 
 `UITheme.module_icon()` draws these keep-aspect on reward / shop / unlock
 offer rows (~64–96px at 720p). Missing files return null and hide the

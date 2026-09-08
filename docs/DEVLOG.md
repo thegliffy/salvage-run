@@ -411,3 +411,23 @@ and a Drone Launcher. Two **empty** bays; launch Attack (red) or Shield Charger
 (blue) with cards. Occupied drones tick once at the start of your turn after
 shield regen and before the draw. Overcharge activates occupied drones twice
 this turn. Offline `drones` subsystem silences them.
+
+---
+
+## 2026-09-08 — Static Coil (uncommon utility)
+
+Kyle's Static Coil is a tier-2 utility in the Repair Bay band: `support`,
+integrity 8, mass 2, power_draw 1, base_value 100, unlock 175. Grants two
+existing Afterburners plus a new uncommon attack, Static Buildup.
+
+**Play count.** Combat had no play counter. `CombatController.cards_played_this_turn`
+increments after a successful play and resets at the start of each player turn.
+`EffectResolver.scaled_amount` uses `count + 1` so the resolving card is included
+— same number the sim sees when it scores the card before playing it. First card
+of the turn deals 2; after two Afterburners it deals 6.
+
+**Cost / upgrade.** 1 energy, like the other setup-dependent uncommon attacks
+(Feedback Spike, Vulture Strike). The Afterburners are 0-cost, so a 1-cost
+finisher still fires after a long cheap chain; 2-cost would compete with Salvo
+for leftover energy on the turn the card asks you to fill. Upgrade is 3× cards
+played (50% bump), not a flat bonus — the identity is the multiplier.

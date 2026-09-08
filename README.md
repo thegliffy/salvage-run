@@ -191,7 +191,8 @@ they make it eligible to appear on the next theft. The **Brawler** starts free;
 the **Tank** is the first hull unlock (450 salvage, above any part), then
 **Shepherd** at 650. Starter weapons begin unlocked (Burst Laser);
 uncommon/rare weapons cost salvage (Missile Rack 150, EMP Projector 200,
-Carrion Lance 400, …).
+Carrion Lance 400, …). Uncommon utilities include Repair Bay (175) and
+Static Coil (175).
 
 ### The sale
 

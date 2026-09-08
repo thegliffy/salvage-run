@@ -402,5 +402,24 @@
     "unlock_cost": 0,
     "slot": "utility",
     "power_gen": 0
+  },
+  "static_coil": {
+    "name": "Static Coil",
+    "system": "support",
+    "tier": 2,
+    "flavor": "Every trigger leaves a charge. Dump it when the coil sings.",
+    "integrity": 8,
+    "power_draw": 1,
+    "mass": 2,
+    "icon": "static_coil.png",
+    "grants": [
+      "afterburner",
+      "afterburner",
+      "static_buildup"
+    ],
+    "base_value": 100,
+    "unlock_cost": 175,
+    "slot": "utility",
+    "power_gen": 0
   }
 }

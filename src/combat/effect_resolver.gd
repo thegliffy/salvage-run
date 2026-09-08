@@ -147,6 +147,13 @@ func scaled_amount(op: Dictionary, ctx: Dictionary) -> int:
 			return base * n
 		"missing_hull":
 			return base * int(floor(float(source.max_hull - source.hull) / 10.0))
+		"cards_played_this_turn":
+			# Include the card being resolved (or scored for play). Completed
+			# plays live on CombatController; +1 is this card.
+			var n := 1
+			if combat != null:
+				n = combat.cards_played_this_turn + 1
+			return base * n
 	return base
 
 func _resolve_target_system(op: Dictionary, ctx: Dictionary, own: bool = false) -> StringName:

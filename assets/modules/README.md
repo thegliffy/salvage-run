@@ -27,6 +27,7 @@ salvage_arm.png
 repair_bay.png
 overcharge_rig.png
 drone_launcher.png
+static_coil.png
 ```
 
 Style lock: unified painted 3D (isometric hardware). Hull/utility pieces may
