@@ -23,6 +23,13 @@ var drone_slots: int = 0
 var systems: Array = []             # [{id, name, integrity, part_uids}]
 var deck: Array[StringName] = []    # card ids
 var warnings: Array[String] = []    # e.g. "power deficit", surfaced in shipyard
+## Compiled improvement combat hooks. Combat reads these, not the loadout.
+var triggers: Array = []            # [{when, op, amount}, ...]
+## Compiled improvement passives (keep_overshield, shop_half_price).
+var flags: Array[StringName] = []
+
+func has_flag(flag: StringName) -> bool:
+	return flags.has(flag)
 
 func system_ids() -> Array[StringName]:
 	var out: Array[StringName] = []

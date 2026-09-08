@@ -21,6 +21,8 @@ var draw_per_turn: int = 5
 ## Per-turn subsystem auto-repair. Enemies get this by default; the player
 ## only gets it from a rare improvement (see system_regen on ShipProfile).
 var system_regen: int = 0
+## Super Capacitor: excess shield above max stays at the start of your turn.
+var keep_overshield: bool = false
 
 var systems: Dictionary = {}    # StringName -> ShipSystem
 var statuses: Dictionary = {}   # StringName -> int stacks
@@ -38,6 +40,7 @@ static func from_profile(prof: ShipProfile) -> Combatant:
 	c.max_energy = prof.power
 	c.draw_per_turn = prof.draw_per_turn
 	c.system_regen = prof.system_regen
+	c.keep_overshield = prof.has_flag(&"keep_overshield")
 	for sd in prof.systems:
 		var s := ShipSystem.from_dict(sd)
 		s.auto_repair = c.system_regen

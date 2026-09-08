@@ -78,6 +78,7 @@ func _run_tests() -> int:
 	_test_drones()
 	_test_static_coil()
 	_test_ui_fit()
+	_test_improvement_triggers()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
 	return 1 if _failed > 0 else 0
 
@@ -129,6 +130,78 @@ func _test_content() -> void:
 		_check("%s icon is unique" % String(cid), sharers.is_empty(), str(sharers))
 		_check("%s icon PNG exists" % String(cid),
 			FileAccess.file_exists("res://assets/icons/" + card.icon))
+
+	var hopper: ImprovementDef = Database.improvement(&"scrap_hopper")
+	_check("scrap hopper exists", hopper != null)
+	if hopper != null:
+		_eq("scrap hopper rarity", hopper.rarity, &"common")
+		_eq("scrap hopper text", hopper.text, "When you exhaust a card, draw a card.")
+		_eq("scrap hopper is trigger-only", hopper.stats.is_empty() and hopper.slots.is_empty(), true)
+		_eq("scrap hopper trigger count", hopper.triggers.size(), 1)
+	var relays: ImprovementDef = Database.improvement(&"freeburn_relays")
+	_check("freeburn relays exists", relays != null)
+	if relays != null:
+		_eq("freeburn relays rarity", relays.rarity, &"rare")
+		_eq("freeburn relays text", relays.text, "Whenever you play a 0-cost card, gain 1 energy.")
+	var paradox: ImprovementDef = Database.improvement(&"paradox_engine")
+	_check("paradox engine exists", paradox != null)
+	if paradox != null:
+		_eq("paradox engine rarity", paradox.rarity, &"uncommon")
+		_eq("paradox engine text", paradox.text, "Whenever your hand is empty, draw a card.")
+
+	var blank := ImprovementDef.new()
+	_eq("statless improvement is rejected", blank.from_dict(&"blank", {
+		"name": "Blank",
+	}), "does nothing")
+	var trig_only := ImprovementDef.new()
+	_eq("trigger-only improvement is accepted", trig_only.from_dict(&"trig", {
+		"name": "Trig",
+		"triggers": [{"when": "card_exhausted", "op": "draw", "amount": 1}],
+	}), "")
+	var bad_when := ImprovementDef.new()
+	_check("unknown trigger when is rejected", bad_when.from_dict(&"bad", {
+		"name": "Bad",
+		"triggers": [{"when": "on_tuesdays", "op": "draw", "amount": 1}],
+	}) != "")
+
+	var common_ids: Array[StringName] = []
+	for imp in Database.improvements_of_rarity([&"common"]):
+		common_ids.append(imp.id)
+	_check("scrap hopper is in the common pool", common_ids.has(&"scrap_hopper"))
+	var uncommon_ids: Array[StringName] = []
+	for imp2 in Database.improvements_of_rarity([&"uncommon"]):
+		uncommon_ids.append(imp2.id)
+	_check("paradox engine is in the uncommon pool", uncommon_ids.has(&"paradox_engine"))
+	var rare_ids: Array[StringName] = []
+	for imp3 in Database.improvements_of_rarity([&"rare"]):
+		rare_ids.append(imp3.id)
+	_check("freeburn relays is in the rare pool", rare_ids.has(&"freeburn_relays"))
+
+	var capacitor: ImprovementDef = Database.improvement(&"super_capacitor")
+	_check("super capacitor exists", capacitor != null)
+	if capacitor != null:
+		_eq("super capacitor rarity", capacitor.rarity, &"rare")
+		_eq("super capacitor text", capacitor.text, "Overshield no longer expires.")
+		_check("super capacitor keep_overshield flag", capacitor.flags.has(&"keep_overshield"))
+	var codes: ImprovementDef = Database.improvement(&"discount_codes")
+	_check("discount codes exists", codes != null)
+	if codes != null:
+		_eq("discount codes rarity", codes.rarity, &"uncommon")
+		_eq("discount codes text", codes.text, "Shop prices are 50% off.")
+		_check("discount codes shop_half_price flag", codes.flags.has(&"shop_half_price"))
+	_check("super capacitor is in the rare pool", rare_ids.has(&"super_capacitor"))
+	_check("discount codes is in the uncommon pool", uncommon_ids.has(&"discount_codes"))
+
+	var flag_only := ImprovementDef.new()
+	_eq("flag-only improvement is accepted", flag_only.from_dict(&"flaggy", {
+		"name": "Flaggy",
+		"flags": ["keep_overshield"],
+	}), "")
+	var bad_flag := ImprovementDef.new()
+	_check("unknown flag is rejected", bad_flag.from_dict(&"badflag", {
+		"name": "Bad Flag",
+		"flags": ["on_tuesdays"],
+	}) != "")
 
 func _test_loadout() -> void:
 	print("loadout (typed slots)")
@@ -566,6 +639,38 @@ func _test_overshield() -> void:
 	c.player.shield_regen = 2
 	c.begin_player_turn()
 	_eq("regen applies after overshield drop", c.player.shield, 4)
+
+	# Super Capacitor: player overshield persists across the turn boundary.
+	var cap_ship := StarterShips.tank()
+	cap_ship.add_improvement(&"super_capacitor")
+	var cap := CombatController.new()
+	cap.setup(cap_ship.compile(), Database.enemy(&"raider"), cap_ship)
+	_check("super capacitor compiles keep_overshield", cap.player.keep_overshield)
+	cap.player.shield_regen = 0
+	var cap_max: int = cap.player.max_shield
+	cap.player.shield = cap_max + 6
+	_eq("super capacitor starts with overshield", cap.player.overshield(), 6)
+	cap.begin_player_turn()
+	_eq("super capacitor keeps overshield across a turn", cap.player.overshield(), 6)
+	_eq("super capacitor keeps excess shield", cap.player.shield, cap_max + 6)
+
+	# Regen still fills toward cap when you are under it.
+	cap.player.shield = cap_max - 4
+	cap.player.shield_regen = 2
+	cap.begin_player_turn()
+	_eq("super capacitor still regens under cap", cap.player.shield, cap_max - 2)
+	_eq("regen under cap adds no overshield", cap.player.overshield(), 0)
+	cap.player.shield_regen = 0
+
+	# Enemy overshield still expires even with the player improvement.
+	cap.enemy.max_shield = 4
+	cap.enemy.shield = 9
+	cap.enemy.shield_regen = 0
+	cap.enemy.clear_overshield()
+	_eq("enemy overshield helper still clears", cap.enemy.overshield(), 0)
+	cap.enemy.shield = 9
+	cap.end_player_turn()
+	_eq("enemy overshield still expires with super capacitor", cap.enemy.overshield(), 0)
 
 func _test_shield_dump() -> void:
 	print("shield dump")
@@ -1053,6 +1158,36 @@ func _test_ship_status_overlay() -> void:
 	_check("single improvement strip uses the name",
 		ShipStatusOverlay.loadout_strip(run.ship).contains("Targeting Uplink"))
 
+	run.ship.improvements.clear()
+	run.ship.add_improvement(&"scrap_hopper")
+	run.ship.add_improvement(&"freeburn_relays")
+	run.ship.add_improvement(&"paradox_engine")
+	var host3 := Control.new()
+	host3.custom_minimum_size = Vector2(1280, 720)
+	add_child(host3)
+	ShipStatusOverlay.open(host3, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host3))
+	_check("overlay names Scrap Hopper", blob.contains("Scrap Hopper"))
+	_check("overlay shows scrap hopper text", blob.contains("When you exhaust a card, draw a card."))
+	_check("overlay names Freeburn Relays", blob.contains("Freeburn Relays"))
+	_check("overlay shows freeburn text", blob.contains("Whenever you play a 0-cost card, gain 1 energy."))
+	_check("overlay names Paradox Engine", blob.contains("Paradox Engine"))
+	_check("overlay shows paradox text", blob.contains("Whenever your hand is empty, draw a card."))
+
+	run.ship.add_improvement(&"super_capacitor")
+	run.ship.add_improvement(&"discount_codes")
+	var host4 := Control.new()
+	host4.custom_minimum_size = Vector2(1280, 720)
+	add_child(host4)
+	ShipStatusOverlay.open(host4, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host4))
+	_check("overlay names Super Capacitor", blob.contains("Super Capacitor"))
+	_check("overlay shows super capacitor text", blob.contains("Overshield no longer expires."))
+	_check("overlay names Discount Codes", blob.contains("Discount Codes"))
+	_check("overlay shows discount codes text", blob.contains("Shop prices are 50% off."))
+	host4.free()
+	host3.free()
+
 	host.free()
 	host2.free()
 	preview.free()
@@ -1098,6 +1233,181 @@ func _test_ui_fit() -> void:
 	var m_tiny := MapScreen.layout_metrics(layers, 4, Vector2(640, 360))
 	_check("tiny window still packs every column",
 		float(m_tiny["col_w"]) * float(layers) + float(m_tiny["pad_x"]) * 2.0 <= 640.01)
+
+func _test_improvement_triggers() -> void:
+	print("improvement triggers")
+	var salvager := StarterShips.salvager()
+	var power_before: int = salvager.compile().power
+	salvager.add_improvement(&"scrap_hopper")
+	salvager.add_improvement(&"freeburn_relays")
+	salvager.add_improvement(&"paradox_engine")
+	var prof := salvager.compile()
+	_eq("trigger improvements add no cards", prof.deck.size(), StarterShips.salvager().compile().deck.size())
+	_eq("freeburn does not raise reactor power", prof.power, power_before)
+	_eq("three trigger hooks compiled", prof.triggers.size(), 3)
+
+	# --- Scrap Hopper: exhaust draws; a normal play does not. ---
+	var hop := _combat_with_improvement(&"scrap_hopper")
+	var hopper_card := CardInstance.create(Database.card(&"salvage_claw"))
+	var hopper_drawn := CardInstance.create(Database.card(&"laser_burst"))
+	hop.deck.hand.append(hopper_card)
+	hop.deck.draw_pile.append(hopper_drawn)
+	hop.player.energy = 5
+	_eq("scrap hopper exhaust plays", hop.play_card(hopper_card), "")
+	_check("scrap hopper draws after exhaust", hop.deck.hand.has(hopper_drawn))
+	_eq("scrap hopper exhaust pile grew", hop.deck.exhaust_pile.size(), 1)
+
+	var hop_miss := _combat_with_improvement(&"scrap_hopper")
+	var laser := CardInstance.create(Database.card(&"laser_burst"))
+	var unused := CardInstance.create(Database.card(&"overheat"))
+	hop_miss.deck.hand.append(laser)
+	hop_miss.deck.draw_pile.append(unused)
+	hop_miss.player.energy = 5
+	hop_miss.enemy.evasion = 0
+	hop_miss.enemy.shield = 0
+	_eq("scrap hopper non-exhaust plays", hop_miss.play_card(laser, &"hull"), "")
+	_check("non-exhaust play does not trigger scrap hopper", not hop_miss.deck.hand.has(unused))
+	_eq("non-exhaust card was discarded", hop_miss.deck.discard_pile.size(), 1)
+
+	var hop_ref := _combat_with_improvement(&"scrap_hopper")
+	var emp := CardInstance.create(Database.card(&"emp_pulse"))
+	var ref_draw := CardInstance.create(Database.card(&"overheat"))
+	hop_ref.deck.hand.append(emp)
+	hop_ref.deck.draw_pile.append(ref_draw)
+	hop_ref.player.energy = 9
+	_check("hull EMP is refused", hop_ref.play_card(emp, &"hull") != "")
+	_check("refused play does not trigger scrap hopper", not hop_ref.deck.hand.has(ref_draw))
+
+	# --- Freeburn Relays: 0-cost play grants energy; costing cards do not. ---
+	var burn := _combat_with_improvement(&"freeburn_relays")
+	var grab := CardInstance.create(Database.card(&"scrap_grab"))
+	burn.deck.hand.append(grab)
+	burn.player.energy = 4
+	_eq("freeburn 0-cost plays", burn.play_card(grab), "")
+	_eq("0-cost play grants 1 energy", burn.player.energy, 5)
+
+	var burn_miss := _combat_with_improvement(&"freeburn_relays")
+	var paid := CardInstance.create(Database.card(&"laser_burst"))
+	burn_miss.deck.hand.append(paid)
+	burn_miss.player.energy = 4
+	burn_miss.enemy.evasion = 0
+	burn_miss.enemy.shield = 0
+	_eq("freeburn costing card plays", burn_miss.play_card(paid, &"hull"), "")
+	_eq("costing card does not trigger freeburn", burn_miss.player.energy, 3)
+
+	var burn_ref := _combat_with_improvement(&"freeburn_relays")
+	var haze := CardInstance.create(Database.card(&"ion_haze"))
+	burn_ref.deck.hand.append(haze)
+	burn_ref.player.energy = 4
+	_eq("freeburn refused 0-cost", burn_ref.play_card(haze), "card requires a target system")
+	_eq("refused 0-cost grants no energy", burn_ref.player.energy, 4)
+
+	var burn_disc := _combat_with_improvement(&"freeburn_relays")
+	var discounted := CardInstance.create(Database.card(&"laser_burst"))
+	discounted.cost_override = 0
+	burn_disc.deck.hand.append(discounted)
+	burn_disc.player.energy = 4
+	burn_disc.enemy.evasion = 0
+	burn_disc.enemy.shield = 0
+	_eq("freeburn discounted play", burn_disc.play_card(discounted, &"hull"), "")
+	_eq("play cost of 0 triggers freeburn", burn_disc.player.energy, 5)
+
+	# --- Paradox Engine: empty hand mid-turn draws; non-empty and EOT do not. ---
+	var px := _combat_with_improvement(&"paradox_engine")
+	var last := CardInstance.create(Database.card(&"laser_burst"))
+	var refill := CardInstance.create(Database.card(&"overheat"))
+	px.deck.hand.append(last)
+	px.deck.draw_pile.append(refill)
+	px.player.energy = 5
+	px.enemy.evasion = 0
+	px.enemy.shield = 0
+	_eq("paradox last-card play", px.play_card(last, &"hull"), "")
+	_check("empty hand after play draws a card", px.deck.hand.has(refill))
+	_eq("paradox leaves exactly one card", px.deck.hand.size(), 1)
+
+	var px_hold := _combat_with_improvement(&"paradox_engine")
+	var keep_a := CardInstance.create(Database.card(&"laser_burst"))
+	var keep_b := CardInstance.create(Database.card(&"plasma_bolt"))
+	var held_back := CardInstance.create(Database.card(&"overheat"))
+	px_hold.deck.hand.append(keep_a)
+	px_hold.deck.hand.append(keep_b)
+	px_hold.deck.draw_pile.append(held_back)
+	px_hold.player.energy = 5
+	px_hold.enemy.evasion = 0
+	px_hold.enemy.shield = 0
+	_eq("paradox non-empty play", px_hold.play_card(keep_a, &"hull"), "")
+	_check("hand still holding a card", px_hold.deck.hand.has(keep_b))
+	_check("non-empty hand does not trigger paradox", not px_hold.deck.hand.has(held_back))
+
+	var px_eot := _combat_with_improvement(&"paradox_engine")
+	px_eot.player.draw_per_turn = 0
+	var eot_keep := CardInstance.create(Database.card(&"laser_burst"))
+	var eot_extra := CardInstance.create(Database.card(&"overheat"))
+	px_eot.deck.hand.append(eot_keep)
+	px_eot.deck.draw_pile.append(eot_extra)
+	px_eot.end_player_turn()
+	_check("end-of-turn discard does not trigger paradox", not px_eot.deck.hand.has(eot_extra))
+	_check("eot leftover stays undrawn", px_eot.deck.draw_pile.has(eot_extra))
+
+	var px_dry := _combat_with_improvement(&"paradox_engine")
+	var dry := CardInstance.create(Database.card(&"salvage_claw"))
+	px_dry.deck.hand.append(dry)
+	px_dry.player.energy = 5
+	_eq("paradox dry play", px_dry.play_card(dry), "")
+	_eq("empty piles leave the hand empty", px_dry.deck.hand.size(), 0)
+	_eq("dry paradox does not loop the combat", px_dry.phase, CombatController.Phase.PLAYER)
+
+	# Hopper + last exhaust: draw first, so Paradox should not also fire.
+	var both_ship := StarterShips.salvager()
+	both_ship.add_improvement(&"scrap_hopper")
+	both_ship.add_improvement(&"paradox_engine")
+	var both := _combat_from_ship(both_ship)
+	var both_ex := CardInstance.create(Database.card(&"salvage_claw"))
+	var both_draw := CardInstance.create(Database.card(&"laser_burst"))
+	var both_spare := CardInstance.create(Database.card(&"overheat"))
+	both.deck.hand.append(both_ex)
+	both.deck.draw_pile.append(both_draw)
+	both.deck.draw_pile.append(both_spare)
+	both.player.energy = 5
+	_eq("hopper+paradox exhaust plays", both.play_card(both_ex), "")
+	_eq("hopper refill stops paradox", both.deck.hand.size(), 1)
+	_eq("paradox did not draw a second card", both.deck.draw_pile.size(), 1)
+
+	# --- Discount Codes: shop part prices halved; strips unchanged. ---
+	var shop_run := RunState.new()
+	shop_run.start(StarterShips.salvager(), 21)
+	var laser_def: PartDef = Database.part(&"burst_laser")
+	_eq("full shop price", RewardPool.shop_price(shop_run, laser_def.base_value),
+		laser_def.base_value)
+	shop_run.ship.add_improvement(&"discount_codes")
+	_eq("discounted shop price is half", RewardPool.shop_price(shop_run, laser_def.base_value),
+		laser_def.base_value / 2)
+	_eq("odd shop price floors", RewardPool.shop_price(shop_run, 55), 27)
+	_eq("strip cost is not a shop price", SalvageYard.credit_cost(shop_run), 40)
+	var shop_meta := MetaState.new()
+	shop_meta.grant_starting_unlocks()
+	var stock: Array = RewardPool.shop_stock(shop_run, shop_meta, 1)
+	_check("shop stock with discount is non-empty", not stock.is_empty())
+	if not stock.is_empty():
+		var offer: Dictionary = stock[0]
+		var def3: PartDef = offer["def"]
+		_eq("shop stock uses the discounted price", int(offer["price"]),
+			RewardPool.shop_price(shop_run, def3.base_value))
+
+func _combat_with_improvement(imp_id: StringName) -> CombatController:
+	var ship := StarterShips.salvager()
+	ship.add_improvement(imp_id)
+	return _combat_from_ship(ship)
+
+func _combat_from_ship(ship: ShipLoadout) -> CombatController:
+	Rng.seed_run(99)
+	var c := CombatController.new()
+	c.setup(ship.compile(), Database.enemy(&"scout_drone"), ship)
+	c.deck.hand.clear()
+	c.deck.draw_pile.clear()
+	c.deck.discard_pile.clear()
+	c.deck.exhaust_pile.clear()
+	return c
 
 func _test_meta_progression() -> void:
 	print("meta")
