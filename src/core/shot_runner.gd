@@ -51,6 +51,13 @@ static func run(host: Node, out_dir: String, win_size: Vector2i = Vector2i.ZERO)
 					screen._open_ship_status()
 					await _settle(host, 14)
 					await _capture(host, "%s/02b-ship-status.png" % out_dir)
+					var overlay: Control = screen.get("_overlay_host") as Control
+					if overlay != null:
+						var sd := overlay.find_child("SelfDestruct", true, false) as Button
+						if sd != null:
+							sd.pressed.emit()
+							await _settle(host, 10)
+							await _capture(host, "%s/02c-self-destruct-confirm.png" % out_dir)
 					if screen.has_method("_close_ship_status"):
 						screen._close_ship_status()
 					await _settle(host, 8)
