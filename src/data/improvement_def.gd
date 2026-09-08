@@ -12,16 +12,26 @@ const TRIGGER_WHENS := {
 	&"card_exhausted": true,
 	&"zero_cost_played": true,
 	&"hand_empty": true,
+	&"combat_won": true,
+	&"hull_damaged": true,
 }
 
 const TRIGGER_OPS := {
 	&"draw": true,
 	&"energy": true,
+	&"credits": true,
+	&"shield": true,
 }
 
 const KNOWN_FLAGS := {
 	&"keep_overshield": true,
 	&"shop_half_price": true,
+	&"virus_no_decay": true,
+	&"damage_as_virus": true,
+	&"hot_swap": true,
+	&"spare_clip": true,
+	&"probe_tip": true,
+	&"signal_noise": true,
 }
 
 var id: StringName
@@ -32,7 +42,9 @@ var stats: Dictionary = {}   # hull, power, draw, evasion, shield, shield_regen
 var slots: Dictionary = {}   # weapon, hull, utility
 ## Combat hooks: [{when: StringName, op: StringName, amount: int}, ...]
 var triggers: Array = []
-## Named passives compiled onto the ship (keep_overshield, shop_half_price).
+## Named passives compiled onto the ship (keep_overshield, shop_half_price,
+## virus_no_decay, damage_as_virus, hot_swap, spare_clip, probe_tip,
+## signal_noise).
 var flags: Array[StringName] = []
 
 func from_dict(def_id: StringName, d: Dictionary) -> String:

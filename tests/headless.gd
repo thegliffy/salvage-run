@@ -77,8 +77,10 @@ func _run_tests() -> int:
 	_test_sectors()
 	_test_drones()
 	_test_static_coil()
+	_test_virus()
 	_test_ui_fit()
 	_test_improvement_triggers()
+	_test_common_improvements()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
 	return 1 if _failed > 0 else 0
 
@@ -158,6 +160,16 @@ func _test_content() -> void:
 		"name": "Trig",
 		"triggers": [{"when": "card_exhausted", "op": "draw", "amount": 1}],
 	}), "")
+	var won := ImprovementDef.new()
+	_eq("combat_won credits trigger is accepted", won.from_dict(&"won", {
+		"name": "Won",
+		"triggers": [{"when": "combat_won", "op": "credits", "amount": 5}],
+	}), "")
+	var bleed := ImprovementDef.new()
+	_eq("hull_damaged shield trigger is accepted", bleed.from_dict(&"bleed", {
+		"name": "Bleed",
+		"triggers": [{"when": "hull_damaged", "op": "shield", "amount": 1}],
+	}), "")
 	var bad_when := ImprovementDef.new()
 	_check("unknown trigger when is rejected", bad_when.from_dict(&"bad", {
 		"name": "Bad",
@@ -191,6 +203,43 @@ func _test_content() -> void:
 		_check("discount codes shop_half_price flag", codes.flags.has(&"shop_half_price"))
 	_check("super capacitor is in the rare pool", rare_ids.has(&"super_capacitor"))
 	_check("discount codes is in the uncommon pool", uncommon_ids.has(&"discount_codes"))
+
+	var strain: ImprovementDef = Database.improvement(&"persistent_strain")
+	_check("persistent strain exists", strain != null)
+	if strain != null:
+		_eq("persistent strain rarity", strain.rarity, &"uncommon")
+		_eq("persistent strain text", strain.text, "Virus counters no longer decay.")
+		_check("persistent strain virus_no_decay flag", strain.flags.has(&"virus_no_decay"))
+	_check("persistent strain is in the uncommon pool", uncommon_ids.has(&"persistent_strain"))
+
+	var payload: ImprovementDef = Database.improvement(&"pure_payload")
+	_check("pure payload exists", payload != null)
+	if payload != null:
+		_eq("pure payload rarity", payload.rarity, &"rare")
+		_eq("pure payload text", payload.text,
+			"Damage you deal becomes virus. You can no longer target subsystems.")
+		_check("pure payload damage_as_virus flag", payload.flags.has(&"damage_as_virus"))
+	_check("pure payload is in the rare pool", rare_ids.has(&"pure_payload"))
+
+	var common_pack := {
+		&"patch_weld": "+4 hull",
+		&"trim_ballast": "+5 evasion",
+		&"coolant_loop": "+2 shield, +1 shield regen",
+		&"jury_battery": "+1 power",
+		&"salvage_magnet": "+5 credits at the end of each fight.",
+		&"hot_swap": "The first card you play each turn costs 1 less.",
+		&"spare_clip": "Start each combat with +1 card in hand.",
+		&"bleed_valve": "When you take hull damage, gain 1 shield.",
+		&"probe_tip": "The first virus applied each combat is +1.",
+		&"signal_noise": "Enemies with virus have -5 evasion.",
+	}
+	for cid in common_pack:
+		var def: ImprovementDef = Database.improvement(cid)
+		_check("%s exists" % String(cid), def != null)
+		if def != null:
+			_eq("%s rarity" % String(cid), def.rarity, &"common")
+			_eq("%s text" % String(cid), def.text, common_pack[cid])
+		_check("%s is in the common pool" % String(cid), common_ids.has(cid))
 
 	var flag_only := ImprovementDef.new()
 	_eq("flag-only improvement is accepted", flag_only.from_dict(&"flaggy", {
@@ -368,6 +417,10 @@ func _test_targeting_rules() -> void:
 	_check("a damage card may target the hull",
 		Database.card(&"laser_burst").can_target_hull())
 	_check("a suppression card may not", not Database.card(&"emp_pulse").can_target_hull())
+	_check("computer spike may not target the hull",
+		not Database.card(&"computer_spike").can_target_hull())
+	_check("infected burst may (its damage still lands)",
+		Database.card(&"infected_burst").can_target_hull())
 	_check("a mixed card may (its damage still lands)",
 		Database.card(&"weak_point").can_target_hull())
 
@@ -1185,6 +1238,40 @@ func _test_ship_status_overlay() -> void:
 	_check("overlay shows super capacitor text", blob.contains("Overshield no longer expires."))
 	_check("overlay names Discount Codes", blob.contains("Discount Codes"))
 	_check("overlay shows discount codes text", blob.contains("Shop prices are 50% off."))
+	run.ship.add_improvement(&"persistent_strain")
+	var host5 := Control.new()
+	host5.custom_minimum_size = Vector2(1280, 720)
+	add_child(host5)
+	ShipStatusOverlay.open(host5, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host5))
+	_check("overlay names Persistent Strain", blob.contains("Persistent Strain"))
+	_check("overlay shows persistent strain text", blob.contains("Virus counters no longer decay."))
+	run.ship.add_improvement(&"pure_payload")
+	var host6 := Control.new()
+	host6.custom_minimum_size = Vector2(1280, 720)
+	add_child(host6)
+	ShipStatusOverlay.open(host6, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host6))
+	_check("overlay names Pure Payload", blob.contains("Pure Payload"))
+	_check("overlay shows pure payload text",
+		blob.contains("Damage you deal becomes virus. You can no longer target subsystems."))
+	run.ship.improvements.clear()
+	run.ship.add_improvement(&"hot_swap")
+	run.ship.add_improvement(&"salvage_magnet")
+	var host7 := Control.new()
+	host7.custom_minimum_size = Vector2(1280, 720)
+	add_child(host7)
+	ShipStatusOverlay.open(host7, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host7))
+	_check("overlay names Hot Swap", blob.contains("Hot Swap"))
+	_check("overlay shows hot swap text",
+		blob.contains("The first card you play each turn costs 1 less."))
+	_check("overlay names Salvage Magnet", blob.contains("Salvage Magnet"))
+	_check("overlay shows salvage magnet text",
+		blob.contains("+5 credits at the end of each fight."))
+	host7.free()
+	host6.free()
+	host5.free()
 	host4.free()
 	host3.free()
 
@@ -1394,6 +1481,129 @@ func _test_improvement_triggers() -> void:
 		_eq("shop stock uses the discounted price", int(offer["price"]),
 			RewardPool.shop_price(shop_run, def3.base_value))
 
+func _test_common_improvements() -> void:
+	print("common improvements")
+	var base := StarterShips.salvager()
+	var base_prof := base.compile()
+
+	var weld := StarterShips.salvager()
+	weld.add_improvement(&"patch_weld")
+	_eq("patch weld +4 hull", weld.compile().max_hull, base_prof.max_hull + 4)
+
+	var trim := StarterShips.salvager()
+	trim.add_improvement(&"trim_ballast")
+	_eq("trim ballast +5 evasion", trim.compile().evasion, base_prof.evasion + 5)
+
+	var loop := StarterShips.salvager()
+	loop.add_improvement(&"coolant_loop")
+	var loop_p := loop.compile()
+	_eq("coolant loop +2 shield", loop_p.max_shield, base_prof.max_shield + 2)
+	_eq("coolant loop +1 shield regen", loop_p.shield_regen, base_prof.shield_regen + 1)
+
+	var jury := StarterShips.salvager()
+	jury.add_improvement(&"jury_battery")
+	_eq("jury battery +1 power", jury.compile().power, base_prof.power + 1)
+
+	# Salvage Magnet: +5 credits on victory via combat_won → credits.
+	var mag := _combat_with_improvement(&"salvage_magnet")
+	_eq("salvage magnet compiles a combat_won hook", mag.improvement_triggers.size(), 1)
+	var reward0: int = mag.pending_credits
+	mag.enemy.evasion = 0
+	mag.enemy.shield = 0
+	mag.enemy.hull = 1
+	mag.player.energy = 9
+	var finisher := CardInstance.create(Database.card(&"laser_burst"))
+	mag.deck.hand.append(finisher)
+	_eq("salvage magnet kill plays", mag.play_card(finisher, &"hull"), "")
+	_check("salvage magnet wins the fight", mag.victory)
+	_eq("salvage magnet adds 5 credits", mag.pending_credits, reward0 + 5)
+
+	# Hot Swap: first card each turn costs 1 less; second is full price.
+	var swap := _combat_with_improvement(&"hot_swap")
+	_check("hot swap compiles the flag", swap.player.hot_swap)
+	swap.enemy.evasion = 0
+	swap.enemy.shield = 0
+	swap.player.energy = 3
+	var first := CardInstance.create(Database.card(&"laser_burst"))
+	var second := CardInstance.create(Database.card(&"laser_burst"))
+	swap.deck.hand.append(first)
+	swap.deck.hand.append(second)
+	_eq("hot swap first-card cost", swap.card_play_cost(first), 0)
+	_eq("hot swap first play", swap.play_card(first, &"hull"), "")
+	_eq("hot swap spent 0 on the first card", swap.player.energy, 3)
+	_eq("hot swap second-card cost", swap.card_play_cost(second), 1)
+	_eq("hot swap second play", swap.play_card(second, &"hull"), "")
+	_eq("hot swap spent 1 on the second card", swap.player.energy, 2)
+	swap.begin_player_turn()
+	var third := CardInstance.create(Database.card(&"laser_burst"))
+	swap.deck.hand.append(third)
+	_eq("hot swap resets next turn", swap.card_play_cost(third), 0)
+
+	# Spare Clip: opening hand is draw_per_turn + 1. Do not use the helper
+	# that empties piles after setup.
+	var clip_ship := StarterShips.salvager()
+	clip_ship.add_improvement(&"spare_clip")
+	var clip := CombatController.new()
+	clip.setup(clip_ship.compile(), Database.enemy(&"scout_drone"), clip_ship)
+	_check("spare clip compiles the flag", clip.player.spare_clip)
+	_eq("spare clip opening hand is +1", clip.deck.hand.size(),
+		clip.player.draw_per_turn + 1)
+	var no_clip := CombatController.new()
+	no_clip.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	_eq("unflagged opening hand is draw_per_turn",
+		no_clip.deck.hand.size(), no_clip.player.draw_per_turn)
+
+	# Bleed Valve: hull damage (enemy shot or self) grants 1 shield.
+	var bleed := _combat_with_improvement(&"bleed_valve")
+	bleed.player.evasion = 0
+	bleed.player.shield = 0
+	bleed.player.max_shield = 10
+	var bh: int = bleed.player.hull
+	bleed.resolver.run([{"op": "damage_hull", "amount": 4}], {
+		"source": bleed.enemy, "opponent": bleed.player, "target_system": &"",
+	})
+	_eq("bleed valve hull still drops", bleed.player.hull, bh - 4)
+	_eq("bleed valve grants 1 shield", bleed.player.shield, 1)
+	var own := CardInstance.create(Database.card(&"overheat"))
+	bleed.deck.hand.append(own)
+	bleed.player.energy = 9
+	bleed.player.shield = 0
+	bleed.enemy.evasion = 0
+	bleed.enemy.shield = 0
+	var bh2: int = bleed.player.hull
+	_eq("bleed valve overheat plays", bleed.play_card(own, &"hull"), "")
+	_eq("overheat still self-damages with bleed valve", bleed.player.hull, bh2 - 3)
+	_eq("overheat also trips bleed valve", bleed.player.shield, 1)
+
+	# Probe Tip: first virus application this combat is +1; later applies are raw.
+	var tip := _combat_with_improvement(&"probe_tip")
+	_check("probe tip compiles the flag", tip.player.probe_tip)
+	tip.player.energy = 9
+	var spike_t := CardInstance.create(Database.card(&"computer_spike"))
+	tip.deck.hand.append(spike_t)
+	_eq("probe tip first spike plays", tip.play_card(spike_t, &"weapons"), "")
+	_eq("first virus apply is +1", tip.enemy.virus(), 2)
+	var spike_t2 := CardInstance.create(Database.card(&"computer_spike"))
+	tip.deck.hand.append(spike_t2)
+	_eq("probe tip second spike plays", tip.play_card(spike_t2, &"weapons"), "")
+	_eq("later virus apply is raw", tip.enemy.virus(), 3)
+
+	# Signal Noise: infected enemies lose 5 evasion.
+	var noise := _combat_with_improvement(&"signal_noise")
+	_check("signal noise compiles the flag", noise.player.signal_noise)
+	_eq("signal noise copies the penalty onto the enemy",
+		noise.enemy.virus_evasion_mod, CombatController.SIGNAL_NOISE_EVASION)
+	noise.enemy.evasion = 10
+	var ev0: int = noise.enemy.effective_evasion()
+	noise.enemy.add_virus(1)
+	_eq("virus drops enemy evasion by 5", noise.enemy.effective_evasion(), ev0 - 5)
+	var quiet := CombatController.new()
+	quiet.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	quiet.enemy.evasion = 10
+	var q0: int = quiet.enemy.effective_evasion()
+	quiet.enemy.add_virus(1)
+	_eq("unflagged virus does not cut evasion", quiet.enemy.effective_evasion(), q0)
+
 func _combat_with_improvement(imp_id: StringName) -> CombatController:
 	var ship := StarterShips.salvager()
 	ship.add_improvement(imp_id)
@@ -1601,6 +1811,17 @@ func _test_card_balance() -> void:
 	_eq("static_buildup+ scale", _op_amt(&"static_buildup", true, "damage_system"), 3)
 	_eq("static_buildup scale_by", String(buildup.effects[0].get("scale_by", "")), "cards_played_this_turn")
 	_check("static_buildup may target the hull", buildup.can_target_hull())
+
+	_eq("computer_spike cost", Database.card(&"computer_spike").cost, 1)
+	_eq("computer_spike suppress", _op_amt(&"computer_spike", false, "suppress_system"), 2)
+	_eq("computer_spike virus", _op_amt(&"computer_spike", false, "apply_virus"), 1)
+	_eq("firewall_bypass cost", Database.card(&"firewall_bypass").cost, 0)
+	_eq("infected_burst cost", Database.card(&"infected_burst").cost, 2)
+	_eq("infected_burst damage", _op_amt(&"infected_burst", false, "damage_system"), 5)
+	_eq("infected_burst virus", _op_amt(&"infected_burst", false, "apply_virus"), 2)
+	_eq("infected_burst+ damage", _op_amt(&"infected_burst", true, "damage_system"), 7)
+	_eq("payload_dump virus", _op_amt(&"payload_dump", false, "apply_virus"), 10)
+	_eq("payload_dump+ virus", _op_amt(&"payload_dump", true, "apply_virus"), 14)
 
 	# Playing the upgraded energy card must discard, not exhaust.
 	Rng.seed_run(3)
@@ -1880,6 +2101,414 @@ func _test_static_coil() -> void:
 	c3.begin_player_turn()
 	_eq("play count resets next turn", c3.cards_played_this_turn, 0)
 
+func _test_virus() -> void:
+	print("virus")
+	var inj: PartDef = Database.part(&"signal_injector")
+	_check("signal_injector exists", inj != null)
+	_eq("signal_injector slot", inj.slot, ShipLoadout.SLOT_WEAPON)
+	_eq("signal_injector tier", inj.tier, 2)
+	_eq("signal_injector system", inj.system, &"weapons")
+	_eq("signal_injector mass", inj.mass, 2)
+	_eq("signal_injector integrity", inj.integrity, 8)
+	_eq("signal_injector power_draw", inj.power_draw, 2)
+	_eq("signal_injector base_value", inj.base_value, 120)
+	_eq("signal_injector unlock_cost", inj.unlock_cost, 200)
+	_eq("signal_injector payout rarity is uncommon",
+		RewardPool.RARITY_BY_TIER[inj.tier], &"uncommon")
+	_check("signal_injector is yard-gated, not a starter", inj.unlock_cost > 0)
+	var emp: PartDef = Database.part(&"emp_projector")
+	var rack: PartDef = Database.part(&"missile_rack")
+	var rail: PartDef = Database.part(&"aegis_rail")
+	var rare_gun: PartDef = Database.part(&"capacitor_cannon")
+	_eq("signal_injector value matches EMP peer", inj.base_value, emp.base_value)
+	_eq("signal_injector unlock matches EMP peer", inj.unlock_cost, emp.unlock_cost)
+	_check("signal_injector value is in the tier-2 weapon band",
+		inj.base_value >= mini(rack.base_value, rail.base_value)
+		and inj.base_value <= maxi(rack.base_value, rail.base_value))
+	_check("signal_injector unlock is below rare weapons",
+		inj.unlock_cost < rare_gun.unlock_cost)
+	_eq("signal_injector icon filename", inj.icon, "signal_injector.png")
+	_eq("signal_injector grants 3 cards", inj.grants.size(), 3)
+	_eq("signal_injector grants 2 computer_spike", inj.grants.count(&"computer_spike"), 2)
+	_eq("signal_injector grants 1 firewall_bypass", inj.grants.count(&"firewall_bypass"), 1)
+
+	var ship := ShipLoadout.new("Injector")
+	ship.capacity = {ShipLoadout.SLOT_WEAPON: 4, ShipLoadout.SLOT_HULL: 3,
+		ShipLoadout.SLOT_UTILITY: 4}
+	_check("installs in a weapon slot", ship.install(inj) != null)
+	var prof := ship.compile()
+	_eq("compiled deck is the three grants", prof.deck.size(), 3)
+	_eq("compiled computer_spike", prof.deck.count(&"computer_spike"), 2)
+	_eq("compiled firewall_bypass", prof.deck.count(&"firewall_bypass"), 1)
+
+	var icon := UITheme.module_icon(inj)
+	_check("signal injector icon is a TextureRect", icon is TextureRect)
+	if icon.texture == null:
+		_check("missing signal_injector.png hides the TextureRect", not icon.visible)
+	else:
+		_check("signal_injector.png wired when present", icon.visible)
+	icon.free()
+
+	var meta := MetaState.new()
+	meta.grant_starting_unlocks()
+	_check("signal_injector starts locked", not meta.is_unlocked(&"signal_injector"))
+	_check("signal_injector is in the unlock shop", meta.unlockable().any(
+		func(p: PartDef): return p.id == &"signal_injector"))
+	_eq("tier 2 offers as uncommon", RewardPool.RARITY_BY_TIER[2], &"uncommon")
+	meta.salvage = inj.unlock_cost
+	_check("signal_injector unlocks", meta.unlock(&"signal_injector"))
+	_check("unlocked signal_injector is in the reward pool", meta.available_parts().any(
+		func(p: PartDef): return p.id == &"signal_injector"))
+
+	var spike_def: CardDef = Database.card(&"computer_spike")
+	_eq("computer_spike kind is tech", spike_def.kind, &"tech")
+	_eq("computer_spike rarity", spike_def.rarity, &"uncommon")
+	_eq("computer_spike cost", spike_def.cost, 1)
+	_eq("computer_spike target", spike_def.target, CardDef.Target.ENEMY_SYSTEM)
+	_eq("computer_spike suppress", _op_amt(&"computer_spike", false, "suppress_system"), 2)
+	_eq("computer_spike virus", _op_amt(&"computer_spike", false, "apply_virus"), 1)
+	_eq("computer_spike+ suppress", _op_amt(&"computer_spike", true, "suppress_system"), 3)
+	_eq("computer_spike+ virus", _op_amt(&"computer_spike", true, "apply_virus"), 2)
+
+	var bypass_def: CardDef = Database.card(&"firewall_bypass")
+	_eq("firewall_bypass kind is tech", bypass_def.kind, &"tech")
+	_eq("firewall_bypass rarity", bypass_def.rarity, &"uncommon")
+	_eq("firewall_bypass cost", bypass_def.cost, 0)
+	_eq("firewall_bypass target", bypass_def.target, CardDef.Target.NONE)
+	var spike_tip := UITheme.card_tip(CardInstance.create(spike_def))
+	_check("computer_spike tip names virus", spike_tip.contains("virus") or spike_tip.contains("Virus"))
+
+	# Spike applies suppress + 1 virus; virus does not tick on apply.
+	Rng.seed_run(41)
+	var c := CombatController.new()
+	c.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c.enemy.evasion = 0
+	c.enemy.shield = 8
+	c.player.energy = 9
+	var hull0: int = c.enemy.hull
+	var shield0: int = c.enemy.shield
+	var spike := CardInstance.create(spike_def)
+	c.deck.hand.append(spike)
+	_eq("computer_spike plays", c.play_card(spike, &"weapons"), "")
+	_eq("spike suppresses 2 turns", c.enemy.system(&"weapons").offline_turns, 2)
+	_eq("spike applies 1 virus", c.enemy.virus(), 1)
+	_eq("virus does not tick on apply", c.enemy.hull, hull0)
+	_eq("virus apply does not touch shields", c.enemy.shield, shield0)
+	_check("apply logged", _has_event(c, "virus_apply"))
+
+	# Player-turn start must not tick the enemy (would double-fire with enemy start).
+	c.begin_player_turn()
+	_eq("player turn does not tick enemy virus", c.enemy.virus(), 1)
+	_eq("player turn does not damage via enemy virus", c.enemy.hull, hull0)
+
+	# Tick on the infected combatant's turn start: damage then decay.
+	# 3 counters → 3 hull, then 2 left. Direct hull, shields ignored.
+	Rng.seed_run(42)
+	var c2 := CombatController.new()
+	c2.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c2.enemy.evasion = 0
+	c2.enemy.shield = 6
+	c2.enemy.max_shield = 6
+	c2.enemy.add_virus(3)
+	var hull2: int = c2.enemy.hull
+	var shield2: int = c2.enemy.shield
+	c2.end_player_turn()
+	_eq("virus tick deals 1 hull per counter", c2.enemy.hull, hull2 - 3)
+	_eq("virus then decays by 1", c2.enemy.virus(), 2)
+	_eq("virus tick ignores shields", c2.enemy.shield, mini(c2.enemy.max_shield, shield2 + c2.enemy.effective_shield_regen()))
+	_check("tick logged", _has_event(c2, "virus_tick"))
+	_check("decay logged", _has_event(c2, "virus_decay"))
+	# One enemy turn elapsed (plus the following player-turn start). Still 2.
+	_eq("virus ticked once, not twice", c2.enemy.virus(), 2)
+
+	# Bypass doubles current counters.
+	Rng.seed_run(43)
+	var c3 := CombatController.new()
+	c3.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c3.player.energy = 9
+	c3.enemy.add_virus(2)
+	var bypass := CardInstance.create(bypass_def)
+	c3.deck.hand.append(bypass)
+	_eq("firewall_bypass plays", c3.play_card(bypass), "")
+	_eq("bypass doubles virus", c3.enemy.virus(), 4)
+	_check("double logged", _has_event(c3, "virus_double"))
+
+	# Zero virus: still playable, no-op with a log line.
+	Rng.seed_run(44)
+	var c4 := CombatController.new()
+	c4.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c4.player.energy = 0
+	_eq("zero virus before bypass", c4.enemy.virus(), 0)
+	var bypass0 := CardInstance.create(bypass_def)
+	c4.deck.hand.append(bypass0)
+	_eq("zero-virus bypass is playable", c4.play_card(bypass0), "")
+	_eq("zero-virus bypass stays 0", c4.enemy.virus(), 0)
+	var noop := _find_event(c4, "virus_double")
+	_check("zero-virus bypass logged a noop", not noop.is_empty() and bool(noop.get("noop", false)))
+
+	# Lethal tick ends the fight before the enemy acts.
+	Rng.seed_run(45)
+	var c5 := CombatController.new()
+	c5.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c5.enemy.add_virus(c5.enemy.hull)
+	var player_hull: int = c5.player.hull
+	c5.end_player_turn()
+	_check("lethal virus wins the fight", c5.victory)
+	_eq("lethal virus ends combat", c5.phase, CombatController.Phase.DONE)
+	_eq("enemy did not fire after lethal virus", c5.player.hull, player_hull)
+
+	# Player virus ticks on the player's turn start only.
+	Rng.seed_run(46)
+	var c6 := CombatController.new()
+	c6.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c6.player.add_virus(2)
+	var ph: int = c6.player.hull
+	c6.begin_player_turn()
+	_eq("player virus deals then decays", c6.player.hull, ph - 2)
+	_eq("player virus remaining", c6.player.virus(), 1)
+
+	var arr: PartDef = Database.part(&"contagion_array")
+	_check("contagion_array exists", arr != null)
+	_eq("contagion_array slot", arr.slot, ShipLoadout.SLOT_WEAPON)
+	_eq("contagion_array tier", arr.tier, 3)
+	_eq("contagion_array system", arr.system, &"weapons")
+	_eq("contagion_array mass", arr.mass, 3)
+	_eq("contagion_array integrity", arr.integrity, 10)
+	_eq("contagion_array power_draw", arr.power_draw, 3)
+	_eq("contagion_array base_value", arr.base_value, 210)
+	_eq("contagion_array unlock_cost", arr.unlock_cost, 390)
+	_eq("contagion_array payout rarity is rare",
+		RewardPool.RARITY_BY_TIER[arr.tier], &"rare")
+	_check("contagion_array is yard-gated, not a starter", arr.unlock_cost > 0)
+	var lance: PartDef = Database.part(&"carrion_lance")
+	var cannon: PartDef = Database.part(&"capacitor_cannon")
+	_check("contagion_array value is in the tier-3 weapon band",
+		arr.base_value >= mini(lance.base_value, cannon.base_value)
+		and arr.base_value <= maxi(lance.base_value, cannon.base_value))
+	_check("contagion_array unlock is in the tier-3 weapon band",
+		arr.unlock_cost >= mini(lance.unlock_cost, cannon.unlock_cost)
+		and arr.unlock_cost <= maxi(lance.unlock_cost, cannon.unlock_cost))
+	_eq("contagion_array icon filename", arr.icon, "contagion_array.png")
+	_eq("contagion_array grants 3 cards", arr.grants.size(), 3)
+	_eq("contagion_array grants infected_burst", arr.grants.count(&"infected_burst"), 1)
+	_eq("contagion_array grants payload_dump", arr.grants.count(&"payload_dump"), 1)
+	_eq("contagion_array reuses firewall_bypass", arr.grants.count(&"firewall_bypass"), 1)
+	_check("firewall_bypass is a single card def", Database.card(&"firewall_bypass") != null)
+
+	var rare_ship := ShipLoadout.new("Array")
+	rare_ship.capacity = {ShipLoadout.SLOT_WEAPON: 4, ShipLoadout.SLOT_HULL: 3,
+		ShipLoadout.SLOT_UTILITY: 4}
+	_check("contagion_array installs in a weapon slot", rare_ship.install(arr) != null)
+	var rare_prof := rare_ship.compile()
+	_eq("contagion compiled deck is the three grants", rare_prof.deck.size(), 3)
+	_eq("compiled infected_burst", rare_prof.deck.count(&"infected_burst"), 1)
+	_eq("compiled payload_dump", rare_prof.deck.count(&"payload_dump"), 1)
+	_eq("compiled reused firewall_bypass", rare_prof.deck.count(&"firewall_bypass"), 1)
+
+	var arr_icon := UITheme.module_icon(arr)
+	_check("contagion array icon is a TextureRect", arr_icon is TextureRect)
+	if arr_icon.texture == null:
+		_check("missing contagion_array.png hides the TextureRect", not arr_icon.visible)
+	else:
+		_check("contagion_array.png wired when present", arr_icon.visible)
+	arr_icon.free()
+
+	var rare_meta := MetaState.new()
+	rare_meta.grant_starting_unlocks()
+	_check("contagion_array starts locked", not rare_meta.is_unlocked(&"contagion_array"))
+	_check("contagion_array is in the unlock shop", rare_meta.unlockable().any(
+		func(p: PartDef): return p.id == &"contagion_array"))
+	rare_meta.salvage = arr.unlock_cost
+	_check("contagion_array unlocks", rare_meta.unlock(&"contagion_array"))
+	_check("unlocked contagion_array is in the reward pool", rare_meta.available_parts().any(
+		func(p: PartDef): return p.id == &"contagion_array"))
+
+	var burst_def: CardDef = Database.card(&"infected_burst")
+	_eq("infected_burst kind is attack", burst_def.kind, &"attack")
+	_eq("infected_burst rarity", burst_def.rarity, &"rare")
+	_eq("infected_burst cost", burst_def.cost, 2)
+	_eq("infected_burst target", burst_def.target, CardDef.Target.ENEMY_SYSTEM)
+	_eq("infected_burst damage", _op_amt(&"infected_burst", false, "damage_system"), 5)
+	_eq("infected_burst virus amount", _op_amt(&"infected_burst", false, "apply_virus"), 2)
+	_eq("infected_burst+ damage", _op_amt(&"infected_burst", true, "damage_system"), 7)
+	_eq("infected_burst+ virus stays 2", _op_amt(&"infected_burst", true, "apply_virus"), 2)
+
+	var dump_def: CardDef = Database.card(&"payload_dump")
+	_eq("payload_dump kind is tech", dump_def.kind, &"tech")
+	_eq("payload_dump rarity", dump_def.rarity, &"rare")
+	_eq("payload_dump cost", dump_def.cost, 2)
+	_eq("payload_dump target", dump_def.target, CardDef.Target.NONE)
+	_eq("payload_dump virus amount", _op_amt(&"payload_dump", false, "apply_virus"), 10)
+	_eq("payload_dump+ virus", _op_amt(&"payload_dump", true, "apply_virus"), 14)
+	_check("payload_dump exhausts", dump_def.has_keyword(&"exhaust", false))
+	_check("payload_dump+ still exhausts", dump_def.has_keyword(&"exhaust", true))
+
+	# Infected Burst: 5 system damage + 2 virus. Virus does not tick on apply.
+	Rng.seed_run(47)
+	var c7 := CombatController.new()
+	c7.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c7.enemy.evasion = 0
+	c7.enemy.shield = 0
+	c7.player.energy = 9
+	var w7: ShipSystem = c7.enemy.system(&"weapons")
+	var sys7: int = w7.integrity
+	var hull7: int = c7.enemy.hull
+	var burst := CardInstance.create(burst_def)
+	c7.deck.hand.append(burst)
+	_eq("infected_burst plays", c7.play_card(burst, &"weapons"), "")
+	_eq("infected_burst deals 5 system damage", w7.integrity, sys7 - 5)
+	_eq("infected_burst applies 2 virus", c7.enemy.virus(), 2)
+	_eq("infected_burst does not tick virus on apply", c7.enemy.hull, hull7)
+	_check("infected_burst apply logged", _has_event(c7, "virus_apply"))
+
+	# Payload Dump: 10 virus, no direct hull/system damage, exhausts.
+	Rng.seed_run(48)
+	var c8 := CombatController.new()
+	c8.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c8.enemy.evasion = 0
+	c8.enemy.shield = 0
+	c8.player.energy = 9
+	var hull8: int = c8.enemy.hull
+	var sys8 := 0
+	for sid8 in c8.enemy.systems:
+		sys8 += c8.enemy.systems[sid8].integrity
+	var dump := CardInstance.create(dump_def)
+	c8.deck.hand.append(dump)
+	_eq("payload_dump plays", c8.play_card(dump), "")
+	_eq("payload_dump applies 10 virus", c8.enemy.virus(), 10)
+	_eq("payload_dump deals no hull on apply", c8.enemy.hull, hull8)
+	var sys8_after := 0
+	for sid8b in c8.enemy.systems:
+		sys8_after += c8.enemy.systems[sid8b].integrity
+	_eq("payload_dump deals no system damage", sys8_after, sys8)
+	_check("payload_dump exhausted", c8.deck.exhaust_pile.has(dump))
+	_check("payload_dump apply logged", _has_event(c8, "virus_apply"))
+
+	# Persistent Strain: damage still ticks, enemy counters do not decay.
+	var hold := _combat_with_improvement(&"persistent_strain")
+	_check("persistent strain compiles virus_no_decay", hold.player.virus_no_decay)
+	_check("enemy does not inherit virus_no_decay", not hold.enemy.virus_no_decay)
+	hold.enemy.evasion = 0
+	hold.enemy.shield = 0
+	hold.enemy.add_virus(3)
+	var hull_h: int = hold.enemy.hull
+	hold.end_player_turn()
+	_eq("persistent strain still deals 1 hull per counter", hold.enemy.hull, hull_h - 3)
+	_eq("persistent strain does not decay enemy virus", hold.enemy.virus(), 3)
+	var hold_ev := _find_event(hold, "virus_decay")
+	_check("persistent strain logged a hold", bool(hold_ev.get("persisted", false)))
+
+	# Player-side virus still decays — the flag is "virus you put on them".
+	hold.player.add_virus(2)
+	var ph_hold: int = hold.player.hull
+	hold.begin_player_turn()
+	_eq("player virus still damages with persistent strain", hold.player.hull, ph_hold - 2)
+	_eq("player virus still decays with persistent strain", hold.player.virus(), 1)
+
+	# Pure Payload: outgoing damage becomes virus 1:1; damage cannot pick systems.
+	var pure := _combat_with_improvement(&"pure_payload")
+	_check("pure payload compiles damage_as_virus", pure.player.damage_as_virus)
+	_check("enemy does not inherit damage_as_virus", not pure.enemy.damage_as_virus)
+	pure.enemy.evasion = 0
+	pure.enemy.shield = 8
+	pure.player.energy = 9
+	var hull_p: int = pure.enemy.hull
+	var wep_p: int = pure.enemy.system(&"weapons").integrity
+	var laser_p := CardInstance.create(Database.card(&"laser_burst"))
+	pure.deck.hand.append(laser_p)
+	_eq("pure payload refuses system targeting on damage cards",
+		pure.play_card(laser_p, &"weapons"), "Laser Burst can only target the hull")
+	_eq("refused laser spends no energy", pure.player.energy, 9)
+	_eq("refused laser deals no virus", pure.enemy.virus(), 0)
+	_eq("refused laser deals no system damage",
+		pure.enemy.system(&"weapons").integrity, wep_p)
+
+	var laser_h := CardInstance.create(Database.card(&"laser_burst"))
+	pure.deck.hand.append(laser_h)
+	_eq("pure payload laser at hull plays", pure.play_card(laser_h, &"hull"), "")
+	_eq("laser 5 damage becomes 5 virus", pure.enemy.virus(), 5)
+	_eq("converted laser deals no hull", pure.enemy.hull, hull_p)
+	_eq("converted laser deals no system damage",
+		pure.enemy.system(&"weapons").integrity, wep_p)
+	_eq("converted laser does not strip shields", pure.enemy.shield, 8)
+	var conv := _find_event(pure, "virus_apply")
+	_check("conversion logged as virus_apply", not conv.is_empty())
+	_check("conversion marked from_damage", bool(conv.get("from_damage", false)))
+
+	# Suppress-only cards may still pick a system.
+	var spike_p := CardInstance.create(Database.card(&"computer_spike"))
+	pure.deck.hand.append(spike_p)
+	_eq("pure payload spike still targets a system",
+		pure.play_card(spike_p, &"weapons"), "")
+	_eq("spike still suppresses under pure payload",
+		pure.enemy.system(&"weapons").offline_turns, 2)
+	_eq("spike virus stacks on converted laser", pure.enemy.virus(), 6)
+
+	# Mixed damage+suppress: suppress lands on the system, damage becomes virus.
+	var weak := CardInstance.create(Database.card(&"weak_point"))
+	pure.deck.hand.append(weak)
+	var eng_w: int = pure.enemy.system(&"engines").integrity
+	_eq("weak point may still pick a system", pure.play_card(weak, &"engines"), "")
+	_eq("weak point suppress lands",
+		pure.enemy.system(&"engines").offline_turns, 1)
+	_eq("weak point damage becomes virus, not system HP",
+		pure.enemy.system(&"engines").integrity, eng_w)
+	_eq("weak point converted 4 damage to virus", pure.enemy.virus(), 10)
+
+	# Infected Burst forced to hull: 5 damage → virus + 2 apply_virus.
+	var burst_p := CardInstance.create(Database.card(&"infected_burst"))
+	pure.deck.hand.append(burst_p)
+	_eq("infected burst refused at a system",
+		pure.play_card(burst_p, &"weapons"), "Infected Burst can only target the hull")
+	var burst_h := CardInstance.create(Database.card(&"infected_burst"))
+	pure.deck.hand.append(burst_h)
+	_eq("infected burst at hull plays", pure.play_card(burst_h, &"hull"), "")
+	_eq("infected burst converts 5 and applies 2", pure.enemy.virus(), 17)
+	_eq("infected burst still deals no hull under pure payload", pure.enemy.hull, hull_p)
+
+	# Overheat self-damage is not converted.
+	var heat := CardInstance.create(Database.card(&"overheat"))
+	pure.deck.hand.append(heat)
+	var own_h: int = pure.player.hull
+	_eq("overheat at hull plays", pure.play_card(heat, &"hull"), "")
+	_eq("overheat outgoing 8 becomes virus", pure.enemy.virus(), 25)
+	_eq("overheat still damages own hull", pure.player.hull, own_h - 3)
+
+	# Miss still misses — no virus.
+	var miss_c := _combat_with_improvement(&"pure_payload")
+	miss_c.enemy.evasion = 100
+	miss_c.enemy.shield = 0
+	miss_c.player.energy = 9
+	var miss_laser := CardInstance.create(Database.card(&"laser_burst"))
+	miss_c.deck.hand.append(miss_laser)
+	_eq("pure payload miss plays", miss_c.play_card(miss_laser, &"hull"), "")
+	_eq("evaded shot applies no virus", miss_c.enemy.virus(), 0)
+	_check("miss logged", _has_event(miss_c, "miss"))
+
+	# Without the flag, laser still damages systems.
+	var plain := CombatController.new()
+	plain.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	plain.enemy.evasion = 0
+	plain.enemy.shield = 0
+	plain.player.energy = 9
+	var wep0: int = plain.enemy.system(&"weapons").integrity
+	var laser_plain := CardInstance.create(Database.card(&"laser_burst"))
+	plain.deck.hand.append(laser_plain)
+	_eq("unflagged laser still plays at weapons",
+		plain.play_card(laser_plain, &"weapons"), "")
+	_eq("unflagged laser still damages the system",
+		plain.enemy.system(&"weapons").integrity, wep0 - 5)
+	_eq("unflagged laser applies no virus", plain.enemy.virus(), 0)
+
+func _has_event(c: CombatController, kind: String) -> bool:
+	return not _find_event(c, kind).is_empty()
+
+func _find_event(c: CombatController, kind: String) -> Dictionary:
+	for e in c.events:
+		if String(e.get("type", "")) == kind:
+			return e
+	return {}
+
 # --- Balance simulator -------------------------------------------------------
 
 func _run_sim(count: int, base_seed: int) -> void:
@@ -2054,7 +2683,8 @@ func _autoplay(c: CombatController, verbose: bool = false,
 			# Hand order is seeded, and ties keep the earlier card, so the
 			# whole policy stays deterministic for a given seed.
 			for card in c.deck.hand:
-				if card.cost() > c.player.energy:
+				var spent := c.card_play_cost(card)
+				if spent > c.player.energy:
 					continue
 				var target := _pick_target(c, card)
 				if card.def.needs_target() and target == &"":
@@ -2062,7 +2692,7 @@ func _autoplay(c: CombatController, verbose: bool = false,
 				var score := _score_card(c, card, target)
 				if score <= 0.0:
 					continue
-				var efficiency := score / maxf(0.5, float(card.cost()))
+				var efficiency := score / maxf(0.5, float(spent))
 				if efficiency > best_efficiency:
 					best_efficiency = efficiency
 					best = card
@@ -2110,6 +2740,8 @@ func _pick_target(c: CombatController, card: CardInstance) -> StringName:
 		CardDef.Target.SELF_SYSTEM:
 			return _worst_own_system(c)
 		CardDef.Target.ENEMY_SYSTEM:
+			if c.player.damage_as_virus and not card.def.has_suppress(card.upgraded):
+				return &"hull"
 			# 1. High shield regen gates everything — soft-disable shields first.
 			if c.enemy.effective_shield_regen() >= REGEN_PRESSURE \
 					and c.enemy.has_active_system(&"shields"):
@@ -2147,6 +2779,9 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 
 		match kind:
 			"damage_system":
+				if c.player.damage_as_virus:
+					score += amount * W_HULL_DAMAGE
+					continue
 				var through := amount
 				if not pierce:
 					var absorbed := mini(shield_left, through)
@@ -2169,6 +2804,9 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 				else:
 					score += through * W_HULL_DAMAGE
 			"damage_hull":
+				if c.player.damage_as_virus:
+					score += amount * W_HULL_DAMAGE
+					continue
 				var h := amount
 				if not pierce:
 					var absorbed_h := mini(shield_left, h)
@@ -2226,6 +2864,12 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 							score += amt * W_SHIELD * reps
 						else:
 							score += amt * W_SYSTEM_DAMAGE * 2.0 * reps
+			"apply_virus":
+				score += maxi(1, amount) * W_HULL_DAMAGE
+			"double_virus":
+				var stacks := c.enemy.virus()
+				if stacks > 0:
+					score += stacks * W_HULL_DAMAGE
 	return score
 
 func _worst_own_system(c: CombatController) -> StringName:

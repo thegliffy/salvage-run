@@ -126,6 +126,31 @@
     "slot": "weapon",
     "power_gen": 0
   },
+  "signal_injector": {
+    "name": "Signal Injector",
+    "system": "weapons",
+    "tier": 2,
+    "flavor": "Jams a payload through their comms. The hull starts counting down.",
+    "integrity": 8,
+    "power_draw": 2,
+    "mass": 2,
+    "icon": "signal_injector.png",
+    "grants": [
+      "computer_spike",
+      "computer_spike",
+      "firewall_bypass"
+    ],
+    "base_value": 120,
+    "unlock_cost": 200,
+    "synergy": {
+      "bonus": {
+        "power": 1
+      },
+      "requires_system": "sensors"
+    },
+    "slot": "weapon",
+    "power_gen": 0
+  },
   "repair_bay": {
     "name": "Repair Bay",
     "system": "support",
@@ -378,6 +403,25 @@
         "shield": 4
       }
     },
+    "slot": "weapon",
+    "power_gen": 0
+  },
+  "contagion_array": {
+    "name": "Contagion Array",
+    "system": "weapons",
+    "tier": 3,
+    "flavor": "A lattice of injectors. When it sings, the hull is already counting.",
+    "integrity": 10,
+    "power_draw": 3,
+    "mass": 3,
+    "icon": "contagion_array.png",
+    "grants": [
+      "infected_burst",
+      "payload_dump",
+      "firewall_bypass"
+    ],
+    "base_value": 210,
+    "unlock_cost": 390,
     "slot": "weapon",
     "power_gen": 0
   },

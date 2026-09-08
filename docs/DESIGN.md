@@ -85,22 +85,55 @@ refused when both bays are full. Offline `drones` silences ticks and overcharge.
 **Tick phase** (`CombatController.begin_player_turn`), in order:
 
 1. Energy refills to max
-2. Subsystems tick (auto-repair, suppress clocks)
-3. Overshield expires
-4. Shield regen fills toward capacity
-5. **Occupied drones activate once each** — Attack deals homing system damage;
+2. **Virus ticks** if this combatant is infected (see below)
+3. Subsystems tick (auto-repair, suppress clocks)
+4. Overshield expires
+5. Shield regen fills toward capacity
+6. **Occupied drones activate once each** — Attack deals homing system damage;
    Shield gains shield (excess is overshield)
-6. Draw for the turn
+7. Draw for the turn
 
 Drones launched this turn sit until the **next** start-of-turn tick, unless you
 Overcharge them the same turn.
+
+**Virus** is a hull-side poison analog. Counters live on the **combatant**
+(`Combatant.statuses["virus"]`), not on a subsystem. Each tick deals **1 hull
+per counter**, then **reduces counters by 1** (damage then decay). That hull
+hit skips evasion and shields.
+
+Tick timing: **the infected combatant's turn start** — player virus in
+`begin_player_turn` after energy refill; enemy virus in `_run_enemy_turn`
+before they act, so a lethal tick can win the fight without a shot. The
+opponent is not also ticked on the other side's turn (no double-tick).
+Signal Injector (`signal_injector`, uncommon / tier 2) is the first part that
+applies it. Contagion Array (`contagion_array`, rare / tier 3) is the heavy
+follow-up and reuses Firewall Bypass. Persistent Strain (`persistent_strain`,
+uncommon improvement, flag `virus_no_decay`) keeps the damage tick but skips
+decay on virus the player applied to the enemy — Super Capacitor's flag pattern.
+
+**Pure Payload** (`pure_payload`, rare improvement, flag `damage_as_virus`):
+player outgoing damage that would hit hull or systems is converted **1:1 into
+virus after the evasion roll** (a miss still misses). Shields, subsystems, and
+hull are not touched by that shot. Self-damage (`damage_self_hull` / overheat)
+is not converted. Drones and pierce shots convert the same way.
+
+Subsystem targeting while the flag is on: the player cannot aim **damage** at
+enemy subsystems. Cards with `suppress_system` may still pick a system
+(Computer Spike, EMP Pulse, Weak Point) so suppress lands; any damage on those
+cards still becomes virus on the hull, not system integrity. Damage-only
+system cards (Laser Burst, Infected Burst) are hull-only. That mixed rule is
+the cleaner split — suppress still has a job, conversion stays on the shared
+`_deal_damage` path.
+
+Related commons: Probe Tip (`probe_tip`) adds +1 to the first virus application
+each combat; Signal Noise (`signal_noise`) gives infected enemies −5 evasion.
 
 ## 4. Damage pipeline
 
 One path, in `EffectResolver._deal_damage()`:
 
 ```
-evasion roll → shields → subsystem integrity → hull spill
+evasion roll → [Pure Payload: become virus] → shields → subsystem integrity → hull spill
 ```
 
 - `pierce` skips shields
@@ -278,7 +311,7 @@ length.
 
 `MetaState` unlocks parts into the *pool* rather than granting them directly.
 The title-screen Salvage Yard is the spend surface. Starter parts begin unlocked;
-gated weapons (Missile Rack, EMP Projector, Carrion Lance, …) cost salvage.
+gated weapons (Missile Rack, EMP Projector, Signal Injector, Contagion Array, Carrion Lance, …) cost salvage.
 
 **Why additive:** more variety next run, not a flat power curve. Early unlocks
 can still feel weak — starter-hull unlocks remain an open question (§Open).

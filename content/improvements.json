@@ -81,5 +81,62 @@
     "name": "Discount Codes", "rarity": "uncommon",
     "text": "Shop prices are 50% off.",
     "flags": ["shop_half_price"]
+  },
+  "persistent_strain": {
+    "name": "Persistent Strain", "rarity": "uncommon",
+    "text": "Virus counters no longer decay.",
+    "flags": ["virus_no_decay"]
+  },
+  "pure_payload": {
+    "name": "Pure Payload", "rarity": "rare",
+    "text": "Damage you deal becomes virus. You can no longer target subsystems.",
+    "flags": ["damage_as_virus"]
+  },
+  "patch_weld": {
+    "name": "Patch Weld", "rarity": "common",
+    "text": "+4 hull", "stats": {"hull": 4}
+  },
+  "trim_ballast": {
+    "name": "Trim Ballast", "rarity": "common",
+    "text": "+5 evasion", "stats": {"evasion": 5}
+  },
+  "coolant_loop": {
+    "name": "Coolant Loop", "rarity": "common",
+    "text": "+2 shield, +1 shield regen",
+    "stats": {"shield": 2, "shield_regen": 1}
+  },
+  "jury_battery": {
+    "name": "Jury Battery", "rarity": "common",
+    "text": "+1 power", "stats": {"power": 1}
+  },
+  "salvage_magnet": {
+    "name": "Salvage Magnet", "rarity": "common",
+    "text": "+5 credits at the end of each fight.",
+    "triggers": [{"when": "combat_won", "op": "credits", "amount": 5}]
+  },
+  "hot_swap": {
+    "name": "Hot Swap", "rarity": "common",
+    "text": "The first card you play each turn costs 1 less.",
+    "flags": ["hot_swap"]
+  },
+  "spare_clip": {
+    "name": "Spare Clip", "rarity": "common",
+    "text": "Start each combat with +1 card in hand.",
+    "flags": ["spare_clip"]
+  },
+  "bleed_valve": {
+    "name": "Bleed Valve", "rarity": "common",
+    "text": "When you take hull damage, gain 1 shield.",
+    "triggers": [{"when": "hull_damaged", "op": "shield", "amount": 1}]
+  },
+  "probe_tip": {
+    "name": "Probe Tip", "rarity": "common",
+    "text": "The first virus applied each combat is +1.",
+    "flags": ["probe_tip"]
+  },
+  "signal_noise": {
+    "name": "Signal Noise", "rarity": "common",
+    "text": "Enemies with virus have -5 evasion.",
+    "flags": ["signal_noise"]
   }
 }

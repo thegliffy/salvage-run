@@ -103,6 +103,30 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 			who.add_status(StringName(op.get("status", "")), amount)
 			_emit({"type": "status", "target": who.display_name,
 				"status": op.get("status", ""), "stacks": amount})
+		"apply_virus":
+			# Counters live on the combatant's hull, not a subsystem.
+			if opponent == null:
+				_emit({"type": "no_target", "op": kind})
+			else:
+				var n := amount if amount > 0 else 1
+				if combat != null:
+					n = combat.grant_virus(opponent, n)
+				else:
+					opponent.add_virus(n)
+				_emit({"type": "virus_apply", "target": opponent.display_name,
+					"amount": n, "virus": opponent.virus()})
+		"double_virus":
+			if opponent == null:
+				_emit({"type": "no_target", "op": kind})
+			else:
+				var cur := opponent.virus()
+				if cur <= 0:
+					_emit({"type": "virus_double", "target": opponent.display_name,
+						"from": 0, "to": 0, "noop": true})
+				else:
+					opponent.add_virus(cur)
+					_emit({"type": "virus_double", "target": opponent.display_name,
+						"from": cur, "to": opponent.virus(), "noop": false})
 		"credits":
 			combat.pending_credits += amount
 			_emit({"type": "credits", "amount": amount})
@@ -190,6 +214,18 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int,
 			_emit({"type": "miss", "target": target.display_name})
 			return
 
+	# Pure Payload: after the dodge roll, the whole shot becomes virus.
+	# Self-damage (overheat) keeps hitting your own hull. 1 damage → 1 virus.
+	if source != null and source.damage_as_virus and target != source:
+		var n := amount
+		if combat != null:
+			n = combat.grant_virus(target, amount)
+		else:
+			target.add_virus(amount)
+		_emit({"type": "virus_apply", "target": target.display_name,
+			"amount": n, "virus": target.virus(), "from_damage": true})
+		return
+
 	var remaining := amount
 
 	# 2. Shields (pierce bypasses them entirely)
@@ -224,6 +260,8 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int,
 		EventBus.hull_damaged.emit(target, remaining)
 		_emit({"type": "hull_damage", "target": target.display_name,
 			"amount": remaining, "hull_left": target.hull})
+		if combat != null:
+			combat.notify_hull_damaged(target, remaining)
 
 func _emit(event: Dictionary) -> void:
 	combat.log_event(event)

@@ -1252,5 +1252,125 @@
       ]
     },
     "icon": "red_r_06.png"
+  },
+  "computer_spike": {
+    "name": "Computer Spike",
+    "kind": "tech",
+    "rarity": "uncommon",
+    "cost": 1,
+    "target": "enemy_system",
+    "text": "Suppress a target system for 2 turns. Apply 1 virus to the enemy.",
+    "effects": [
+      {
+        "op": "suppress_system",
+        "turns": 2
+      },
+      {
+        "op": "apply_virus",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "Suppress a target system for 3 turns. Apply 2 virus to the enemy.",
+      "effects": [
+        {
+          "op": "suppress_system",
+          "turns": 3
+        },
+        {
+          "op": "apply_virus",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "blue_b_04.png"
+  },
+  "firewall_bypass": {
+    "name": "Firewall Bypass",
+    "kind": "tech",
+    "rarity": "uncommon",
+    "cost": 0,
+    "target": "none",
+    "text": "Double the enemy's virus counters.",
+    "effects": [
+      {
+        "op": "double_virus"
+      }
+    ],
+    "upgrade": {
+      "text": "Double the enemy's virus counters. Apply 1 virus.",
+      "effects": [
+        {
+          "op": "double_virus"
+        },
+        {
+          "op": "apply_virus",
+          "amount": 1
+        }
+      ]
+    },
+    "icon": "blue_b_13.png"
+  },
+  "infected_burst": {
+    "name": "Infected Burst",
+    "kind": "attack",
+    "rarity": "rare",
+    "cost": 2,
+    "target": "enemy_system",
+    "text": "Deal 5 damage to a target system. Apply 2 virus to the enemy.",
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 5
+      },
+      {
+        "op": "apply_virus",
+        "amount": 2
+      }
+    ],
+    "upgrade": {
+      "text": "Deal 7 damage to a target system. Apply 2 virus to the enemy.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 7
+        },
+        {
+          "op": "apply_virus",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "red_r_03.png"
+  },
+  "payload_dump": {
+    "name": "Payload Dump",
+    "kind": "tech",
+    "rarity": "rare",
+    "cost": 2,
+    "target": "none",
+    "text": "Apply 10 virus to the enemy. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "apply_virus",
+        "amount": 10
+      }
+    ],
+    "upgrade": {
+      "text": "Apply 14 virus to the enemy. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "apply_virus",
+          "amount": 14
+        }
+      ]
+    },
+    "icon": "blue_b_18.png"
   }
 }

@@ -48,6 +48,7 @@ const NAME_RIGHT := 0.925
 var card: CardInstance
 var selected := false
 var playable := true
+var _shown_cost: int = -1
 
 var _frame: TextureRect
 var _fallback: PanelContainer
@@ -188,8 +189,10 @@ func _place(node: Control, frac: Rect2) -> void:
 	node.offset_right = 0
 	node.offset_bottom = 0
 
-func set_playable(value: bool, energy: int = -1) -> void:
+func set_playable(value: bool, energy: int = -1, shown_cost: int = -1) -> void:
 	playable = value
+	if shown_cost >= 0:
+		_shown_cost = shown_cost
 	if card != null:
 		tooltip_text = UITheme.card_tip(card, energy)
 	_restyle()
@@ -215,7 +218,7 @@ func _restyle() -> void:
 	# Position, rotation and scale belong to HandView -- see its header. Two
 	# owners for one transform means the hover tween and this fight each other.
 	if _cost != null:
-		_cost.text = str(card.cost())
+		_cost.text = str(_shown_cost if _shown_cost >= 0 else card.cost())
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed \
