@@ -6,11 +6,15 @@ extends RefCounted
 ## render. Run under xvfb so a check never steals the developer's desktop:
 ##
 ##   xvfb-run -a godot --path . -- --shots /tmp/shots
+##   xvfb-run -a godot --path . --resolution 960x540 -- --shots /tmp/shots --shots-size 960x540
 ##
 ## Not referenced by any normal code path.
 
-static func run(host: Node, out_dir: String) -> void:
+static func run(host: Node, out_dir: String, win_size: Vector2i = Vector2i.ZERO) -> void:
 	DirAccess.make_dir_recursive_absolute(out_dir)
+	if win_size.x > 0 and win_size.y > 0:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(win_size)
 	await host.get_tree().process_frame
 
 	await _settle(host, 25)

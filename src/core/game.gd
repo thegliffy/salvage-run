@@ -36,7 +36,13 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	var i := args.find("--shots")
 	if i != -1 and i + 1 < args.size():
-		ShotRunner.run(self, args[i + 1])
+		var win := Vector2i.ZERO
+		var si := args.find("--shots-size")
+		if si != -1 and si + 1 < args.size() and args[si + 1].contains("x"):
+			var bits: PackedStringArray = args[si + 1].split("x")
+			if bits.size() == 2 and bits[0].is_valid_int() and bits[1].is_valid_int():
+				win = Vector2i(int(bits[0]), int(bits[1]))
+		ShotRunner.run(self, args[i + 1], win)
 
 func start_run(run_seed: int = -1, ship_id: StringName = &"brawler") -> void:
 	if not meta.is_ship_unlocked(ship_id):

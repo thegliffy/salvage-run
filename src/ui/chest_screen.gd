@@ -11,14 +11,21 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
+	add_child(margin)
+
 	var centre := CenterContainer.new()
-	centre.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(centre)
+	centre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	centre.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(centre)
 
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 26))
-	card.custom_minimum_size.x = 540
+		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 18))
+	card.custom_minimum_size.x = mini(540, int(size.x) - 48) if size.x > 0 else 540
 	centre.add_child(card)
 
 	var col := VBoxContainer.new()

@@ -27,16 +27,15 @@ func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 16)
+		margin.add_theme_constant_override("margin_" + side, 10)
 	add_child(margin)
 
-	# Fill the expanded viewport; leftover height goes to the ship sketch and
-	# the offer row. GridContainer does not pass extra space to a single row,
-	# which is why the tiles used to sit at their min size on a tall window.
+	# Fill the viewport; leftover height goes to the ship sketch and the offer
+	# row. Tiles themselves stay compact so TAKE / SKIP / JETTISON never clip.
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 6)
+	col.add_theme_constant_override("separation", 4)
 	margin.add_child(col)
 
 	var chrome := HBoxContainer.new()
@@ -50,7 +49,7 @@ func _ready() -> void:
 	chrome.add_child(deck_btn)
 
 	_reward = Game.pending_reward
-	_heading = UITheme.label(_reward_heading(), 24, UITheme.GOOD, "Black")
+	_heading = UITheme.label(_reward_heading(), 20, UITheme.GOOD, "Black")
 	col.add_child(_heading)
 	var hint := "Take a part — skip to field-repair the hull."
 	if Game.pending_sector_advance:
@@ -66,10 +65,10 @@ func _ready() -> void:
 	col.add_child(_payout_banner(imp))
 
 	_ship_view = ShipView.new()
-	_ship_view.custom_minimum_size = Vector2(0, 72)
+	_ship_view.custom_minimum_size = Vector2(0, 48)
 	_ship_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_ship_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_ship_view.size_flags_stretch_ratio = 0.45
+	_ship_view.size_flags_stretch_ratio = 0.35
 	col.add_child(_ship_view)
 	_ship_view.refresh(Game.run.ship)
 
@@ -114,9 +113,9 @@ func _ready() -> void:
 	_refresh()
 
 func _payout_banner(imp: ImprovementDef) -> Control:
-	var wrap := UITheme.box(UITheme.PANEL_RAISED, UITheme.ACCENT_DIM, 1, 4, 12)
+	var wrap := UITheme.box(UITheme.PANEL_RAISED, UITheme.ACCENT_DIM, 1, 4, 8)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 6)
+	col.add_theme_constant_override("separation", 3)
 	wrap.add_child(col)
 	col.add_child(UITheme.label("+%d CREDITS" % int(_reward.get("credits", 0)),
 		18, UITheme.WARN, "Bold"))
@@ -236,19 +235,19 @@ func _offer_row(offer: Dictionary) -> Control:
 	var shout_deficit := after_def > 0
 	var wrap := UITheme.box(UITheme.PANEL,
 		UITheme.WARN if shout_deficit else rarity_c,
-		2 if shout_deficit else 1, 4, 12)
+		2 if shout_deficit else 1, 4, 8)
 	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	wrap.custom_minimum_size = Vector2(0, 160)
+	wrap.custom_minimum_size = Vector2(0, 120)
 	UITheme.tip(wrap, UITheme.part_tip(def))
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 5)
+	info.add_theme_constant_override("separation", 4)
 	wrap.add_child(info)
 
-	var name_l := UITheme.label(def.name, 17, UITheme.TEXT, "Bold")
+	var name_l := UITheme.label(def.name, 16, UITheme.TEXT, "Bold")
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(name_l)
 
@@ -258,12 +257,22 @@ func _offer_row(offer: Dictionary) -> Control:
 	badges.add_child(UITheme.badge(String(rarity).to_upper(), rarity_c))
 	badges.add_child(UITheme.badge(String(def.slot).to_upper(), UITheme.ACCENT))
 
-	# Keep-aspect module art grows with leftover tile height on a taller window.
-	var art := UITheme.module_icon(def, UITheme.MODULE_ICON_SIZE)
-	art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	art.size_flags_stretch_ratio = 0.55
-	info.add_child(art)
+	# Icon beside the card chips so the tile does not stack 80px art on top of
+	# three grant rows — that stack was taller than 720p leftover space.
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 8)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info.add_child(body)
+	var art := UITheme.module_icon(def, UITheme.MODULE_ICON_COMPACT)
+	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	art.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	body.add_child(art)
+	var grants := VBoxContainer.new()
+	grants.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grants.add_theme_constant_override("separation", 3)
+	body.add_child(grants)
+	grants.add_child(UITheme.label("GRANTS", 10, UITheme.TEXT_FAINT, "Bold"))
+	grants.add_child(_card_chips(def.grants))
 
 	var costs := _cost_bits(def)
 	if not costs.is_empty():
@@ -276,9 +285,6 @@ func _offer_row(offer: Dictionary) -> Control:
 			"energy %d → %d / turn" % [before["energy"], after["energy"]]))
 	elif int(after["energy"]) != int(before["energy"]) or def.power_draw > 0:
 		info.add_child(UITheme.energy_note(int(before["energy"]), int(after["energy"])))
-
-	info.add_child(UITheme.label("GRANTS", 10, UITheme.TEXT_FAINT, "Bold"))
-	info.add_child(_card_chips(def.grants))
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -322,29 +328,36 @@ func _offer_row(offer: Dictionary) -> Control:
 	return wrap
 
 func _jettison_row(inst: PartInstance) -> Control:
-	var wrap := UITheme.box(UITheme.PANEL, UITheme.HOSTILE, 1, 4, 12)
+	var wrap := UITheme.box(UITheme.PANEL, UITheme.HOSTILE, 1, 4, 8)
 	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	wrap.custom_minimum_size = Vector2(0, 140)
+	wrap.custom_minimum_size = Vector2(0, 110)
 	UITheme.tip(wrap, UITheme.part_tip(inst.def, "Jettison frees the slot and removes these cards."))
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 5)
+	info.add_theme_constant_override("separation", 4)
 	wrap.add_child(info)
 
-	var name_l := UITheme.label(inst.def.name, 16, UITheme.TEXT, "Bold")
+	var name_l := UITheme.label(inst.def.name, 15, UITheme.TEXT, "Bold")
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(name_l)
 	info.add_child(UITheme.badge(String(inst.def.slot).to_upper(), UITheme.ACCENT))
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 8)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info.add_child(body)
 	var art := UITheme.module_icon(inst.def, UITheme.MODULE_ICON_COMPACT)
-	art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	art.size_flags_stretch_ratio = 0.45
-	info.add_child(art)
-	info.add_child(UITheme.label("frees slot + cards", 11, UITheme.TEXT_FAINT))
-	info.add_child(_card_chips(inst.granted_cards()))
+	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	art.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	body.add_child(art)
+	var grants := VBoxContainer.new()
+	grants.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grants.add_theme_constant_override("separation", 3)
+	body.add_child(grants)
+	grants.add_child(UITheme.label("frees slot + cards", 11, UITheme.TEXT_FAINT))
+	grants.add_child(_card_chips(inst.granted_cards()))
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	info.add_child(spacer)

@@ -74,6 +74,7 @@ func _run_tests() -> int:
 	_test_card_balance()
 	_test_sectors()
 	_test_drones()
+	_test_ui_fit()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
 	return 1 if _failed > 0 else 0
 
@@ -868,6 +869,37 @@ func _test_ui_copy() -> void:
 	UITheme.row_cta(btn)
 	_check("row CTA does not stretch vertically", btn.size_flags_vertical == Control.SIZE_SHRINK_BEGIN)
 	btn.free()
+
+func _test_ui_fit() -> void:
+	print("ui fit")
+	_eq("stretch mode", str(ProjectSettings.get_setting("display/window/stretch/mode")),
+		"canvas_items")
+	_eq("stretch aspect", str(ProjectSettings.get_setting("display/window/stretch/aspect")),
+		"expand")
+	_eq("base viewport width", int(ProjectSettings.get_setting("display/window/size/viewport_width")),
+		1280)
+	_eq("base viewport height", int(ProjectSettings.get_setting("display/window/size/viewport_height")),
+		720)
+
+	var layers := MapGenerator.STOPS_BEFORE_BOSS + 2
+	var m720 := MapScreen.layout_metrics(layers, 4, Vector2(1280, 620))
+	_check("12 columns fit 1280 wide",
+		float(m720["col_w"]) * float(layers) + float(m720["pad_x"]) * 2.0 <= 1280.01)
+	_check("4 rows fit 620 tall",
+		float(m720["row_h"]) * 4.0 + float(m720["pad_y"]) * 2.0 <= 620.01)
+	_check("720p canvas uses the full width", is_equal_approx(float(m720["canvas_w"]), 1280.0))
+	_check("node radius stays clickable at 720p", float(m720["node_r"]) >= 14.0)
+
+	var m540 := MapScreen.layout_metrics(layers, 4, Vector2(960, 430))
+	_check("12 columns fit 960-class width",
+		float(m540["col_w"]) * float(layers) + float(m540["pad_x"]) * 2.0 <= 960.01)
+	_check("4 rows fit 430-class height",
+		float(m540["row_h"]) * 4.0 + float(m540["pad_y"]) * 2.0 <= 430.01)
+	_check("node radius stays clickable at 540p-class", float(m540["node_r"]) >= 14.0)
+
+	var m_tiny := MapScreen.layout_metrics(layers, 4, Vector2(640, 360))
+	_check("tiny window still packs every column",
+		float(m_tiny["col_w"]) * float(layers) + float(m_tiny["pad_x"]) * 2.0 <= 640.01)
 
 func _test_meta_progression() -> void:
 	print("meta")
