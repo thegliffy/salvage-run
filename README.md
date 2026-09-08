@@ -1,6 +1,6 @@
 # Salvage Run
 
-**v0.15** · by **thegliffy**
+**v0.20** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
 across three sectors to the final boss, then sell what you built for salvage
@@ -13,7 +13,7 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-360 tests passing · playable PC demo
+384 tests passing · playable PC demo
 ```
 
 ---
@@ -40,10 +40,13 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.15-win64.zip` from
+**Windows:** download `SalvageRun-v0.20-win64.zip` from
 [Releases](https://github.com/thegliffy/salvage-run/releases), unzip, run
 `SalvageRun.exe`. Single self-contained executable — no installer, no separate
 data files.
+
+**Linux:** download `SalvageRun-v0.20-linux64.zip`, unzip, run
+`./salvage-run.x86_64`.
 
 **From source:**
 
@@ -89,15 +92,17 @@ improvements, jettison, card stripping, run-end appraisal, meta unlock shop
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-### What's new in v0.15
+### What's new in v0.20
 
-- **Brawler** starter (4 weapons, 5 energy, no innate shields) and unlockable
-  **Tank** (3 weapons, 4 energy, Deflector Mk I at 10 shield / +2 regen)
-- Tank is the cheapest hull unlock at **450 salvage** — more than any part
-- **Overshield** — shield gains above capacity stick until your next turn
-- Tank-oriented weapons: Plasma Cycler, Aegis Rail, and rare **Capacitor Cannon**
-  with **Shield Dump** (spend all your shield as pierce damage)
-- Ship status overlay from combat and map; reward offers as equal tiles across
+- **Module icons** on reward tiles, shop rows, and the Salvage Yard
+- Window stretch is **`expand`** so the UI fills the window instead of letterboxing
+- **Strip costs credits** in-run (`40 + 25 ×` mounts already stripped), plus the
+  existing sale-value penalty
+- **Card rebalance** (Burst Laser, Plasma Cycler, Missile Rack, Power Relay, and
+  related shared cards)
+- Run is **three sectors of ~10 stops** plus a true final boss
+- Unlockable **Shepherd** hull (1 weapon / 3 hull / 6 utility, Deflector Mk I,
+  Drone Launcher) at **650 salvage**
 
 ---
 
