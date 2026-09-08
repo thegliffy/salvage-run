@@ -900,6 +900,11 @@ func _test_ship_status_overlay() -> void:
 	_check("overlay names Ion Thrusters", blob.contains("Ion Thrusters"))
 	_check("overlay states empty mount capacity", blob.contains("empty mount"))
 	_check("overlay shows empty improvements", blob.contains("No improvements yet"))
+	_check("overlay lists the compiled deck heading", blob.contains("DECK"))
+	_check("overlay names Laser Burst from the deck", blob.contains("Laser Burst"))
+	_check("overlay names Overheat from the deck", blob.contains("Overheat"))
+	_check("overlay names Afterburner from the deck", blob.contains("Afterburner"))
+	_check("overlay counts duplicate Laser Burst", blob.contains("x2"))
 	_check("empty overlay has no bulkheads", not blob.contains("Reinforced Bulkheads"))
 	var icons := _count_visible_textures(host)
 	if icons > 0:
@@ -924,6 +929,7 @@ func _test_ship_status_overlay() -> void:
 	_check("overlay names Power Conduits", blob.contains("Power Conduits"))
 	_check("overlay shows conduit effect", blob.contains("+1 power"))
 	_check("parts remain listed with improvements", blob.contains("Burst Laser"))
+	_check("deck remains listed with improvements", blob.contains("Laser Burst"))
 
 	run.ship.improvements.clear()
 	run.ship.add_improvement(&"targeting_uplink")

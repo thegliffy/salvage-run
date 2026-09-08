@@ -77,9 +77,9 @@ The amber banner is the enemy's next attack and names the subsystem that fires
 it. Cards that need no target play on a single click.
 
 **SHIP** (combat) / **SHIP STATUS** (map) opens the full loadout: equipped parts
-by slot (including empty mounts), installed improvements, power budget, deck,
-and the painted ship view. **DECK** on the reward and map screens lists the
-compiled deck.
+by slot (including empty mounts), installed improvements, power budget, and the
+compiled deck (hover a row to read the card). **DECK** on combat, reward, and
+map screens opens the same card list on its own.
 
 ## Status: playable PC demo
 

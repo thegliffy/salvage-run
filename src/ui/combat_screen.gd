@@ -113,7 +113,7 @@ func _build() -> void:
 	root.add_theme_constant_override("separation", 10)
 	margin.add_child(root)
 
-	# Header: title left, two drone rings top-center, banner + SHIP right.
+	# Header: title left, two drone rings top-center, banner + DECK + SHIP right.
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	root.add_child(head)
@@ -124,8 +124,12 @@ func _build() -> void:
 	head.add_child(UITheme.expand())
 	_banner = UITheme.label(_fight_banner(), 13, UITheme.TEXT_DIM, "SemiBold")
 	head.add_child(_banner)
+	var deck_btn := UITheme.ghost_button("  DECK  ")
+	UITheme.tip(deck_btn, "Deck\n---\nCards compiled from the ship. Duplicates are counted. Hover a row to read the card.")
+	deck_btn.pressed.connect(_open_deck)
+	head.add_child(deck_btn)
 	var ship_btn := UITheme.ghost_button("  SHIP  ")
-	UITheme.tip(ship_btn, "Ship status\n---\nEquipped parts, installed improvements, power budget, and deck.")
+	UITheme.tip(ship_btn, "Ship status\n---\nEquipped parts, installed improvements, power budget, and the compiled deck.")
 	ship_btn.pressed.connect(_open_ship_status)
 	head.add_child(ship_btn)
 
@@ -465,7 +469,7 @@ func _refresh() -> void:
 	_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
 	_loadout_line.text = ShipStatusOverlay.loadout_strip(Game.run.ship)
 	UITheme.tip(_loadout_line,
-		"Loadout\n%s\n---\nSHIP opens every equipped part and installed improvement." % _loadout_line.text)
+		"Loadout\n%s\n---\nSHIP opens equipped parts, improvements, and the compiled deck." % _loadout_line.text)
 	var deficit_n := int(bud["deficit"])
 	if deficit_n > 0:
 		_deficit_host.visible = true
@@ -646,6 +650,9 @@ func _rebuild_hand() -> void:
 
 func _open_ship_status() -> void:
 	ShipStatusOverlay.open(_overlay_host, _preview_layer, _close_ship_status)
+
+func _open_deck() -> void:
+	ShipStatusOverlay.open_deck(_overlay_host, _preview_layer, _close_ship_status)
 
 func _close_ship_status() -> void:
 	if _overlay_host == null:

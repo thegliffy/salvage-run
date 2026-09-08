@@ -44,16 +44,14 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 		outer.add_theme_constant_override("margin_" + side, 12)
 	panel.add_child(outer)
 
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	outer.add_child(scroll)
-
+	# Fill the panel — do not wrap the whole overlay in a ScrollContainer.
+	# Nested leftover-height scrolls (parts / deck) need a definite parent
+	# height or they collapse and clip, which is how the deck used to vanish.
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 10)
-	scroll.add_child(col)
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 8)
+	outer.add_child(col)
 
 	var run: RunState = Game.run
 	var prof := run.profile
@@ -109,43 +107,56 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	# first screen — they used to hang off the bottom of a nested slots scroll.
 	col.add_child(_improvements_block(run))
 
-	# Loadout first: nested inner scrolls used to clip hull / utility to a
-	# sliver under the ship sketch. One outer scroll, both columns size to
-	# content, so equipped parts stay on the same wheel as the deck.
+	# Two leftover-height columns. Headings stay pinned; only the lists scroll,
+	# so a long deck is browseable without clipping parts or improvements.
 	var body := HBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.custom_minimum_size.y = 180
 	body.add_theme_constant_override("separation", 16)
 	col.add_child(body)
 
-	var slots_col := VBoxContainer.new()
-	slots_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slots_col.size_flags_stretch_ratio = 1.15
-	slots_col.add_theme_constant_override("separation", 8)
-	body.add_child(slots_col)
-	slots_col.add_child(UITheme.label("EQUIPPED PARTS", 15, UITheme.TEXT, "Bold"))
-	slots_col.add_child(UITheme.label(
+	var slots_wrap := VBoxContainer.new()
+	slots_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slots_wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slots_wrap.size_flags_stretch_ratio = 1.12
+	slots_wrap.add_theme_constant_override("separation", 6)
+	body.add_child(slots_wrap)
+	slots_wrap.add_child(UITheme.label("EQUIPPED PARTS", 15, UITheme.TEXT, "Bold"))
+	slots_wrap.add_child(UITheme.label(
 		"Grouped by mount. Empty mounts still count against capacity.",
 		11, UITheme.TEXT_FAINT))
+	var slots_scroll := ScrollContainer.new()
+	slots_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slots_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slots_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	slots_wrap.add_child(slots_scroll)
+	var slots_col := VBoxContainer.new()
+	slots_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slots_col.add_theme_constant_override("separation", 8)
+	slots_scroll.add_child(slots_col)
 	for slot in ShipLoadout.SLOT_TYPES:
 		slots_col.add_child(_slot_block(run, slot))
 
-	var deck_col := VBoxContainer.new()
-	deck_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	deck_col.add_theme_constant_override("separation", 4)
-	body.add_child(deck_col)
-	deck_col.add_child(UITheme.label("DECK  (%d)" % prof.deck.size(), 15, UITheme.TEXT, "Bold"))
-	deck_col.add_child(UITheme.label("Hover a card to read it.", 11, UITheme.TEXT_FAINT))
-
-	for entry in tally_deck(prof.deck):
-		deck_col.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
-
-	var ship_view := ShipView.new()
-	ship_view.custom_minimum_size = Vector2(0, 72)
-	ship_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(ship_view)
-	ship_view.refresh(run.ship)
-	col.add_child(UITheme.label(
-		"Red turrets = weapons · cyan plates = hull · green pods = utility · empty rings = free slots",
+	var deck_wrap := VBoxContainer.new()
+	deck_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	deck_wrap.add_theme_constant_override("separation", 4)
+	body.add_child(deck_wrap)
+	deck_wrap.add_child(UITheme.label("DECK  (%d)" % prof.deck.size(), 15, UITheme.TEXT, "Bold"))
+	deck_wrap.add_child(UITheme.label(
+		"Compiled from installed parts. Duplicates share a count. Hover a row to read the card.",
 		11, UITheme.TEXT_FAINT))
+	var deck_scroll := ScrollContainer.new()
+	deck_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	deck_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	deck_wrap.add_child(deck_scroll)
+	var deck_list := VBoxContainer.new()
+	deck_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_list.add_theme_constant_override("separation", 4)
+	deck_scroll.add_child(deck_list)
+	_fill_deck_list(deck_list, prof.deck, preview_layer, on_close)
 
 	var close_foot := UITheme.ghost_button("  CLOSE  ")
 	close_foot.pressed.connect(on_close)
@@ -274,12 +285,7 @@ static func open_deck(host: Control, preview_layer: Control, on_close: Callable)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 4)
 	scroll.add_child(list)
-
-	if deck.is_empty():
-		list.add_child(UITheme.label("No cards — the ship is empty.", 13, UITheme.TEXT_FAINT))
-	else:
-		for entry in tally_deck(deck):
-			list.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
+	_fill_deck_list(list, deck, preview_layer, on_close)
 
 	var close_foot := UITheme.ghost_button("  CLOSE  ")
 	close_foot.pressed.connect(on_close)
@@ -292,6 +298,14 @@ static func close(host: Control, preview_layer: Control = null) -> void:
 	for c in host.get_children():
 		c.queue_free()
 	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+static func _fill_deck_list(list: VBoxContainer, deck: Array, preview_layer: Control,
+		on_close: Callable) -> void:
+	if deck.is_empty():
+		list.add_child(UITheme.label("No cards — the ship is empty.", 13, UITheme.TEXT_FAINT))
+		return
+	for entry in tally_deck(deck):
+		list.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
 
 static func _slot_block(run: RunState, slot: StringName) -> Control:
 	var used := run.ship.installed_in(slot)

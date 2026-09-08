@@ -78,7 +78,7 @@ func _build() -> void:
 	head_row.add_child(deck_btn)
 
 	var ship_btn := UITheme.ghost_button("  SHIP STATUS  ")
-	UITheme.tip(ship_btn, "Ship status\n---\nEquipped parts, installed improvements, power budget, and deck.")
+	UITheme.tip(ship_btn, "Ship status\n---\nEquipped parts, installed improvements, power budget, and the compiled deck.")
 	ship_btn.pressed.connect(_open_ship_status)
 	head_row.add_child(ship_btn)
 
@@ -208,7 +208,7 @@ func _rebuild() -> void:
 	_status.text = "HULL %d/%d    CREDITS %d    DECK %d    AT %s" % [
 		run.hull_carryover, run.profile.max_hull, run.credits,
 		run.profile.deck.size(), MapGenerator.label_for(String(cur["type"]), run.sector)]
-	UITheme.tip(_status, "Run status\nhull %d/%d · credits %d · deck %d\n---\nDECK lists the compiled cards. SHIP STATUS lists equipped parts and improvements." % [
+	UITheme.tip(_status, "Run status\nhull %d/%d · credits %d · deck %d\n---\nDECK lists the compiled cards. SHIP STATUS lists equipped parts, improvements, and the same deck." % [
 		run.hull_carryover, run.profile.max_hull, run.credits, run.profile.deck.size()])
 
 	# Fitted canvas matches the scroll view, so no pan is required. Keep a
