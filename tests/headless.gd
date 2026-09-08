@@ -2683,7 +2683,8 @@ func _autoplay(c: CombatController, verbose: bool = false,
 			# Hand order is seeded, and ties keep the earlier card, so the
 			# whole policy stays deterministic for a given seed.
 			for card in c.deck.hand:
-				if card.cost() > c.player.energy:
+				var spent := c.card_play_cost(card)
+				if spent > c.player.energy:
 					continue
 				var target := _pick_target(c, card)
 				if card.def.needs_target() and target == &"":
@@ -2691,7 +2692,7 @@ func _autoplay(c: CombatController, verbose: bool = false,
 				var score := _score_card(c, card, target)
 				if score <= 0.0:
 					continue
-				var efficiency := score / maxf(0.5, float(card.cost()))
+				var efficiency := score / maxf(0.5, float(spent))
 				if efficiency > best_efficiency:
 					best_efficiency = efficiency
 					best = card
