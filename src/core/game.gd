@@ -29,6 +29,9 @@ var pending_node_id: int = -1
 ## True after a non-final sector boss: the next reward-screen exit generates
 ## the following sector's map instead of returning to the current one.
 var pending_sector_advance: bool = false
+## Headless tests set this so `_end_run()` still appraises and records the sale
+## without tearing down the test scene.
+var skip_scene_change: bool = false
 
 func _ready() -> void:
 	meta = SaveSystem.load_meta()
@@ -127,9 +130,19 @@ func after_shop() -> void:
 func after_chest() -> void:
 	goto_map()
 
+## Scuttle the current run. Same pipeline as a hull-loss: `RunState.scuttle()`
+## then `_end_run()` so the yard sells a wreck, not a delivered ship.
+func self_destruct() -> void:
+	if run == null or not run.alive:
+		return
+	run.scuttle()
+	_end_run()
+
 func _end_run() -> void:
 	last_valuation = Valuation.appraise(run)
 	meta.record_sale(last_valuation)
+	if skip_scene_change:
+		return
 	SaveSystem.save_meta(meta)
 	get_tree().change_scene_to_file(SCENE_SALE)
 

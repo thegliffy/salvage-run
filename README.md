@@ -13,7 +13,7 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-421 tests passing · playable PC demo
+556 tests passing · playable PC demo
 ```
 
 ---
@@ -78,8 +78,10 @@ it. Cards that need no target play on a single click.
 
 **SHIP** (combat) / **SHIP STATUS** (map) opens the full loadout: equipped parts
 by slot (including empty mounts), installed improvements, power budget, and the
-compiled deck (hover a row to read the card). **DECK** on combat, reward, and
-map screens opens the same card list on its own.
+compiled deck (hover a row to read the card). **SELF-DESTRUCT** on that overlay
+asks for confirmation, then scuttles the ship and sells the wreck (same as a
+hull-loss). **DECK** on combat, reward, and map screens opens the same card list
+on its own.
 
 ## Status: playable PC demo
 
@@ -88,7 +90,8 @@ Title → salvage unlock shop → sector map (×3) → combat / shop / chest →
 
 **Working:** three StS-style sectors (~10 stops + boss each), combat with hull as
 the primary target and soft subsystem control, typed-slot ship loadout,
-power-budget UI, tiered rewards (skip = field repair), ship status overlay, ship
+power-budget UI, tiered rewards (skip = field repair), ship status overlay,
+self-destruct (confirmed scuttle → wreck sale), ship
 improvements, jettison, card stripping, run-end appraisal, meta unlock shop
 (parts + hulls), overshield, Brawler / Tank / Shepherd starters, meta saves.
 
