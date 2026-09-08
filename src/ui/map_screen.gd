@@ -70,7 +70,7 @@ func _build() -> void:
 	for pair in [
 		["FIGHT", TYPE_COLOUR["combat"], "Regular combat — credits and a part offer."],
 		["MINI-BOSS", TYPE_COLOUR["elite"], "Elite fight — harder, pays an improvement."],
-		["STORE", TYPE_COLOUR["shop"], "Buy parts or strip a card from a mount."],
+		["STORE", TYPE_COLOUR["shop"], "Buy parts or strip a card (credits, plus a sale penalty)."],
 		["CHEST", TYPE_COLOUR["chest"], "Free ship improvement. No slot, no cards."],
 		["BOSS", TYPE_COLOUR["boss"], "Sector boss. Win and sell the ship."],
 	]:
@@ -258,7 +258,7 @@ func _tooltip(node: Dictionary, can_enter: bool, is_here: bool, visited: bool) -
 	bits.append("---")
 	match ntype:
 		"shop":
-			bits.append("Buy parts with credits, or strip one card from a mount.")
+			bits.append("Buy parts with credits, or strip a card (credits + sale penalty).")
 		"chest":
 			bits.append("A ship improvement — no slot, no cards.")
 		"start":

@@ -164,10 +164,10 @@ an installed part: the slot frees up and all three of its cards leave the deck.
 ### Trimming the deck
 
 Each part can have exactly **one** of its three cards stripped, permanently, at a
-salvage yard / store. Because the cap is one per part, a ship can never fall
-below two thirds of its cards — so there is no escalating purge price. Strips are
-paid for in the ship's **sale value**: you are cutting up the thing you intend
-to sell.
+store. The first strip costs **40 credits**, then 65, 90, … (`40 + 25 ×` mounts
+already stripped this run). Stripping also cuts that part's **sale value** by
+25%. Because the cap is one per part, a ship can never fall below two thirds of
+its cards.
 
 ### Meta unlocks
 

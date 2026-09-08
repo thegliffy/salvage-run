@@ -577,6 +577,9 @@ func _test_strip() -> void:
 	var opts := SalvageYard.options(run)
 	_eq("every mount on every part is offered", opts.size(), 3 * 3)
 	_check("options carry a value cost", int(opts[0]["value_cost"]) > 0)
+	_eq("first strip credit cost is 40", int(opts[0]["credit_cost"]),
+		SalvageYard.STRIP_CREDIT_BASE)
+	_eq("cannot afford first strip with 0 credits", opts[0]["can_afford"], false)
 
 	# Cut the weapon's third mount. The starter carries no status-kind dud any
 	# more (its reactor is gone), so the interesting strip is a real tradeoff
@@ -590,10 +593,24 @@ func _test_strip() -> void:
 	_check("the weapon's third mount is available to cut", target_inst != null)
 
 	var value_before: int = target_inst.sale_value()
+	_check("strip refused without credits",
+		SalvageYard.strip(run, target_inst, target_index) != "")
+	_eq("credits unchanged on refuse", run.credits, 0)
+	_check("part not stripped on refuse", not target_inst.is_stripped())
+	_eq("deck unchanged on refuse", run.profile.deck.size(), deck_before)
+
+	run.add_credits(SalvageYard.STRIP_CREDIT_BASE)
+	opts = SalvageYard.options(run)
+	_eq("can afford after funding", opts[0]["can_afford"], true)
+	var credits_before: int = run.credits
 	_eq("strip succeeds", SalvageYard.strip(run, target_inst, target_index), "")
 	_eq("deck is one card lighter", run.profile.deck.size(), deck_before - 1)
 	_check("the stripped card is gone", not run.profile.deck.has(&"overheat"))
-	_check("strip costs sale value", target_inst.sale_value() < value_before)
+	_eq("strip debit first cost", run.credits,
+		credits_before - SalvageYard.STRIP_CREDIT_BASE)
+	_check("strip still cuts sale value", target_inst.sale_value() < value_before)
+	_eq("sale penalty is 25%", target_inst.sale_value(),
+		int(round(float(value_before) * (1.0 - PartInstance.STRIP_VALUE_PENALTY))))
 
 	# THE regression that matters: the deck is derived, so a strip that is not
 	# stored on the part gets silently undone by the next ship change.
@@ -607,18 +624,43 @@ func _test_strip() -> void:
 	# One strip per part, enforced by the type rather than by price.
 	_check("part reports itself stripped", target_inst.is_stripped())
 	_check("part cannot be stripped twice", not target_inst.can_strip())
-	_check("second strip is refused", SalvageYard.strip(run, target_inst, 0) != "")
+	_eq("second strip on same mount names the part, not credits",
+		SalvageYard.strip(run, target_inst, 0).contains("stripped"), true)
 	for o in SalvageYard.options(run):
 		if o["part"] == target_inst:
 			_check("stripped part offers no further mounts", false)
 	_check("stripped part drops out of the options list", true)
 
+	# Cost scales with installed stripped mounts: 40, then 65.
+	_eq("second strip costs 65", SalvageYard.credit_cost(run),
+		SalvageYard.STRIP_CREDIT_BASE + SalvageYard.STRIP_CREDIT_STEP)
+	var other: PartInstance = null
+	for inst in run.ship.parts:
+		if inst.can_strip():
+			other = inst
+			break
+	_check("another mount is still strippable", other != null)
+	_check("second strip refused until funded",
+		SalvageYard.strip(run, other, 0) != "")
+	_eq("credits stay 0 after unaffordable second strip", run.credits, 0)
+	run.add_credits(SalvageYard.credit_cost(run))
+	var second_cost := SalvageYard.credit_cost(run)
+	var credits_mid: int = run.credits
+	_eq("second strip succeeds", SalvageYard.strip(run, other, 0), "")
+	_eq("second strip debit 65", run.credits, credits_mid - second_cost)
+
 	# Thinning has a floor: you can never cut past two thirds.
 	var floor_run := RunState.new()
 	floor_run.start(StarterShips.salvager(), 32)
+	var triple := SalvageYard.STRIP_CREDIT_BASE \
+		+ (SalvageYard.STRIP_CREDIT_BASE + SalvageYard.STRIP_CREDIT_STEP) \
+		+ (SalvageYard.STRIP_CREDIT_BASE + SalvageYard.STRIP_CREDIT_STEP * 2)
+	floor_run.add_credits(triple)
+	var floor_credits: int = floor_run.credits
 	for inst in floor_run.ship.parts:
 		SalvageYard.strip(floor_run, inst, 0)
 	_eq("every part stripped once", floor_run.profile.deck.size(), 6)
+	_eq("three strips cost 40+65+90", floor_run.credits, floor_credits - triple)
 	var still_strippable := 0
 	for inst in floor_run.ship.parts:
 		if inst.can_strip():
@@ -1213,6 +1255,8 @@ var _sim_meta: MetaState = null
 ## the sim just needs the mechanic exercised so deck size reflects it.
 func _auto_strip(run: RunState) -> void:
 	for o in SalvageYard.options(run):
+		if not bool(o.get("can_afford", false)):
+			continue
 		var card: CardDef = Database.card(o["card_id"])
 		if card != null and card.kind == &"status":
 			SalvageYard.strip(run, o["part"], o["index"])

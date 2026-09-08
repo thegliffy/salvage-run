@@ -11,14 +11,13 @@ var uid: int = 0           # stable id for save/load and UI diffing
 
 ## Index into def.grants of the card stripped from this mount, or -1.
 ##
-## A single int, not a list, and that is the whole balance design: one strip
-## per part, enforced by the data type rather than by an escalating price
-## table. A ship can never be thinned past two thirds of its cards, and the
-## player can see that limit instead of discovering it in a price curve.
+## A single int, not a list: one strip per part, so a ship can never be
+## thinned past two thirds of its cards. The store also charges run credits
+## that scale with how many mounts are already stripped (see SalvageYard).
 var stripped_index: int = -1
 
-## Value lost by stripping a mount. You are cutting up the ship you intend
-## to sell, so removal is paid for in meta-progression, not credits.
+## Value lost by stripping a mount. Still applied on sale; the store also
+## charges run credits (SalvageYard.credit_cost).
 const STRIP_VALUE_PENALTY := 0.25
 
 static var _next_uid: int = 1
