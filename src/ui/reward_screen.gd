@@ -7,7 +7,7 @@ extends Control
 ## installed part to free its slot. Hover a card chip to see the full card.
 
 var _reward: Dictionary = {}
-var _list: GridContainer
+var _list: VBoxContainer
 var _status: Label
 var _heading: Label
 var _skip_btn: Button
@@ -16,20 +16,26 @@ var _power_panel: PanelContainer
 var _jettisoning := false
 var _preview_layer: Control
 var _preview_card: CardView
+var _overlay_host: Control
 
 func _ready() -> void:
 	var bg := ColorRect.new()
 	bg.color = UITheme.BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "top", "right", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 16)
 	add_child(margin)
 
+	# Fill the expanded viewport; leftover height goes to the ship sketch and
+	# the offer row. GridContainer does not pass extra space to a single row,
+	# which is why the tiles used to sit at their min size on a tall window.
 	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 6)
 	margin.add_child(col)
 
@@ -38,6 +44,10 @@ func _ready() -> void:
 	col.add_child(chrome)
 	chrome.add_child(UITheme.chrome_mark())
 	chrome.add_child(UITheme.expand())
+	var deck_btn := UITheme.ghost_button("  DECK  ")
+	UITheme.tip(deck_btn, "Deck\n---\nCards compiled from the ship. Duplicates are counted.")
+	deck_btn.pressed.connect(_open_deck)
+	chrome.add_child(deck_btn)
 
 	_reward = Game.pending_reward
 	_heading = UITheme.label(_reward_heading(), 24, UITheme.GOOD, "Black")
@@ -69,14 +79,13 @@ func _ready() -> void:
 	_status = UITheme.label("", 12, UITheme.TEXT, "SemiBold")
 	col.add_child(_status)
 
-	# Three tiles across; they share leftover height so footer buttons stay on screen.
-	_list = GridContainer.new()
-	_list.columns = 3
+	# Expanding HBox rows (not GridContainer): leftover viewport height after
+	# chrome / footer is given to the tiles so they grow with the window.
+	_list = VBoxContainer.new()
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_list.size_flags_stretch_ratio = 1.0
-	_list.add_theme_constant_override("h_separation", 10)
-	_list.add_theme_constant_override("v_separation", 10)
+	_list.add_theme_constant_override("separation", 10)
 	col.add_child(_list)
 
 	_skip_btn = UITheme.outline_button("", UITheme.GOOD)
@@ -88,12 +97,18 @@ func _ready() -> void:
 	jettison.pressed.connect(_toggle_jettison)
 	col.add_child(jettison)
 
+	_overlay_host = Control.new()
+	_overlay_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_overlay_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_overlay_host.z_index = 10
+	add_child(_overlay_host)
+
 	# Floating card preview sits above everything; ignores mouse so hover
 	# doesn't flicker when the cursor is over the preview itself.
 	_preview_layer = Control.new()
-	_preview_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_preview_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_preview_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_preview_layer.z_index = 20
+	_preview_layer.z_index = 30
 	add_child(_preview_layer)
 
 	_refresh()
@@ -142,16 +157,18 @@ func _refresh() -> void:
 	_hide_card_preview()
 	if _ship_view != null:
 		_ship_view.refresh(run.ship)
+	var tiles: Array = []
 	if _jettisoning:
 		_heading.text = "JETTISON A PART"
 		_skip_btn.visible = false
 		for inst in run.ship.parts:
-			_list.add_child(_jettison_row(inst))
+			tiles.append(_jettison_row(inst))
 	else:
 		_skip_btn.visible = true
 		_heading.text = _reward_heading()
 		for offer in _reward.get("parts", []):
-			_list.add_child(_offer_row(offer))
+			tiles.append(_offer_row(offer))
+	_fill_offer_rows(tiles)
 
 func _reward_heading() -> String:
 	if Game.pending_sector_advance:
@@ -222,7 +239,7 @@ func _offer_row(offer: Dictionary) -> Control:
 		2 if shout_deficit else 1, 4, 12)
 	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	wrap.custom_minimum_size = Vector2(0, 120)
+	wrap.custom_minimum_size = Vector2(0, 160)
 	UITheme.tip(wrap, UITheme.part_tip(def))
 
 	var info := VBoxContainer.new()
@@ -241,9 +258,11 @@ func _offer_row(offer: Dictionary) -> Control:
 	badges.add_child(UITheme.badge(String(rarity).to_upper(), rarity_c))
 	badges.add_child(UITheme.badge(String(def.slot).to_upper(), UITheme.ACCENT))
 
-	# Prominent keep-aspect module art between title and body (~80px at 720p).
+	# Keep-aspect module art grows with leftover tile height on a taller window.
 	var art := UITheme.module_icon(def, UITheme.MODULE_ICON_SIZE)
 	art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	art.size_flags_stretch_ratio = 0.55
 	info.add_child(art)
 
 	var costs := _cost_bits(def)
@@ -267,11 +286,13 @@ func _offer_row(offer: Dictionary) -> Control:
 
 	var take := UITheme.button("TAKE", UITheme.GOOD)
 	take.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	take.size_flags_vertical = Control.SIZE_SHRINK_END
 	if not offer["can_install"]:
 		var replaces: PartInstance = offer.get("replaces")
 		if replaces != null:
 			take = UITheme.button("REPLACE", UITheme.WARN)
 			take.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			take.size_flags_vertical = Control.SIZE_SHRINK_END
 			UITheme.tip(take, "Replace %s\n---\nFrees that slot and its cards, then installs %s." % [
 				replaces.def.name, def.name])
 		else:
@@ -304,7 +325,7 @@ func _jettison_row(inst: PartInstance) -> Control:
 	var wrap := UITheme.box(UITheme.PANEL, UITheme.HOSTILE, 1, 4, 12)
 	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	wrap.custom_minimum_size = Vector2(0, 100)
+	wrap.custom_minimum_size = Vector2(0, 140)
 	UITheme.tip(wrap, UITheme.part_tip(inst.def, "Jettison frees the slot and removes these cards."))
 
 	var info := VBoxContainer.new()
@@ -319,6 +340,8 @@ func _jettison_row(inst: PartInstance) -> Control:
 	info.add_child(UITheme.badge(String(inst.def.slot).to_upper(), UITheme.ACCENT))
 	var art := UITheme.module_icon(inst.def, UITheme.MODULE_ICON_COMPACT)
 	art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	art.size_flags_stretch_ratio = 0.45
 	info.add_child(art)
 	info.add_child(UITheme.label("frees slot + cards", 11, UITheme.TEXT_FAINT))
 	info.add_child(_card_chips(inst.granted_cards()))
@@ -328,6 +351,7 @@ func _jettison_row(inst: PartInstance) -> Control:
 
 	var cut := UITheme.button("JETTISON", UITheme.HOSTILE)
 	cut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cut.size_flags_vertical = Control.SIZE_SHRINK_END
 	UITheme.tip(cut, "Jettison %s\n---\nSlot opens. Its cards leave the deck for the rest of the run." % inst.def.name)
 	cut.pressed.connect(func():
 		var err := RewardPool.jettison(Game.run, inst)
@@ -394,6 +418,39 @@ func _cost_bits(def: PartDef) -> PackedStringArray:
 			bits.append("+%d %s" % [v, key.replace("_", " ")])
 	return bits
 
+## Three expanding tiles per row so leftover viewport space stretches the
+## cards instead of pooling as empty GridContainer slack.
+func _fill_offer_rows(tiles: Array) -> void:
+	var row: HBoxContainer = null
+	var in_row := 0
+	for tile in tiles:
+		if row == null or in_row == 3:
+			row = HBoxContainer.new()
+			row.add_theme_constant_override("separation", 10)
+			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			_list.add_child(row)
+			in_row = 0
+		row.add_child(tile)
+		in_row += 1
+	if row != null:
+		while in_row < 3:
+			var pad := Control.new()
+			pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			pad.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			row.add_child(pad)
+			in_row += 1
+
+func _open_deck() -> void:
+	_hide_card_preview()
+	ShipStatusOverlay.open_deck(_overlay_host, _preview_layer, _close_deck)
+
+func _close_deck() -> void:
+	_preview_card = null
+	if _overlay_host == null:
+		return
+	ShipStatusOverlay.close(_overlay_host, _preview_layer)
+
 func _skip_for_repair() -> void:
 	var healed := RewardPool.skip_for_repair(Game.run)
 	if healed > 0:
@@ -413,4 +470,5 @@ func _toggle_jettison() -> void:
 
 func _continue() -> void:
 	_hide_card_preview()
+	_close_deck()
 	Game.after_reward()

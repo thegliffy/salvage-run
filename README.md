@@ -102,7 +102,7 @@ integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
   related shared cards)
 - Run is **three sectors of ~10 stops** plus a true final boss
 - Unlockable **Shepherd** hull (1 weapon / 3 hull / 6 utility, Deflector Mk I,
-  Drone Launcher) at **650 salvage**
+  Drone Launcher with two empty bays you fill by playing launch cards) at **650 salvage**
 
 ---
 

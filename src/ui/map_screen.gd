@@ -60,6 +60,11 @@ func _build() -> void:
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head_row.add_child(_status)
 
+	var deck_btn := UITheme.ghost_button("  DECK  ")
+	UITheme.tip(deck_btn, "Deck\n---\nCards compiled from the ship. Duplicates are counted.")
+	deck_btn.pressed.connect(_open_deck)
+	head_row.add_child(deck_btn)
+
 	var ship_btn := UITheme.ghost_button("  SHIP STATUS  ")
 	UITheme.tip(ship_btn, "Ship status\n---\nSlots, power budget, deck, and the painted hull.")
 	ship_btn.pressed.connect(_open_ship_status)
@@ -152,7 +157,7 @@ func _rebuild() -> void:
 	_status.text = "HULL %d/%d    CREDITS %d    DECK %d    AT %s" % [
 		run.hull_carryover, run.profile.max_hull, run.credits,
 		run.profile.deck.size(), MapGenerator.label_for(String(cur["type"]), run.sector)]
-	UITheme.tip(_status, "Run status\nhull %d/%d · credits %d · deck %d\n---\nSHIP STATUS opens the full loadout, power budget, and deck." % [
+	UITheme.tip(_status, "Run status\nhull %d/%d · credits %d · deck %d\n---\nDECK lists the compiled cards. SHIP STATUS opens the full loadout and power budget." % [
 		run.hull_carryover, run.profile.max_hull, run.credits, run.profile.deck.size()])
 
 	# Keep the current column in view.
@@ -287,10 +292,16 @@ func _tooltip(node: Dictionary, can_enter: bool, is_here: bool, visited: bool) -
 		bits.append("Not reachable from here.")
 	return "\n".join(bits)
 
-# --- Ship status overlay -----------------------------------------------------
+# --- Overlays ----------------------------------------------------------------
+
+func _open_deck() -> void:
+	ShipStatusOverlay.open_deck(_overlay_host, _preview_layer, _close_overlay)
 
 func _open_ship_status() -> void:
-	ShipStatusOverlay.open(_overlay_host, _preview_layer, _close_ship_status)
+	ShipStatusOverlay.open(_overlay_host, _preview_layer, _close_overlay)
+
+func _close_overlay() -> void:
+	ShipStatusOverlay.close(_overlay_host, _preview_layer)
 
 func _close_ship_status() -> void:
-	ShipStatusOverlay.close(_overlay_host, _preview_layer)
+	_close_overlay()

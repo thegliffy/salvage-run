@@ -47,6 +47,8 @@ var _hand_epoch: int = 0
 var _ship_stats: Label
 var _deficit_host: PanelContainer
 var _deficit: Label
+var _drone_bay: HBoxContainer
+var _drone_rings: Array = []
 
 func _ready() -> void:
 	_build()
@@ -110,11 +112,14 @@ func _build() -> void:
 	root.add_theme_constant_override("separation", 10)
 	margin.add_child(root)
 
-	# Header
+	# Header: title left, two drone rings top-center, banner + SHIP right.
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	root.add_child(head)
 	head.add_child(UITheme.chrome_mark())
+	head.add_child(UITheme.expand())
+	_drone_bay = _build_drone_bay()
+	head.add_child(_drone_bay)
 	head.add_child(UITheme.expand())
 	_banner = UITheme.label(_fight_banner(), 13, UITheme.TEXT_DIM, "SemiBold")
 	head.add_child(_banner)
@@ -326,23 +331,22 @@ func _build_hand_row() -> Control:
 	row.add_child(_hand)
 
 	var side := VBoxContainer.new()
-	side.add_theme_constant_override("separation", 6)
-	side.custom_minimum_size.x = 136
+	side.add_theme_constant_override("separation", 8)
+	side.custom_minimum_size.x = 158
+	side.size_flags_vertical = Control.SIZE_FILL
 	row.add_child(side)
 
-	var piles := HBoxContainer.new()
-	piles.add_theme_constant_override("separation", 6)
-	side.add_child(piles)
-	var draw_box := _pile_box("DRAW")
+	var draw_box := _pile_box("DRAW PILE", UITheme.ACCENT)
 	_draw_count = draw_box.get_meta("count")
-	piles.add_child(draw_box)
-	var disc_box := _pile_box("DISC")
+	side.add_child(draw_box)
+	var disc_box := _pile_box("DISCARD", UITheme.ACCENT_DIM)
 	_discard_count = disc_box.get_meta("count")
-	piles.add_child(disc_box)
-	# Invisible label keeps the FX pile anchors used by CardFx.
+	side.add_child(disc_box)
+	# Tiny FX fallback; live counts live on DRAW PILE / DISCARD.
 	_piles = UITheme.label("", 1, Color(0, 0, 0, 0))
 	_piles.custom_minimum_size = Vector2(1, 1)
-	piles.add_child(_piles)
+	_piles.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	side.add_child(_piles)
 
 	_end_turn = UITheme.button("END TURN", UITheme.WARN)
 	_end_turn.pressed.connect(_on_end_turn)
@@ -350,18 +354,48 @@ func _build_hand_row() -> Control:
 	side.add_child(_end_turn)
 	return wrap
 
-func _pile_box(caption: String) -> PanelContainer:
+func _build_drone_bay() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.visible = false
+	_drone_rings.clear()
+	for i in 2:
+		var ring := _make_drone_ring()
+		row.add_child(ring)
+		_drone_rings.append(ring)
+	return row
+
+func _make_drone_ring() -> PanelContainer:
+	var ring := PanelContainer.new()
+	var px := UITheme.DRONE_SLOT_SIZE
+	ring.custom_minimum_size = Vector2(px, px)
+	UITheme.touch(ring, px)
+	var chip := TextureRect.new()
+	chip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	chip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	ring.add_child(chip)
+	ring.set_meta("chip", chip)
+	return ring
+
+func _pile_box(caption: String, border: Color = UITheme.ACCENT_DIM) -> PanelContainer:
 	var box := ThemedPanel.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	box.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL, UITheme.ACCENT_DIM, 1, 3, 6))
+		UITheme.panel(UITheme.PANEL, border, 1, 4, 8))
+	UITheme.touch(box, 64)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 0)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(col)
-	var cap := UITheme.label(caption, 9, UITheme.TEXT_FAINT, "Bold")
+	var cap := UITheme.label(caption, 11, UITheme.ACCENT, "Bold")
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(cap)
-	var count := UITheme.label("0", 16, UITheme.TEXT, "Black")
+	var count := UITheme.label("0", 26, UITheme.TEXT, "Black")
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(count)
 	box.set_meta("count", count)
@@ -416,23 +450,13 @@ func _refresh() -> void:
 	_energy.text = "⚡ %d / %d" % [p.energy, p.max_energy]
 	UITheme.tip(_energy, "Energy\n%d / %d this turn\n---\nRefills each turn. Playing a card spends its cost. Overdraw from ship power cuts this maximum." % [
 		p.energy, p.max_energy])
-	if _draw_count != null:
-		_draw_count.text = str(combat.deck.draw_pile.size())
-		UITheme.tip(_draw_count.get_parent().get_parent(),
-			"Draw pile\n%d cards\n---\nDrawn at the start of your turn. Empty pile reshuffles discard." % combat.deck.draw_pile.size())
-	if _discard_count != null:
-		_discard_count.text = str(combat.deck.discard_pile.size())
-		UITheme.tip(_discard_count.get_parent().get_parent(),
-			"Discard pile\n%d cards\n---\nPlayed and leftover cards land here until reshuffle." % combat.deck.discard_pile.size())
-	_piles.text = "draw %d\ndiscard %d" % [combat.deck.draw_pile.size(), combat.deck.discard_pile.size()]
+	_refresh_piles()
 	var bud: Dictionary = Game.run.ship.power_budget()
 	var prof := Game.run.profile
 	# Max shield lives on the ◆ readout beside the hull bar; repeating it here
 	# is just clutter, so this line carries the regen rate only.
 	var stats := "evasion %d  ·  shield +%d/t  ·  power %d/%d  ·  deck %d" % [
 		prof.evasion, prof.shield_regen, bud["draw"], bud["output"], prof.deck.size()]
-	if combat.drone_slots > 0:
-		stats += "  ·  drones ×%d %s" % [combat.drone_slots, String(combat.drone_mode).to_upper()]
 	_ship_stats.text = stats
 	_ship_stats.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
 	var deficit_n := int(bud["deficit"])
@@ -444,7 +468,80 @@ func _refresh() -> void:
 		_deficit_host.visible = false
 		_deficit.text = ""
 	UITheme.tip(_ship_stats, UITheme.power_tip(bud))
+	_refresh_drone_bay()
 	_rebuild_hand()
+
+func _refresh_piles() -> void:
+	if combat == null:
+		return
+	var draw_n := combat.deck.draw_pile.size()
+	var disc_n := combat.deck.discard_pile.size()
+	if _draw_count != null:
+		_draw_count.text = str(draw_n)
+		UITheme.tip(_draw_count.get_parent().get_parent(),
+			"Draw pile\n%d cards remaining\n---\nDrawn at the start of your turn. Empty pile reshuffles discard." % draw_n)
+	if _discard_count != null:
+		_discard_count.text = str(disc_n)
+		UITheme.tip(_discard_count.get_parent().get_parent(),
+			"Discard pile\n%d cards\n---\nPlayed and leftover cards land here until reshuffle." % disc_n)
+
+func _refresh_drone_bay() -> void:
+	if _drone_bay == null:
+		return
+	var n := 0 if combat == null else combat.drone_slots
+	_drone_bay.visible = n > 0
+	if n <= 0:
+		return
+	while _drone_rings.size() < n:
+		var ring := _make_drone_ring()
+		_drone_bay.add_child(ring)
+		_drone_rings.append(ring)
+	for i in _drone_rings.size():
+		var ring: PanelContainer = _drone_rings[i]
+		ring.visible = i < n
+		if i >= n:
+			continue
+		var filled: Dictionary = combat.drones[i] if i < combat.drones.size() else {}
+		_style_drone_ring(ring, filled)
+	UITheme.tip(_drone_bay, _drone_bay_tip())
+
+func _style_drone_ring(ring: PanelContainer, drone: Dictionary) -> void:
+	var kind := StringName(drone.get("type", &""))
+	var chip: TextureRect = ring.get_meta("chip")
+	var tex := UITheme.drone_slot_texture(kind)
+	if tex != null:
+		chip.texture = tex
+		chip.visible = true
+		# Chip already paints the ring / orb; keep the panel hole transparent.
+		ring.add_theme_stylebox_override("panel",
+			UITheme.panel(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0))
+		return
+	chip.texture = null
+	chip.visible = false
+	if kind == &"attack":
+		ring.add_theme_stylebox_override("panel",
+			UITheme.panel(UITheme.HOSTILE, UITheme.HOSTILE.lightened(0.2), 2, 24, 0))
+	elif kind == &"shield":
+		ring.add_theme_stylebox_override("panel",
+			UITheme.panel(UITheme.ACCENT, UITheme.ACCENT.lightened(0.2), 2, 24, 0))
+	else:
+		ring.add_theme_stylebox_override("panel",
+			UITheme.panel(Color(0, 0, 0, 0), UITheme.TEXT_FAINT, 2, 24, 0))
+
+func _drone_bay_tip() -> String:
+	var bits: PackedStringArray = ["DRONE BAYS"]
+	bits.append("%d / %d occupied" % [combat.drones.size(), combat.drone_slots])
+	bits.append("---")
+	for i in combat.drone_slots:
+		if i < combat.drones.size():
+			var d: Dictionary = combat.drones[i]
+			var kind := String(d.get("type", "attack"))
+			bits.append("Bay %d — %s (%d)" % [i + 1, kind.to_upper(), int(d.get("amount", 0))])
+		else:
+			bits.append("Bay %d — empty" % (i + 1))
+	bits.append("---")
+	bits.append("Launch with cards. Occupied drones fire at the start of your turn, after shield regen and before you draw.")
+	return "\n".join(bits)
 
 func _refresh_intent() -> void:
 	var info: Dictionary = combat.brain.telegraph_info()
@@ -670,9 +767,11 @@ func _discard_pile_pos() -> Vector2:
 
 func _on_cards_drawn(cards: Array) -> void:
 	_pending_draw += cards.size()
+	_refresh_piles()
 
 func _on_deck_reshuffled() -> void:
 	_log_line("— discard pile shuffled back in —", UITheme.TEXT_FAINT)
+	_refresh_piles()
 	CardFx.shuffle(_fx_layer, _discard_pile_pos(), _draw_pile_pos())
 
 func _on_end_turn() -> void:
@@ -724,12 +823,20 @@ func _on_effect(event: Dictionary) -> void:
 			line = "  %s %s suppressed %d turn(s)" % [event["target"], event["system"], event["turns"]]
 			colour = UITheme.WARN
 		"drones":
-			line = "  Drones ×%d %s" % [int(event.get("count", 0)),
-				String(event.get("mode", "attack")).to_upper()]
+			var times := int(event.get("times", 1))
+			if times > 1:
+				line = "  Drones ×%d activate ×%d" % [int(event.get("count", 0)), times]
+			else:
+				line = "  Drones ×%d tick" % int(event.get("count", 0))
 			colour = UITheme.ACCENT
-		"drone_mode":
-			line = "  Drone wing set to %s" % String(event.get("mode", "")).to_upper()
-			colour = UITheme.ACCENT
+		"drone_launch":
+			line = "  Launch %s drone (%d / %d)" % [
+				String(event.get("mode", "")).to_upper(),
+				int(event.get("count", 0)), int(event.get("slots", 0))]
+			colour = UITheme.HOSTILE if String(event.get("mode", "")) == "attack" else UITheme.ACCENT
+		"drone_overcharge":
+			line = "  Overcharge — occupied drones fire ×%d" % int(event.get("times", 2))
+			colour = UITheme.WARN
 	if line != "":
 		_log_line(line, colour)
 

@@ -43,8 +43,8 @@ static func tank() -> ShipLoadout:
 	_install(g, &"ion_thrusters")
 	return g
 
-## One weapon, extra utility bays, Deflector shields, and a two-drone wing.
-## Drones tick at the start of your turn (after shield regen).
+## One weapon, extra utility bays, Deflector shields, and two empty drone bays.
+## Launch Attack / Shield drones with cards; they tick at the start of your turn.
 static func shepherd() -> ShipLoadout:
 	var g := ShipLoadout.new("Shepherd")
 	g.capacity = {
@@ -94,7 +94,7 @@ static func choices() -> Array:
 		{
 			"id": &"shepherd",
 			"name": "Shepherd",
-			"blurb": "1 weapon · 6 utility · Deflector Mk I · two drones each turn",
+			"blurb": "1 weapon · 6 utility · Deflector Mk I · two empty drone bays",
 			"unlock_cost": 650,
 		},
 	]

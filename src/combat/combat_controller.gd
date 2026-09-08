@@ -20,13 +20,15 @@ var victory: bool = false
 var pending_credits: int = 0
 var events: Array[Dictionary] = []
 
-## Drone wing: each filled slot ticks once at the start of your turn, after
-## shield regen. Standing order defaults to Attack; protocol cards change it.
+## Drone bays: empty until a launch card fills a slot. Occupied drones tick
+## once at the start of the player's turn, after shield regen / overshield
+## drop and before the draw. Overcharge activates occupied drones extra times
+## immediately (still this turn). Offline `drones` subsystem silences ticks.
 const DRONE_ATTACK := 2
-const DRONE_REPAIR := 2
 const DRONE_SHIELD := 2
 var drone_slots: int = 0
-var drone_mode: StringName = &"attack"
+## Occupied bays: [{type: attack|shield, amount: int}, ...] — empty at setup.
+var drones: Array = []
 
 # Link back to the run so subsystem destruction can wear down real parts.
 var loadout: ShipLoadout = null
@@ -45,7 +47,7 @@ func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) 
 	turn = 0
 	pending_credits = int(enemy_def.reward.get("credits", 0))
 	drone_slots = profile.drone_slots
-	drone_mode = &"attack"
+	drones.clear()
 	events.clear()
 	EventBus.combat_started.emit(self)
 	brain.choose_intent()
@@ -61,6 +63,7 @@ func begin_player_turn() -> void:
 	# Overshield expires at the start of your turn, then regen fills toward cap.
 	player.clear_overshield()
 	player.shield = mini(player.max_shield, player.shield + player.effective_shield_regen())
+	# Occupied drones tick after shield regen, before the draw.
 	_tick_drones()
 	deck.draw(player.draw_per_turn)
 	EventBus.energy_changed.emit(player.energy, player.max_energy)
@@ -74,6 +77,9 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 		return "card is not in hand"
 	if card.cost() > player.energy:
 		return "not enough energy"
+	var drone_err := _drone_play_error(card)
+	if drone_err != "":
+		return drone_err
 	if card.def.needs_target() and target_system == &"":
 		return "card requires a target system"
 	if target_system == &"hull" and not card.def.can_target_hull():
@@ -95,31 +101,73 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 	_check_end()
 	return ""
 
-## Drones fire at the start of your turn, after shield regen / overshield drop.
-## Offline `drones` subsystem silences the wing for the turn (soft control).
-func _tick_drones() -> void:
-	if drone_slots <= 0 or phase == Phase.DONE:
+func empty_drone_slots() -> int:
+	return maxi(0, drone_slots - drones.size())
+
+## Fill the next empty bay. Returns a reason if the launch is illegal.
+func launch_drone(kind: StringName, amount: int) -> String:
+	if drone_slots <= 0:
+		return "no drone bays"
+	if drones.size() >= drone_slots:
+		return "drone bays are full"
+	if kind != &"attack" and kind != &"shield":
+		kind = &"attack"
+	drones.append({"type": kind, "amount": maxi(1, amount)})
+	return ""
+
+func _drone_play_error(card: CardInstance) -> String:
+	for op in card.effects():
+		if typeof(op) != TYPE_DICTIONARY:
+			continue
+		match String(op.get("op", "")):
+			"launch_drone":
+				if drone_slots <= 0:
+					return "no drone bays"
+				if drones.size() >= drone_slots:
+					return "drone bays are full"
+			"overcharge_drones":
+				if drones.is_empty():
+					return "no drones launched"
+				var ds: ShipSystem = player.system(&"drones")
+				if ds != null and not ds.is_active():
+					return "drone launcher is offline"
+	return ""
+
+## Occupied drones fire `times` each. Default once: start-of-turn tick.
+## Offline `drones` subsystem silences the wing (soft control).
+func _tick_drones(times: int = 1) -> void:
+	if drones.is_empty() or phase == Phase.DONE:
 		return
 	var ds: ShipSystem = player.system(&"drones")
 	if ds != null and not ds.is_active():
 		log_event({"type": "offline", "target": "Drones"})
 		return
-	var op: Dictionary
-	match drone_mode:
-		&"repair":
-			op = {"op": "repair_hull", "amount": DRONE_REPAIR}
-		&"shield":
-			op = {"op": "shield", "amount": DRONE_SHIELD}
-		_:
-			op = {"op": "damage_system", "amount": DRONE_ATTACK, "homing": true}
-	for i in drone_slots:
-		if phase == Phase.DONE:
-			return
-		resolver.run([op], {
-			"source": player, "opponent": enemy, "target_system": &"",
-		})
-	log_event({"type": "drones", "mode": String(drone_mode), "count": drone_slots})
+	var reps := maxi(1, times)
+	for i in reps:
+		for d in drones:
+			if phase == Phase.DONE:
+				return
+			_activate_drone(d)
+	var ev := {
+		"type": "drones",
+		"count": drones.size(),
+		"times": reps,
+	}
+	log_event(ev)
+	EventBus.effect_resolved.emit(ev)
 	_check_end()
+
+func _activate_drone(d: Dictionary) -> void:
+	var kind := StringName(d.get("type", &"attack"))
+	var amt := int(d.get("amount", DRONE_ATTACK if kind == &"attack" else DRONE_SHIELD))
+	var op: Dictionary
+	if kind == &"shield":
+		op = {"op": "shield", "amount": amt}
+	else:
+		op = {"op": "damage_system", "amount": amt, "homing": true}
+	resolver.run([op], {
+		"source": player, "opponent": enemy, "target_system": &"",
+	})
 
 func end_player_turn() -> void:
 	if phase != Phase.PLAYER:
@@ -194,4 +242,5 @@ func snapshot() -> Dictionary:
 	return {"turn": turn, "phase": phase, "player": player.snapshot(),
 		"enemy": enemy.snapshot(), "intent": brain.telegraph(),
 		"hand": deck.hand.size(), "draw": deck.draw_pile.size(),
-		"discard": deck.discard_pile.size()}
+		"discard": deck.discard_pile.size(),
+		"drone_slots": drone_slots, "drones": drones.size()}
