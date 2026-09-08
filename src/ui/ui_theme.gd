@@ -45,6 +45,8 @@ const DRONE_SLOT_DIR := "res://assets/ui/drone_slots/"
 ## Design size at 720p; canvas_items stretch scales this with the window.
 const MODULE_ICON_SIZE := 80
 const MODULE_ICON_COMPACT := 64
+## Loadout / ship-status part rows. Smaller than shop tiles so a full ship lists.
+const MODULE_ICON_LIST := 40
 ## Combat header drone bays. Slot chips are 128px; this is the on-screen size.
 const DRONE_SLOT_SIZE := 48
 

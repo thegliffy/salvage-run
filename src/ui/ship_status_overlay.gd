@@ -27,9 +27,11 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	var panel := PanelContainer.new()
 	# Fit inside the viewport with a margin — never taller/wider than the screen.
 	var vp := host.get_viewport_rect().size
+	if vp.x < 160.0 or vp.y < 160.0:
+		vp = Vector2(1280, 720)
 	panel.custom_minimum_size = Vector2(
-		minf(740.0, vp.x - 48.0),
-		minf(540.0, vp.y - 48.0))
+		minf(760.0, maxf(vp.x - 48.0, 320.0)),
+		minf(560.0, maxf(vp.y - 48.0, 280.0)))
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -39,19 +41,17 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 
 	var outer := MarginContainer.new()
 	for side in ["left", "top", "right", "bottom"]:
-		outer.add_theme_constant_override("margin_" + side, 0)
+		outer.add_theme_constant_override("margin_" + side, 12)
 	panel.add_child(outer)
 
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	outer.add_child(scroll)
-
+	# Fill the panel — do not wrap the whole overlay in a ScrollContainer.
+	# Nested leftover-height scrolls (parts / deck) need a definite parent
+	# height or they collapse and clip, which is how the deck used to vanish.
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 10)
-	scroll.add_child(col)
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 8)
+	outer.add_child(col)
 
 	var run: RunState = Game.run
 	var prof := run.profile
@@ -103,60 +103,102 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 			continue
 		col.add_child(UITheme.label("! " + w, 13, UITheme.WARN, "SemiBold"))
 
-	var ship_view := ShipView.new()
-	ship_view.custom_minimum_size = Vector2(0, 120)
-	ship_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(ship_view)
-	ship_view.refresh(run.ship)
-	col.add_child(UITheme.label(
-		"Red turrets = weapons · cyan plates = hull · green pods = utility · empty rings = free slots",
-		11, UITheme.TEXT_FAINT))
+	# Improvements sit under the stats so an empty or installed list is on the
+	# first screen — they used to hang off the bottom of a nested slots scroll.
+	col.add_child(_improvements_block(run))
 
+	# Two leftover-height columns. Headings stay pinned; only the lists scroll,
+	# so a long deck is browseable without clipping parts or improvements.
 	var body := HBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 18)
+	body.custom_minimum_size.y = 180
+	body.add_theme_constant_override("separation", 16)
 	col.add_child(body)
 
+	var slots_wrap := VBoxContainer.new()
+	slots_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slots_wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slots_wrap.size_flags_stretch_ratio = 1.12
+	slots_wrap.add_theme_constant_override("separation", 6)
+	body.add_child(slots_wrap)
+	slots_wrap.add_child(UITheme.label("EQUIPPED PARTS", 15, UITheme.TEXT, "Bold"))
+	slots_wrap.add_child(UITheme.label(
+		"Grouped by mount. Empty mounts still count against capacity.",
+		11, UITheme.TEXT_FAINT))
 	var slots_scroll := ScrollContainer.new()
 	slots_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slots_scroll.size_flags_stretch_ratio = 1.1
+	slots_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	slots_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	body.add_child(slots_scroll)
+	slots_wrap.add_child(slots_scroll)
 	var slots_col := VBoxContainer.new()
 	slots_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slots_col.add_theme_constant_override("separation", 10)
+	slots_col.add_theme_constant_override("separation", 8)
 	slots_scroll.add_child(slots_col)
-	slots_col.add_child(UITheme.label("SLOTS", 15, UITheme.TEXT, "Bold"))
 	for slot in ShipLoadout.SLOT_TYPES:
 		slots_col.add_child(_slot_block(run, slot))
 
-	if not run.ship.improvements.is_empty():
-		slots_col.add_child(UITheme.spacer(4))
-		slots_col.add_child(UITheme.label("IMPROVEMENTS", 15, UITheme.TEXT, "Bold"))
-		for iid in run.ship.improvements:
-			var imp: ImprovementDef = Database.improvement(iid)
-			if imp == null:
-				continue
-			slots_col.add_child(UITheme.label("· %s — %s" % [imp.name, imp.text],
-				12, UITheme.TEXT_DIM))
-
+	var deck_wrap := VBoxContainer.new()
+	deck_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	deck_wrap.add_theme_constant_override("separation", 4)
+	body.add_child(deck_wrap)
+	deck_wrap.add_child(UITheme.label("DECK  (%d)" % prof.deck.size(), 15, UITheme.TEXT, "Bold"))
+	deck_wrap.add_child(UITheme.label(
+		"Compiled from installed parts. Duplicates share a count. Hover a row to read the card.",
+		11, UITheme.TEXT_FAINT))
 	var deck_scroll := ScrollContainer.new()
 	deck_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	deck_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	body.add_child(deck_scroll)
-	var deck_col := VBoxContainer.new()
-	deck_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	deck_col.add_theme_constant_override("separation", 4)
-	deck_scroll.add_child(deck_col)
-	deck_col.add_child(UITheme.label("DECK  (%d)" % prof.deck.size(), 15, UITheme.TEXT, "Bold"))
-	deck_col.add_child(UITheme.label("Hover a card to read it.", 11, UITheme.TEXT_FAINT))
-
-	for entry in tally_deck(prof.deck):
-		deck_col.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
+	deck_wrap.add_child(deck_scroll)
+	var deck_list := VBoxContainer.new()
+	deck_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_list.add_theme_constant_override("separation", 4)
+	deck_scroll.add_child(deck_list)
+	_fill_deck_list(deck_list, prof.deck, preview_layer, on_close)
 
 	var close_foot := UITheme.ghost_button("  CLOSE  ")
 	close_foot.pressed.connect(on_close)
 	col.add_child(close_foot)
+
+## Compact combat / tooltip strip: slot fill plus improvement count or name.
+static func loadout_strip(ship: ShipLoadout) -> String:
+	if ship == null:
+		return ""
+	var bits: PackedStringArray = []
+	bits.append("W %d/%d" % [
+		ship.installed_in(ShipLoadout.SLOT_WEAPON).size(),
+		ship.slot_capacity(ShipLoadout.SLOT_WEAPON)])
+	bits.append("H %d/%d" % [
+		ship.installed_in(ShipLoadout.SLOT_HULL).size(),
+		ship.slot_capacity(ShipLoadout.SLOT_HULL)])
+	bits.append("U %d/%d" % [
+		ship.installed_in(ShipLoadout.SLOT_UTILITY).size(),
+		ship.slot_capacity(ShipLoadout.SLOT_UTILITY)])
+	var n := ship.improvements.size()
+	if n <= 0:
+		bits.append("no improvements")
+	elif n == 1:
+		var imp: ImprovementDef = Database.improvement(ship.improvements[0])
+		bits.append(imp.name if imp != null else "1 improvement")
+	else:
+		bits.append("%d improvements" % n)
+	return "  ·  ".join(bits)
+
+## Visible label copy under `root`. Used by headless overlay coverage.
+static func collect_texts(root: Node) -> PackedStringArray:
+	var out: PackedStringArray = []
+	_collect_texts(root, out)
+	return out
+
+static func _collect_texts(n: Node, out: PackedStringArray) -> void:
+	if n is Label:
+		var t := String((n as Label).text).strip_edges()
+		if t != "":
+			out.append(t)
+	for c in n.get_children():
+		_collect_texts(c, out)
 
 ## First-seen order with duplicate counts. The run deck is derived from the
 ## ship, so this is the list combat will shuffle.
@@ -243,12 +285,7 @@ static func open_deck(host: Control, preview_layer: Control, on_close: Callable)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 4)
 	scroll.add_child(list)
-
-	if deck.is_empty():
-		list.add_child(UITheme.label("No cards — the ship is empty.", 13, UITheme.TEXT_FAINT))
-	else:
-		for entry in tally_deck(deck):
-			list.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
+	_fill_deck_list(list, deck, preview_layer, on_close)
 
 	var close_foot := UITheme.ghost_button("  CLOSE  ")
 	close_foot.pressed.connect(on_close)
@@ -262,6 +299,14 @@ static func close(host: Control, preview_layer: Control = null) -> void:
 		c.queue_free()
 	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+static func _fill_deck_list(list: VBoxContainer, deck: Array, preview_layer: Control,
+		on_close: Callable) -> void:
+	if deck.is_empty():
+		list.add_child(UITheme.label("No cards — the ship is empty.", 13, UITheme.TEXT_FAINT))
+		return
+	for entry in tally_deck(deck):
+		list.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
+
 static func _slot_block(run: RunState, slot: StringName) -> Control:
 	var used := run.ship.installed_in(slot)
 	var cap := run.ship.slot_capacity(slot)
@@ -269,11 +314,11 @@ static func _slot_block(run: RunState, slot: StringName) -> Control:
 	var full := used.size() >= cap
 	wrap.add_theme_stylebox_override("panel", UITheme.panel(
 		UITheme.PANEL_RAISED,
-		UITheme.WARN if full else UITheme.ACCENT_DIM, 1, 4, 10))
+		UITheme.WARN if full else UITheme.ACCENT_DIM, 1, 4, 8))
 	UITheme.tip(wrap, "%s slots\n%d / %d%s\n---\nTyped mounts. Full means a new part of this type must replace one." % [
 		String(slot).to_upper(), used.size(), cap, " · FULL" if full else ""])
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 3)
+	col.add_theme_constant_override("separation", 4)
 	wrap.add_child(col)
 
 	var head := HBoxContainer.new()
@@ -284,30 +329,97 @@ static func _slot_block(run: RunState, slot: StringName) -> Control:
 		UITheme.WARN if full else UITheme.TEXT_DIM, "SemiBold"))
 	if full:
 		head.add_child(UITheme.label("FULL", 11, UITheme.WARN, "Bold"))
+	else:
+		var empty := cap - used.size()
+		head.add_child(UITheme.label(
+			"1 empty mount" if empty == 1 else "%d empty mounts" % empty,
+			11, UITheme.TEXT_FAINT))
 
 	if used.is_empty():
-		col.add_child(UITheme.label("empty", 12, UITheme.TEXT_FAINT))
+		col.add_child(UITheme.label("nothing equipped", 12, UITheme.TEXT_FAINT))
 	else:
 		for inst in used:
-			var line := "%s" % inst.def.name
-			if inst.is_wrecked():
-				line += "  (wrecked)"
-			elif inst.is_stripped():
-				line += "  (stripped)"
-			var bits: PackedStringArray = []
-			if inst.def.power_draw > 0:
-				bits.append("-%d power" % inst.def.power_draw)
-			bits.append("%d mass" % inst.def.mass)
-			var part_l := UITheme.label("· %s  (%s)" % [line, "  ".join(bits)], 12,
-				UITheme.HOSTILE if inst.is_wrecked() else UITheme.TEXT)
-			var extra := ""
-			if inst.is_wrecked():
-				extra = "Wrecked — cards gone until repaired."
-			elif inst.is_stripped():
-				extra = "Stripped — one card already cut from this mount."
-			UITheme.tip(part_l, UITheme.part_tip(inst.def, extra))
-			col.add_child(part_l)
+			col.add_child(_part_row(inst))
 	return wrap
+
+static func _part_row(inst: PartInstance) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	var art := UITheme.module_icon(inst.def, UITheme.MODULE_ICON_LIST)
+	art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(art)
+
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 0)
+	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(info)
+
+	var name := inst.def.name
+	if inst.is_wrecked():
+		name += "  (wrecked)"
+	elif inst.is_stripped():
+		name += "  (stripped)"
+	info.add_child(UITheme.label(name, 13,
+		UITheme.HOSTILE if inst.is_wrecked() else UITheme.TEXT, "SemiBold"))
+	var bits: PackedStringArray = []
+	if inst.def.power_draw > 0:
+		bits.append("−%d power" % inst.def.power_draw)
+	bits.append("%d mass" % inst.def.mass)
+	info.add_child(UITheme.label("  ·  ".join(bits), 11, UITheme.TEXT_FAINT))
+
+	var extra := ""
+	if inst.is_wrecked():
+		extra = "Wrecked — cards gone until repaired."
+	elif inst.is_stripped():
+		extra = "Stripped — one card already cut from this mount."
+	UITheme.tip(row, UITheme.part_tip(inst.def, extra))
+	return row
+
+static func _improvements_block(run: RunState) -> Control:
+	var wrap := ThemedPanel.new()
+	wrap.add_theme_stylebox_override("panel", UITheme.panel(
+		UITheme.PANEL_RAISED, UITheme.ACCENT_DIM, 1, 4, 8))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	wrap.add_child(col)
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	col.add_child(head)
+	head.add_child(UITheme.label("IMPROVEMENTS", 14, UITheme.ACCENT, "Bold"))
+	head.add_child(UITheme.label(str(run.ship.improvements.size()), 13,
+		UITheme.TEXT_DIM, "SemiBold"))
+
+	if run.ship.improvements.is_empty():
+		head.add_child(UITheme.label("No improvements yet", 13, UITheme.TEXT_FAINT, "SemiBold"))
+		UITheme.tip(wrap,
+			"Improvements\nNone installed\n---\nMini-bosses and chests install these. They fill no slot and add no cards.")
+		return wrap
+
+	for iid in run.ship.improvements:
+		var imp: ImprovementDef = Database.improvement(iid)
+		if imp == null:
+			continue
+		col.add_child(_improvement_row(imp))
+	return wrap
+
+static func _improvement_row(imp: ImprovementDef) -> Control:
+	var colour: Color = UITheme.rarity_colour(imp.rarity)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.add_child(UITheme.label(imp.name, 13, UITheme.TEXT, "SemiBold"))
+	if imp.text != "":
+		var effect := UITheme.label("—  %s" % imp.text, 12, UITheme.TEXT)
+		effect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		effect.autowrap_mode = TextServer.AUTOWRAP_OFF
+		row.add_child(effect)
+	row.add_child(UITheme.label(String(imp.rarity).to_upper(), 10, colour, "Bold"))
+	UITheme.tip(row, "%s\n%s\n---\nInstalled ship improvement. Fills no slot and grants no cards." % [
+		imp.name, imp.text if imp.text != "" else String(imp.rarity).capitalize()])
+	return row
 
 static func _deck_row(card_id: StringName, count: int, preview_layer: Control,
 		_on_close: Callable) -> Control:

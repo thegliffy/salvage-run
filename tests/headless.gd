@@ -69,6 +69,7 @@ func _run_tests() -> int:
 	_test_rewards()
 	_test_valuation()
 	_test_ui_copy()
+	_test_ship_status_overlay()
 	_test_meta_progression()
 	_test_map()
 	_test_card_balance()
@@ -893,6 +894,85 @@ func _test_ui_copy() -> void:
 	UITheme.row_cta(btn)
 	_check("row CTA does not stretch vertically", btn.size_flags_vertical == Control.SIZE_SHRINK_BEGIN)
 	btn.free()
+
+func _test_ship_status_overlay() -> void:
+	print("ship status overlay")
+	var prev: RunState = Game.run
+	var run := RunState.new()
+	run.start(StarterShips.brawler(), 1)
+	Game.run = run
+
+	var strip := ShipStatusOverlay.loadout_strip(run.ship)
+	_check("loadout strip names weapon fill", strip.contains("W 1/4"))
+	_check("loadout strip names hull fill", strip.contains("H 1/3"))
+	_check("loadout strip names utility fill", strip.contains("U 1/4"))
+	_check("loadout strip empty improvements", strip.contains("no improvements"))
+
+	var host := Control.new()
+	host.custom_minimum_size = Vector2(1280, 720)
+	add_child(host)
+	var preview := Control.new()
+	add_child(preview)
+	ShipStatusOverlay.open(host, preview, func(): pass)
+	var blob := "\n".join(ShipStatusOverlay.collect_texts(host))
+	_check("overlay heading is equipped parts", blob.contains("EQUIPPED PARTS"))
+	_check("overlay lists WEAPON mounts", blob.contains("WEAPON"))
+	_check("overlay lists UTILITY mounts", blob.contains("UTILITY"))
+	_check("overlay names Burst Laser", blob.contains("Burst Laser"))
+	_check("overlay names Ablative Plating", blob.contains("Ablative Plating"))
+	_check("overlay names Ion Thrusters", blob.contains("Ion Thrusters"))
+	_check("overlay states empty mount capacity", blob.contains("empty mount"))
+	_check("overlay shows empty improvements", blob.contains("No improvements yet"))
+	_check("overlay lists the compiled deck heading", blob.contains("DECK"))
+	_check("overlay names Laser Burst from the deck", blob.contains("Laser Burst"))
+	_check("overlay names Overheat from the deck", blob.contains("Overheat"))
+	_check("overlay names Afterburner from the deck", blob.contains("Afterburner"))
+	_check("overlay counts duplicate Laser Burst", blob.contains("x2"))
+	_check("empty overlay has no bulkheads", not blob.contains("Reinforced Bulkheads"))
+	var icons := _count_visible_textures(host)
+	if icons > 0:
+		_eq("overlay shows an icon per equipped part", icons, run.ship.parts.size())
+	else:
+		_check("missing module art still lists part names", blob.contains("Burst Laser"))
+
+	run.ship.add_improvement(&"reinforced_bulkheads")
+	run.ship.add_improvement(&"power_conduits")
+	run.recompile()
+	_check("loadout strip counts two improvements",
+		ShipStatusOverlay.loadout_strip(run.ship).contains("2 improvements"))
+
+	var host2 := Control.new()
+	host2.custom_minimum_size = Vector2(1280, 720)
+	add_child(host2)
+	ShipStatusOverlay.open(host2, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host2))
+	_check("installed improvements drop the empty state", not blob.contains("No improvements yet"))
+	_check("overlay names Reinforced Bulkheads", blob.contains("Reinforced Bulkheads"))
+	_check("overlay shows bulkhead effect", blob.contains("+8 hull"))
+	_check("overlay names Power Conduits", blob.contains("Power Conduits"))
+	_check("overlay shows conduit effect", blob.contains("+1 power"))
+	_check("parts remain listed with improvements", blob.contains("Burst Laser"))
+	_check("deck remains listed with improvements", blob.contains("Laser Burst"))
+
+	run.ship.improvements.clear()
+	run.ship.add_improvement(&"targeting_uplink")
+	_check("single improvement strip uses the name",
+		ShipStatusOverlay.loadout_strip(run.ship).contains("Targeting Uplink"))
+
+	host.free()
+	host2.free()
+	preview.free()
+	Game.run = prev
+
+func _count_visible_textures(n: Node) -> int:
+	var c := 0
+	if n is TextureRect:
+		var tex := n as TextureRect
+		if tex.visible and tex.texture != null:
+			c += 1
+	for ch in n.get_children():
+		c += _count_visible_textures(ch)
+	return c
 
 func _test_ui_fit() -> void:
 	print("ui fit")
