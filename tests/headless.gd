@@ -1119,7 +1119,7 @@ func _test_drones() -> void:
 	Rng.seed_run(21)
 	var ship := StarterShips.shepherd()
 	var launcher: PartDef = Database.part(&"drone_launcher")
-	_eq("drone_launcher default icon filename", launcher.icon, "drone_launcher.png")
+	_eq("drone_launcher icon filename", launcher.icon, "drone_launcher.png")
 	var icon := UITheme.module_icon(launcher)
 	_check("drone launcher icon is a TextureRect", icon is TextureRect)
 	if icon.texture == null:

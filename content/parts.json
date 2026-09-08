@@ -389,6 +389,7 @@
     "integrity": 6,
     "power_draw": 1,
     "mass": 2,
+    "icon": "drone_launcher.png",
     "stats": {
       "drone_slots": 2
     },
