@@ -77,10 +77,12 @@ func begin_player_turn() -> void:
 	player.energy = player.max_energy
 	player.tick_systems()
 	# Overshield expires at the start of your turn, then regen fills toward cap.
-	# Super Capacitor skips the drop for the player only.
+	# Super Capacitor skips the drop for the player only. Regen still fills
+	# toward max, but must not clamp a kept overshield back down.
 	if not player.keep_overshield:
 		player.clear_overshield()
-	player.shield = mini(player.max_shield, player.shield + player.effective_shield_regen())
+	if player.shield < player.max_shield:
+		player.shield = mini(player.max_shield, player.shield + player.effective_shield_regen())
 	# Occupied drones tick after shield regen, before the draw.
 	_tick_drones()
 	deck.draw(player.draw_per_turn)

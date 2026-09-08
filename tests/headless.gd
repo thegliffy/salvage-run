@@ -654,6 +654,14 @@ func _test_overshield() -> void:
 	_eq("super capacitor keeps overshield across a turn", cap.player.overshield(), 6)
 	_eq("super capacitor keeps excess shield", cap.player.shield, cap_max + 6)
 
+	# Regen still fills toward cap when you are under it.
+	cap.player.shield = cap_max - 4
+	cap.player.shield_regen = 2
+	cap.begin_player_turn()
+	_eq("super capacitor still regens under cap", cap.player.shield, cap_max - 2)
+	_eq("regen under cap adds no overshield", cap.player.overshield(), 0)
+	cap.player.shield_regen = 0
+
 	# Enemy overshield still expires even with the player improvement.
 	cap.enemy.max_shield = 4
 	cap.enemy.shield = 9
