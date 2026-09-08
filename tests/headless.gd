@@ -68,6 +68,7 @@ func _run_tests() -> int:
 	_test_strip()
 	_test_rewards()
 	_test_valuation()
+	_test_self_destruct()
 	_test_ui_copy()
 	_test_ship_status_overlay()
 	_test_meta_progression()
@@ -831,6 +832,99 @@ func _test_valuation() -> void:
 	var deep := Valuation.appraise(run)
 	_check("boss and depth multiply value", deep["total"] > worn["total"])
 	_check("receipt renders", Valuation.format_receipt(deep).contains("TOTAL"))
+
+func _test_self_destruct() -> void:
+	print("self-destruct")
+	var prev_run: RunState = Game.run
+	var prev_meta: MetaState = Game.meta
+	var prev_val: Dictionary = Game.last_valuation
+	var prev_skip := Game.skip_scene_change
+	Game.skip_scene_change = true
+	Game.meta = MetaState.new()
+	Game.meta.grant_starting_unlocks()
+
+	var run := RunState.new()
+	run.start(StarterShips.brawler(), 3)
+	Game.run = run
+
+	var living := Valuation.appraise(run)
+	_check("living run is a survival", living["survived"] == true)
+	run.scuttle()
+	var wreck := Valuation.appraise(run)
+	_eq("scuttle marks not alive", run.alive, false)
+	_eq("wreck is not a survival", wreck["survived"], false)
+	_check("wreck applies death recovery", wreck["total"] < living["total"],
+		"%d vs %d" % [wreck["total"], living["total"]])
+	_check("wreck multiplier names salvaged wreck",
+		String(wreck["multiplier_label"]).contains("salvaged wreck"))
+
+	run.alive = true
+	Game.last_valuation = {}
+
+	var host := Control.new()
+	host.custom_minimum_size = Vector2(1280, 720)
+	add_child(host)
+	var preview := Control.new()
+	add_child(preview)
+	ShipStatusOverlay.open(host, preview, func(): pass)
+	var blob := "\n".join(ShipStatusOverlay.collect_texts(host))
+	_check("overlay still lists equipped parts", blob.contains("EQUIPPED PARTS"))
+
+	var sd := host.find_child("SelfDestruct", true, false) as Button
+	_check("self-destruct button is labeled", sd != null and sd.text.contains("SELF-DESTRUCT"))
+	_check("confirm is not open yet", host.get_node_or_null("SelfDestructConfirm") == null)
+
+	# First click only opens confirm — does not end the run.
+	sd.pressed.emit()
+	_eq("first click leaves the ship alive", run.alive, true)
+	_check("first click does not appraise", Game.last_valuation.is_empty())
+	_check("confirm dialog opened", host.get_node_or_null("SelfDestructConfirm") != null)
+
+	var cancel := host.find_child("CancelSelfDestruct", true, false) as Button
+	_check("cancel button exists", cancel != null)
+	cancel.pressed.emit()
+	_eq("cancel leaves the ship alive", run.alive, true)
+	_check("cancel does not appraise", Game.last_valuation.is_empty())
+	_check("cancel dismisses confirm", host.get_node_or_null("SelfDestructConfirm") == null)
+
+	# Dim click is the other dismiss path.
+	sd.pressed.emit()
+	var layer := host.get_node_or_null("SelfDestructConfirm") as Control
+	_check("confirm reopened", layer != null)
+	if layer != null:
+		var ev := InputEventMouseButton.new()
+		ev.pressed = true
+		ev.button_index = MOUSE_BUTTON_LEFT
+		(layer.get_child(0) as Control).gui_input.emit(ev)
+	_eq("dim dismiss leaves the ship alive", run.alive, true)
+	_check("dim dismiss does not appraise", Game.last_valuation.is_empty())
+	_check("dim dismisses confirm", host.get_node_or_null("SelfDestructConfirm") == null)
+
+	# Confirm ends the run through Game._end_run / Valuation.appraise.
+	sd.pressed.emit()
+	var salvage_before := Game.meta.salvage
+	var confirm := host.find_child("ConfirmSelfDestruct", true, false) as Button
+	_check("scuttle button exists", confirm != null)
+	if confirm != null:
+		confirm.pressed.emit()
+	_eq("confirm scuttles the ship", run.alive, false)
+	_check("confirm produces a valuation", not Game.last_valuation.is_empty())
+	_eq("sale path is a wreck", Game.last_valuation.get("survived", true), false)
+	_check("sale path names salvaged wreck",
+		String(Game.last_valuation.get("multiplier_label", "")).contains("salvaged wreck"))
+	_eq("sale is recorded on meta", Game.meta.salvage,
+		salvage_before + int(Game.last_valuation.get("total", 0)))
+
+	var salvage_after := Game.meta.salvage
+	Game.self_destruct()
+	_eq("dead run does not sell twice", Game.meta.salvage, salvage_after)
+
+	host.free()
+	preview.free()
+	Game.run = prev_run
+	Game.meta = prev_meta
+	Game.last_valuation = prev_val
+	Game.skip_scene_change = prev_skip
 
 func _test_ui_copy() -> void:
 	print("ui copy")

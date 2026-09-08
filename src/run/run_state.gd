@@ -85,8 +85,13 @@ func finish_combat(c: CombatController) -> void:
 		cleared_nodes += 1
 		add_credits(c.pending_credits)
 	else:
-		alive = false
+		scuttle()
 	recompile()
+
+## Mark the ship destroyed. Same flag the hull-loss path uses so valuation
+## sells a wreck (40% recovery) rather than a delivered theft.
+func scuttle() -> void:
+	alive = false
 
 ## True when `node_id` is a real node on the current map.
 func is_valid_node(node_id: int) -> bool:

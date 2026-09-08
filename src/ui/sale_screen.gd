@@ -47,7 +47,8 @@ func _ready() -> void:
 	col.add_child(UITheme.chrome_mark())
 
 	var v: Dictionary = Game.last_valuation
-	var won: bool = v.get("boss_killed", false)
+	var survived := bool(v.get("survived", false))
+	var won: bool = survived and bool(v.get("boss_killed", false))
 	var title := UITheme.label("DELIVERED TO THE YARD" if won else "WRECK TOWED IN",
 		24, UITheme.GOOD if won else UITheme.WARN, "Black")
 	col.add_child(title)

@@ -158,9 +158,92 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	deck_scroll.add_child(deck_list)
 	_fill_deck_list(deck_list, prof.deck, preview_layer, on_close)
 
+	var foot := HBoxContainer.new()
+	foot.add_theme_constant_override("separation", 12)
+	col.add_child(foot)
+	var scuttle := UITheme.outline_button("  SELF-DESTRUCT  ", UITheme.HOSTILE)
+	scuttle.name = "SelfDestruct"
+	UITheme.tip(scuttle,
+		"Self-destruct\n---\nScuttle the ship and sell the wreck. Asks for confirmation — same as a hull-loss.")
+	scuttle.pressed.connect(func():
+		_open_self_destruct_confirm(host))
+	foot.add_child(scuttle)
+	foot.add_child(UITheme.expand())
 	var close_foot := UITheme.ghost_button("  CLOSE  ")
 	close_foot.pressed.connect(on_close)
-	col.add_child(close_foot)
+	foot.add_child(close_foot)
+
+## Confirm layer on top of SHIP STATUS. CANCEL / dim click dismisses it and
+## leaves the run running; SCUTTLE calls `Game.self_destruct()`.
+static func _open_self_destruct_confirm(host: Control) -> void:
+	var existing := host.get_node_or_null("SelfDestructConfirm")
+	if existing != null and not existing.is_queued_for_deletion():
+		return
+	if existing != null:
+		host.remove_child(existing)
+		existing.free()
+
+	var layer := Control.new()
+	layer.name = "SelfDestructConfirm"
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.z_index = 20
+	host.add_child(layer)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.55)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed:
+			_close_self_destruct_confirm(host))
+	layer.add_child(dim)
+
+	var centre := CenterContainer.new()
+	centre.set_anchors_preset(Control.PRESET_FULL_RECT)
+	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(centre)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(420, 0)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.add_theme_stylebox_override("panel",
+		UITheme.panel(UITheme.PANEL, UITheme.HOSTILE, 1, 6, 18))
+	centre.add_child(panel)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	panel.add_child(col)
+
+	col.add_child(UITheme.label("SELF-DESTRUCT", 20, UITheme.HOSTILE, "Black"))
+	col.add_child(UITheme.callout(
+		"Scuttle the ship and sell the wreck.",
+		"Same as a hull-loss: forty percent recovery, then back to the title. This cannot be undone.",
+		&"hostile"))
+
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 12)
+	col.add_child(actions)
+	var cancel := UITheme.ghost_button("  CANCEL  ")
+	cancel.name = "CancelSelfDestruct"
+	cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel.pressed.connect(func():
+		_close_self_destruct_confirm(host))
+	actions.add_child(cancel)
+	var confirm := UITheme.button("  SCUTTLE  ", UITheme.HOSTILE)
+	confirm.name = "ConfirmSelfDestruct"
+	confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UITheme.tip(confirm,
+		"Scuttle\n---\nEnds the run. The yard pays for a salvaged wreck, not a delivered theft.")
+	confirm.pressed.connect(func():
+		Game.self_destruct())
+	actions.add_child(confirm)
+
+static func _close_self_destruct_confirm(host: Control) -> void:
+	var layer := host.get_node_or_null("SelfDestructConfirm")
+	if layer == null:
+		return
+	host.remove_child(layer)
+	layer.queue_free()
 
 ## Compact combat / tooltip strip: slot fill plus improvement count or name.
 static func loadout_strip(ship: ShipLoadout) -> String:

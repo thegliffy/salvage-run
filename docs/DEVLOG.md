@@ -431,3 +431,18 @@ of the turn deals 2; after two Afterburners it deals 6.
 finisher still fires after a long cheap chain; 2-cost would compete with Salvo
 for leftover energy on the turn the card asks you to fill. Upgrade is 3× cards
 played (50% bump), not a flat bonus — the identity is the multiplier.
+
+---
+
+## 2026-09-08 — Self-destruct
+
+Kyle asked for a button that ends the run. **SELF-DESTRUCT** lives on the SHIP
+STATUS footer (map and combat share that overlay) as a hostile outline, so it
+cannot be mistaken for CLOSE and cannot fire from a single tap.
+
+Confirm is a second panel: CANCEL / dim click dismisses it; **SCUTTLE** calls
+`Game.self_destruct()` → `RunState.scuttle()` (`alive = false`) → `_end_run()`.
+That is the hull-loss pipeline — `Valuation.appraise` applies the 40% wreck
+recovery and the sale screen reads as a towed wreck, then back to title.
+Mid-combat scuttle skips `finish_combat` so it cannot land on a reward screen.
+
