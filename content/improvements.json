@@ -56,5 +56,20 @@
     "name": "Damage Control Nanites", "rarity": "rare",
     "text": "Your subsystems auto-repair 2 HP each turn if undamaged",
     "stats": {"system_regen": 2}
+  },
+  "scrap_hopper": {
+    "name": "Scrap Hopper", "rarity": "common",
+    "text": "When you exhaust a card, draw a card.",
+    "triggers": [{"when": "card_exhausted", "op": "draw", "amount": 1}]
+  },
+  "freeburn_relays": {
+    "name": "Freeburn Relays", "rarity": "rare",
+    "text": "Whenever you play a 0-cost card, gain 1 energy.",
+    "triggers": [{"when": "zero_cost_played", "op": "energy", "amount": 1}]
+  },
+  "paradox_engine": {
+    "name": "Paradox Engine", "rarity": "uncommon",
+    "text": "Whenever your hand is empty, draw a card.",
+    "triggers": [{"when": "hand_empty", "op": "draw", "amount": 1}]
   }
 }

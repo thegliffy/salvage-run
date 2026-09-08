@@ -32,6 +32,13 @@ const DRONE_SHIELD := 2
 var drone_slots: int = 0
 ## Occupied bays: [{type: attack|shield, amount: int}, ...] — empty at setup.
 var drones: Array = []
+## Compiled improvement hooks from the ship profile. Data-driven: JSON
+## `triggers` land here via ShipLoadout.compile(), combat never reads defs.
+var improvement_triggers: Array = []
+## True after the hand has been non-empty this player turn. Paradox Engine
+## fires once when the hand hits 0, not while it stays empty, and not when
+## end-of-turn discard empties it.
+var _hand_empty_armed: bool = false
 
 # Link back to the run so subsystem destruction can wear down real parts.
 var loadout: ShipLoadout = null
@@ -53,6 +60,10 @@ func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) 
 	drones.clear()
 	events.clear()
 	cards_played_this_turn = 0
+	improvement_triggers.clear()
+	for t in profile.triggers:
+		improvement_triggers.append((t as Dictionary).duplicate())
+	_hand_empty_armed = false
 	EventBus.combat_started.emit(self)
 	brain.choose_intent()
 	begin_player_turn()
@@ -73,6 +84,7 @@ func begin_player_turn() -> void:
 	deck.draw(player.draw_per_turn)
 	EventBus.energy_changed.emit(player.energy, player.max_energy)
 	EventBus.turn_began.emit(&"player")
+	_note_hand_empty()
 
 ## Returns "" on success, or a reason the card could not be played.
 func play_card(card: CardInstance, target_system: StringName = &"") -> String:
@@ -90,7 +102,9 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 	if target_system == &"hull" and not card.def.can_target_hull():
 		return "%s needs a subsystem, not the hull" % card.def.name
 
-	player.energy -= card.cost()
+	var play_cost := card.cost()
+	var exhausts := card.has_keyword(&"exhaust")
+	player.energy -= play_cost
 	EventBus.energy_changed.emit(player.energy, player.max_energy)
 	EventBus.card_played.emit(card, [target_system])
 
@@ -98,12 +112,18 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 		"source": player, "opponent": enemy, "target_system": target_system,
 	})
 
-	if card.has_keyword(&"exhaust"):
+	if exhausts:
 		deck.exhaust(card)
 	else:
 		deck.discard(card)
 
 	cards_played_this_turn += 1
+	if phase == Phase.PLAYER:
+		if exhausts:
+			_fire_improvement_triggers(&"card_exhausted")
+		if play_cost == 0:
+			_fire_improvement_triggers(&"zero_cost_played")
+		_note_hand_empty()
 	_check_end()
 	return ""
 
@@ -178,6 +198,8 @@ func _activate_drone(d: Dictionary) -> void:
 func end_player_turn() -> void:
 	if phase != Phase.PLAYER:
 		return
+	# End-of-turn discard into an empty hand is not a Paradox empty event.
+	_hand_empty_armed = false
 	deck.discard_hand()
 	EventBus.turn_ended.emit(&"player")
 	_run_enemy_turn()
@@ -206,6 +228,38 @@ func _run_enemy_turn() -> void:
 	brain.choose_intent()
 	EventBus.turn_ended.emit(&"enemy")
 	begin_player_turn()
+
+func _fire_improvement_triggers(when: StringName) -> void:
+	if phase != Phase.PLAYER or player == null:
+		return
+	for t in improvement_triggers:
+		if StringName(t.get("when", "")) != when:
+			continue
+		var op := String(t.get("op", ""))
+		var amount := int(t.get("amount", 1))
+		if op == "" or amount <= 0:
+			continue
+		resolver.run([{"op": op, "amount": amount}], {
+			"source": player, "opponent": enemy, "target_system": &"",
+		})
+		if phase != Phase.PLAYER:
+			return
+
+## Fire `hand_empty` once when the hand hits 0 during the player turn.
+## Drawing refills the hand so the same empty event cannot loop; a failed
+## draw (empty piles) leaves the trigger disarmed until a card is held again.
+func _note_hand_empty() -> void:
+	if phase != Phase.PLAYER or deck == null:
+		return
+	if not deck.hand.is_empty():
+		_hand_empty_armed = true
+		return
+	if not _hand_empty_armed:
+		return
+	_hand_empty_armed = false
+	_fire_improvement_triggers(&"hand_empty")
+	if not deck.hand.is_empty():
+		_hand_empty_armed = true
 
 func _check_end() -> void:
 	if enemy.is_dead():
