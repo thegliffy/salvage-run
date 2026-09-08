@@ -111,12 +111,29 @@ follow-up and reuses Firewall Bypass. Persistent Strain (`persistent_strain`,
 uncommon improvement, flag `virus_no_decay`) keeps the damage tick but skips
 decay on virus the player applied to the enemy — Super Capacitor's flag pattern.
 
+**Pure Payload** (`pure_payload`, rare improvement, flag `damage_as_virus`):
+player outgoing damage that would hit hull or systems is converted **1:1 into
+virus after the evasion roll** (a miss still misses). Shields, subsystems, and
+hull are not touched by that shot. Self-damage (`damage_self_hull` / overheat)
+is not converted. Drones and pierce shots convert the same way.
+
+Subsystem targeting while the flag is on: the player cannot aim **damage** at
+enemy subsystems. Cards with `suppress_system` may still pick a system
+(Computer Spike, EMP Pulse, Weak Point) so suppress lands; any damage on those
+cards still becomes virus on the hull, not system integrity. Damage-only
+system cards (Laser Burst, Infected Burst) are hull-only. That mixed rule is
+the cleaner split — suppress still has a job, conversion stays on the shared
+`_deal_damage` path.
+
+Related commons: Probe Tip (`probe_tip`) adds +1 to the first virus application
+each combat; Signal Noise (`signal_noise`) gives infected enemies −5 evasion.
+
 ## 4. Damage pipeline
 
 One path, in `EffectResolver._deal_damage()`:
 
 ```
-evasion roll → shields → subsystem integrity → hull spill
+evasion roll → [Pure Payload: become virus] → shields → subsystem integrity → hull spill
 ```
 
 - `pierce` skips shields

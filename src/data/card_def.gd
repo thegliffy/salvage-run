@@ -103,3 +103,14 @@ func can_target_hull() -> bool:
 
 func needs_target() -> bool:
 	return target == Target.ENEMY_SYSTEM or target == Target.SELF_SYSTEM
+
+func has_effect_op(op_name: String, upgraded: bool = false) -> bool:
+	for op in effects_for(upgraded):
+		if typeof(op) == TYPE_DICTIONARY and String(op.get("op", "")) == op_name:
+			return true
+	return false
+
+## Suppress still needs a live subsystem. Pure Payload keeps those picks
+## legal while forcing damage-only system cards onto the hull.
+func has_suppress(upgraded: bool = false) -> bool:
+	return has_effect_op("suppress_system", upgraded)

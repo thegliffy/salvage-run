@@ -80,6 +80,7 @@ func _run_tests() -> int:
 	_test_virus()
 	_test_ui_fit()
 	_test_improvement_triggers()
+	_test_common_improvements()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
 	return 1 if _failed > 0 else 0
 
@@ -159,6 +160,16 @@ func _test_content() -> void:
 		"name": "Trig",
 		"triggers": [{"when": "card_exhausted", "op": "draw", "amount": 1}],
 	}), "")
+	var won := ImprovementDef.new()
+	_eq("combat_won credits trigger is accepted", won.from_dict(&"won", {
+		"name": "Won",
+		"triggers": [{"when": "combat_won", "op": "credits", "amount": 5}],
+	}), "")
+	var bleed := ImprovementDef.new()
+	_eq("hull_damaged shield trigger is accepted", bleed.from_dict(&"bleed", {
+		"name": "Bleed",
+		"triggers": [{"when": "hull_damaged", "op": "shield", "amount": 1}],
+	}), "")
 	var bad_when := ImprovementDef.new()
 	_check("unknown trigger when is rejected", bad_when.from_dict(&"bad", {
 		"name": "Bad",
@@ -200,6 +211,35 @@ func _test_content() -> void:
 		_eq("persistent strain text", strain.text, "Virus counters no longer decay.")
 		_check("persistent strain virus_no_decay flag", strain.flags.has(&"virus_no_decay"))
 	_check("persistent strain is in the uncommon pool", uncommon_ids.has(&"persistent_strain"))
+
+	var payload: ImprovementDef = Database.improvement(&"pure_payload")
+	_check("pure payload exists", payload != null)
+	if payload != null:
+		_eq("pure payload rarity", payload.rarity, &"rare")
+		_eq("pure payload text", payload.text,
+			"Damage you deal becomes virus. You can no longer target subsystems.")
+		_check("pure payload damage_as_virus flag", payload.flags.has(&"damage_as_virus"))
+	_check("pure payload is in the rare pool", rare_ids.has(&"pure_payload"))
+
+	var common_pack := {
+		&"patch_weld": "+4 hull",
+		&"trim_ballast": "+5 evasion",
+		&"coolant_loop": "+2 shield, +1 shield regen",
+		&"jury_battery": "+1 power",
+		&"salvage_magnet": "+5 credits at the end of each fight.",
+		&"hot_swap": "The first card you play each turn costs 1 less.",
+		&"spare_clip": "Start each combat with +1 card in hand.",
+		&"bleed_valve": "When you take hull damage, gain 1 shield.",
+		&"probe_tip": "The first virus applied each combat is +1.",
+		&"signal_noise": "Enemies with virus have -5 evasion.",
+	}
+	for cid in common_pack:
+		var def: ImprovementDef = Database.improvement(cid)
+		_check("%s exists" % String(cid), def != null)
+		if def != null:
+			_eq("%s rarity" % String(cid), def.rarity, &"common")
+			_eq("%s text" % String(cid), def.text, common_pack[cid])
+		_check("%s is in the common pool" % String(cid), common_ids.has(cid))
 
 	var flag_only := ImprovementDef.new()
 	_eq("flag-only improvement is accepted", flag_only.from_dict(&"flaggy", {
@@ -1206,6 +1246,31 @@ func _test_ship_status_overlay() -> void:
 	blob = "\n".join(ShipStatusOverlay.collect_texts(host5))
 	_check("overlay names Persistent Strain", blob.contains("Persistent Strain"))
 	_check("overlay shows persistent strain text", blob.contains("Virus counters no longer decay."))
+	run.ship.add_improvement(&"pure_payload")
+	var host6 := Control.new()
+	host6.custom_minimum_size = Vector2(1280, 720)
+	add_child(host6)
+	ShipStatusOverlay.open(host6, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host6))
+	_check("overlay names Pure Payload", blob.contains("Pure Payload"))
+	_check("overlay shows pure payload text",
+		blob.contains("Damage you deal becomes virus. You can no longer target subsystems."))
+	run.ship.improvements.clear()
+	run.ship.add_improvement(&"hot_swap")
+	run.ship.add_improvement(&"salvage_magnet")
+	var host7 := Control.new()
+	host7.custom_minimum_size = Vector2(1280, 720)
+	add_child(host7)
+	ShipStatusOverlay.open(host7, preview, func(): pass)
+	blob = "\n".join(ShipStatusOverlay.collect_texts(host7))
+	_check("overlay names Hot Swap", blob.contains("Hot Swap"))
+	_check("overlay shows hot swap text",
+		blob.contains("The first card you play each turn costs 1 less."))
+	_check("overlay names Salvage Magnet", blob.contains("Salvage Magnet"))
+	_check("overlay shows salvage magnet text",
+		blob.contains("+5 credits at the end of each fight."))
+	host7.free()
+	host6.free()
 	host5.free()
 	host4.free()
 	host3.free()
@@ -1415,6 +1480,129 @@ func _test_improvement_triggers() -> void:
 		var def3: PartDef = offer["def"]
 		_eq("shop stock uses the discounted price", int(offer["price"]),
 			RewardPool.shop_price(shop_run, def3.base_value))
+
+func _test_common_improvements() -> void:
+	print("common improvements")
+	var base := StarterShips.salvager()
+	var base_prof := base.compile()
+
+	var weld := StarterShips.salvager()
+	weld.add_improvement(&"patch_weld")
+	_eq("patch weld +4 hull", weld.compile().max_hull, base_prof.max_hull + 4)
+
+	var trim := StarterShips.salvager()
+	trim.add_improvement(&"trim_ballast")
+	_eq("trim ballast +5 evasion", trim.compile().evasion, base_prof.evasion + 5)
+
+	var loop := StarterShips.salvager()
+	loop.add_improvement(&"coolant_loop")
+	var loop_p := loop.compile()
+	_eq("coolant loop +2 shield", loop_p.max_shield, base_prof.max_shield + 2)
+	_eq("coolant loop +1 shield regen", loop_p.shield_regen, base_prof.shield_regen + 1)
+
+	var jury := StarterShips.salvager()
+	jury.add_improvement(&"jury_battery")
+	_eq("jury battery +1 power", jury.compile().power, base_prof.power + 1)
+
+	# Salvage Magnet: +5 credits on victory via combat_won → credits.
+	var mag := _combat_with_improvement(&"salvage_magnet")
+	_eq("salvage magnet compiles a combat_won hook", mag.improvement_triggers.size(), 1)
+	var reward0: int = mag.pending_credits
+	mag.enemy.evasion = 0
+	mag.enemy.shield = 0
+	mag.enemy.hull = 1
+	mag.player.energy = 9
+	var finisher := CardInstance.create(Database.card(&"laser_burst"))
+	mag.deck.hand.append(finisher)
+	_eq("salvage magnet kill plays", mag.play_card(finisher, &"hull"), "")
+	_check("salvage magnet wins the fight", mag.victory)
+	_eq("salvage magnet adds 5 credits", mag.pending_credits, reward0 + 5)
+
+	# Hot Swap: first card each turn costs 1 less; second is full price.
+	var swap := _combat_with_improvement(&"hot_swap")
+	_check("hot swap compiles the flag", swap.player.hot_swap)
+	swap.enemy.evasion = 0
+	swap.enemy.shield = 0
+	swap.player.energy = 3
+	var first := CardInstance.create(Database.card(&"laser_burst"))
+	var second := CardInstance.create(Database.card(&"laser_burst"))
+	swap.deck.hand.append(first)
+	swap.deck.hand.append(second)
+	_eq("hot swap first-card cost", swap.card_play_cost(first), 0)
+	_eq("hot swap first play", swap.play_card(first, &"hull"), "")
+	_eq("hot swap spent 0 on the first card", swap.player.energy, 3)
+	_eq("hot swap second-card cost", swap.card_play_cost(second), 1)
+	_eq("hot swap second play", swap.play_card(second, &"hull"), "")
+	_eq("hot swap spent 1 on the second card", swap.player.energy, 2)
+	swap.begin_player_turn()
+	var third := CardInstance.create(Database.card(&"laser_burst"))
+	swap.deck.hand.append(third)
+	_eq("hot swap resets next turn", swap.card_play_cost(third), 0)
+
+	# Spare Clip: opening hand is draw_per_turn + 1. Do not use the helper
+	# that empties piles after setup.
+	var clip_ship := StarterShips.salvager()
+	clip_ship.add_improvement(&"spare_clip")
+	var clip := CombatController.new()
+	clip.setup(clip_ship.compile(), Database.enemy(&"scout_drone"), clip_ship)
+	_check("spare clip compiles the flag", clip.player.spare_clip)
+	_eq("spare clip opening hand is +1", clip.deck.hand.size(),
+		clip.player.draw_per_turn + 1)
+	var no_clip := CombatController.new()
+	no_clip.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	_eq("unflagged opening hand is draw_per_turn",
+		no_clip.deck.hand.size(), no_clip.player.draw_per_turn)
+
+	# Bleed Valve: hull damage (enemy shot or self) grants 1 shield.
+	var bleed := _combat_with_improvement(&"bleed_valve")
+	bleed.player.evasion = 0
+	bleed.player.shield = 0
+	bleed.player.max_shield = 10
+	var bh: int = bleed.player.hull
+	bleed.resolver.run([{"op": "damage_hull", "amount": 4}], {
+		"source": bleed.enemy, "opponent": bleed.player, "target_system": &"",
+	})
+	_eq("bleed valve hull still drops", bleed.player.hull, bh - 4)
+	_eq("bleed valve grants 1 shield", bleed.player.shield, 1)
+	var own := CardInstance.create(Database.card(&"overheat"))
+	bleed.deck.hand.append(own)
+	bleed.player.energy = 9
+	bleed.enemy.evasion = 0
+	bleed.enemy.shield = 0
+	var bh2: int = bleed.player.hull
+	var sh2: int = bleed.player.shield
+	_eq("bleed valve overheat plays", bleed.play_card(own, &"hull"), "")
+	_eq("overheat still self-damages with bleed valve", bleed.player.hull, bh2 - 3)
+	_eq("overheat also trips bleed valve", bleed.player.shield, sh2 + 1)
+
+	# Probe Tip: first virus application this combat is +1; later applies are raw.
+	var tip := _combat_with_improvement(&"probe_tip")
+	_check("probe tip compiles the flag", tip.player.probe_tip)
+	tip.player.energy = 9
+	var spike_t := CardInstance.create(Database.card(&"computer_spike"))
+	tip.deck.hand.append(spike_t)
+	_eq("probe tip first spike plays", tip.play_card(spike_t, &"weapons"), "")
+	_eq("first virus apply is +1", tip.enemy.virus(), 2)
+	var spike_t2 := CardInstance.create(Database.card(&"computer_spike"))
+	tip.deck.hand.append(spike_t2)
+	_eq("probe tip second spike plays", tip.play_card(spike_t2, &"weapons"), "")
+	_eq("later virus apply is raw", tip.enemy.virus(), 3)
+
+	# Signal Noise: infected enemies lose 5 evasion.
+	var noise := _combat_with_improvement(&"signal_noise")
+	_check("signal noise compiles the flag", noise.player.signal_noise)
+	_eq("signal noise copies the penalty onto the enemy",
+		noise.enemy.virus_evasion_mod, CombatController.SIGNAL_NOISE_EVASION)
+	noise.enemy.evasion = 10
+	var ev0: int = noise.enemy.effective_evasion()
+	noise.enemy.add_virus(1)
+	_eq("virus drops enemy evasion by 5", noise.enemy.effective_evasion(), ev0 - 5)
+	var quiet := CombatController.new()
+	quiet.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	quiet.enemy.evasion = 10
+	var q0: int = quiet.enemy.effective_evasion()
+	quiet.enemy.add_virus(1)
+	_eq("unflagged virus does not cut evasion", quiet.enemy.effective_evasion(), q0)
 
 func _combat_with_improvement(imp_id: StringName) -> CombatController:
 	var ship := StarterShips.salvager()
@@ -2217,6 +2405,101 @@ func _test_virus() -> void:
 	_eq("player virus still damages with persistent strain", hold.player.hull, ph_hold - 2)
 	_eq("player virus still decays with persistent strain", hold.player.virus(), 1)
 
+	# Pure Payload: outgoing damage becomes virus 1:1; damage cannot pick systems.
+	var pure := _combat_with_improvement(&"pure_payload")
+	_check("pure payload compiles damage_as_virus", pure.player.damage_as_virus)
+	_check("enemy does not inherit damage_as_virus", not pure.enemy.damage_as_virus)
+	pure.enemy.evasion = 0
+	pure.enemy.shield = 8
+	pure.player.energy = 9
+	var hull_p: int = pure.enemy.hull
+	var wep_p: int = pure.enemy.system(&"weapons").integrity
+	var laser_p := CardInstance.create(Database.card(&"laser_burst"))
+	pure.deck.hand.append(laser_p)
+	_eq("pure payload refuses system targeting on damage cards",
+		pure.play_card(laser_p, &"weapons"), "Laser Burst can only target the hull")
+	_eq("refused laser spends no energy", pure.player.energy, 9)
+	_eq("refused laser deals no virus", pure.enemy.virus(), 0)
+	_eq("refused laser deals no system damage",
+		pure.enemy.system(&"weapons").integrity, wep_p)
+
+	var laser_h := CardInstance.create(Database.card(&"laser_burst"))
+	pure.deck.hand.append(laser_h)
+	_eq("pure payload laser at hull plays", pure.play_card(laser_h, &"hull"), "")
+	_eq("laser 5 damage becomes 5 virus", pure.enemy.virus(), 5)
+	_eq("converted laser deals no hull", pure.enemy.hull, hull_p)
+	_eq("converted laser deals no system damage",
+		pure.enemy.system(&"weapons").integrity, wep_p)
+	_eq("converted laser does not strip shields", pure.enemy.shield, 8)
+	var conv := _find_event(pure, "virus_apply")
+	_check("conversion logged as virus_apply", not conv.is_empty())
+	_check("conversion marked from_damage", bool(conv.get("from_damage", false)))
+
+	# Suppress-only cards may still pick a system.
+	var spike_p := CardInstance.create(Database.card(&"computer_spike"))
+	pure.deck.hand.append(spike_p)
+	_eq("pure payload spike still targets a system",
+		pure.play_card(spike_p, &"weapons"), "")
+	_eq("spike still suppresses under pure payload",
+		pure.enemy.system(&"weapons").offline_turns, 2)
+	_eq("spike virus stacks on converted laser", pure.enemy.virus(), 6)
+
+	# Mixed damage+suppress: suppress lands on the system, damage becomes virus.
+	var weak := CardInstance.create(Database.card(&"weak_point"))
+	pure.deck.hand.append(weak)
+	var eng_w: int = pure.enemy.system(&"engines").integrity
+	_eq("weak point may still pick a system", pure.play_card(weak, &"engines"), "")
+	_eq("weak point suppress lands",
+		pure.enemy.system(&"engines").offline_turns, 1)
+	_eq("weak point damage becomes virus, not system HP",
+		pure.enemy.system(&"engines").integrity, eng_w)
+	_eq("weak point converted 4 damage to virus", pure.enemy.virus(), 10)
+
+	# Infected Burst forced to hull: 5 damage → virus + 2 apply_virus.
+	var burst_p := CardInstance.create(Database.card(&"infected_burst"))
+	pure.deck.hand.append(burst_p)
+	_eq("infected burst refused at a system",
+		pure.play_card(burst_p, &"weapons"), "Infected Burst can only target the hull")
+	var burst_h := CardInstance.create(Database.card(&"infected_burst"))
+	pure.deck.hand.append(burst_h)
+	_eq("infected burst at hull plays", pure.play_card(burst_h, &"hull"), "")
+	_eq("infected burst converts 5 and applies 2", pure.enemy.virus(), 17)
+	_eq("infected burst still deals no hull under pure payload", pure.enemy.hull, hull_p)
+
+	# Overheat self-damage is not converted.
+	var heat := CardInstance.create(Database.card(&"overheat"))
+	pure.deck.hand.append(heat)
+	var own_h: int = pure.player.hull
+	_eq("overheat at hull plays", pure.play_card(heat, &"hull"), "")
+	_eq("overheat outgoing 8 becomes virus", pure.enemy.virus(), 25)
+	_eq("overheat still damages own hull", pure.player.hull, own_h - 3)
+
+	# Miss still misses — no virus.
+	var miss_c := _combat_with_improvement(&"pure_payload")
+	miss_c.enemy.evasion = 100
+	miss_c.enemy.shield = 0
+	miss_c.player.energy = 9
+	var miss_laser := CardInstance.create(Database.card(&"laser_burst"))
+	miss_c.deck.hand.append(miss_laser)
+	_eq("pure payload miss plays", miss_c.play_card(miss_laser, &"hull"), "")
+	_eq("evaded shot applies no virus", miss_c.enemy.virus(), 0)
+	_check("miss logged", _has_event(miss_c, "miss"))
+
+	# Without the flag, laser still damages systems.
+	var plain := CombatController.new()
+	plain.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	plain.enemy.evasion = 0
+	plain.enemy.shield = 0
+	plain.player.energy = 9
+	var wep0: int = plain.enemy.system(&"weapons").integrity
+	var laser_plain := CardInstance.create(Database.card(&"laser_burst"))
+	plain.deck.hand.append(laser_plain)
+	_eq("unflagged laser still plays at weapons",
+		plain.play_card(laser_plain, &"weapons"), "")
+	_eq("unflagged laser still damages the system",
+		plain.enemy.system(&"weapons").integrity, wep0 - 5)
+	_eq("unflagged laser applies no virus", plain.enemy.virus(), 0)
+
 func _has_event(c: CombatController, kind: String) -> bool:
 	return not _find_event(c, kind).is_empty()
 
@@ -2456,6 +2739,8 @@ func _pick_target(c: CombatController, card: CardInstance) -> StringName:
 		CardDef.Target.SELF_SYSTEM:
 			return _worst_own_system(c)
 		CardDef.Target.ENEMY_SYSTEM:
+			if c.player.damage_as_virus and not card.def.has_suppress(card.upgraded):
+				return &"hull"
 			# 1. High shield regen gates everything — soft-disable shields first.
 			if c.enemy.effective_shield_regen() >= REGEN_PRESSURE \
 					and c.enemy.has_active_system(&"shields"):
@@ -2493,6 +2778,9 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 
 		match kind:
 			"damage_system":
+				if c.player.damage_as_virus:
+					score += amount * W_HULL_DAMAGE
+					continue
 				var through := amount
 				if not pierce:
 					var absorbed := mini(shield_left, through)
@@ -2515,6 +2803,9 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 				else:
 					score += through * W_HULL_DAMAGE
 			"damage_hull":
+				if c.player.damage_as_virus:
+					score += amount * W_HULL_DAMAGE
+					continue
 				var h := amount
 				if not pierce:
 					var absorbed_h := mini(shield_left, h)

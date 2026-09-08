@@ -28,6 +28,18 @@ var system_regen: int = 0
 var keep_overshield: bool = false
 ## Persistent Strain: virus the player applied to enemies does not decay.
 var virus_no_decay: bool = false
+## Pure Payload: outgoing damage becomes virus (1:1) instead of HP.
+var damage_as_virus: bool = false
+## Hot Swap: first card each turn costs 1 less (min 0).
+var hot_swap: bool = false
+## Spare Clip: draw one extra card on the first turn of combat.
+var spare_clip: bool = false
+## Probe Tip: first virus application this combat lands +1 stack.
+var probe_tip: bool = false
+## Signal Noise lives on the player; the enemy copies a evasion penalty.
+var signal_noise: bool = false
+## Subtracted from effective evasion while this combatant has virus.
+var virus_evasion_mod: int = 0
 
 var systems: Dictionary = {}    # StringName -> ShipSystem
 var statuses: Dictionary = {}   # StringName -> int stacks
@@ -47,6 +59,11 @@ static func from_profile(prof: ShipProfile) -> Combatant:
 	c.system_regen = prof.system_regen
 	c.keep_overshield = prof.has_flag(&"keep_overshield")
 	c.virus_no_decay = prof.has_flag(&"virus_no_decay")
+	c.damage_as_virus = prof.has_flag(&"damage_as_virus")
+	c.hot_swap = prof.has_flag(&"hot_swap")
+	c.spare_clip = prof.has_flag(&"spare_clip")
+	c.probe_tip = prof.has_flag(&"probe_tip")
+	c.signal_noise = prof.has_flag(&"signal_noise")
 	for sd in prof.systems:
 		var s := ShipSystem.from_dict(sd)
 		s.auto_repair = c.system_regen
@@ -124,6 +141,8 @@ func effective_evasion() -> int:
 		e = int(round(float(e) * (0.4 + 0.6 * engines.efficiency())))
 	elif not systems.is_empty():
 		pass
+	if virus() > 0 and virus_evasion_mod != 0:
+		e -= virus_evasion_mod
 	return maxi(0, e)
 
 func effective_shield_regen() -> int:

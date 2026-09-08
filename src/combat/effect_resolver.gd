@@ -109,7 +109,10 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 				_emit({"type": "no_target", "op": kind})
 			else:
 				var n := amount if amount > 0 else 1
-				opponent.add_virus(n)
+				if combat != null:
+					n = combat.grant_virus(opponent, n)
+				else:
+					opponent.add_virus(n)
 				_emit({"type": "virus_apply", "target": opponent.display_name,
 					"amount": n, "virus": opponent.virus()})
 		"double_virus":
@@ -211,6 +214,18 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int,
 			_emit({"type": "miss", "target": target.display_name})
 			return
 
+	# Pure Payload: after the dodge roll, the whole shot becomes virus.
+	# Self-damage (overheat) keeps hitting your own hull. 1 damage → 1 virus.
+	if source != null and source.damage_as_virus and target != source:
+		var n := amount
+		if combat != null:
+			n = combat.grant_virus(target, amount)
+		else:
+			target.add_virus(amount)
+		_emit({"type": "virus_apply", "target": target.display_name,
+			"amount": n, "virus": target.virus(), "from_damage": true})
+		return
+
 	var remaining := amount
 
 	# 2. Shields (pierce bypasses them entirely)
@@ -245,6 +260,8 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int,
 		EventBus.hull_damaged.emit(target, remaining)
 		_emit({"type": "hull_damage", "target": target.display_name,
 			"amount": remaining, "hull_left": target.hull})
+		if combat != null:
+			combat.notify_hull_damaged(target, remaining)
 
 func _emit(event: Dictionary) -> void:
 	combat.log_event(event)

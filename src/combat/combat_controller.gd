@@ -39,6 +39,10 @@ var improvement_triggers: Array = []
 ## fires once when the hand hits 0, not while it stays empty, and not when
 ## end-of-turn discard empties it.
 var _hand_empty_armed: bool = false
+## Probe Tip: first successful virus application this combat is +1.
+var _virus_boosted: bool = false
+## Signal Noise: enemies with virus lose this much evasion.
+const SIGNAL_NOISE_EVASION := 5
 
 # Link back to the run so subsystem destruction can wear down real parts.
 var loadout: ShipLoadout = null
@@ -64,6 +68,9 @@ func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) 
 	for t in profile.triggers:
 		improvement_triggers.append((t as Dictionary).duplicate())
 	_hand_empty_armed = false
+	_virus_boosted = false
+	if profile.has_flag(&"signal_noise"):
+		enemy.virus_evasion_mod = SIGNAL_NOISE_EVASION
 	EventBus.combat_started.emit(self)
 	brain.choose_intent()
 	begin_player_turn()
@@ -92,6 +99,9 @@ func begin_player_turn() -> void:
 	# Occupied drones tick after shield regen, before the draw.
 	_tick_drones()
 	deck.draw(player.draw_per_turn)
+	# Spare Clip: one extra card on the opening turn of each fight.
+	if turn == 1 and player.spare_clip:
+		deck.draw(1)
 	EventBus.energy_changed.emit(player.energy, player.max_energy)
 	EventBus.turn_began.emit(&"player")
 	_note_hand_empty()
@@ -102,7 +112,8 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 		return "not your turn"
 	if not deck.hand.has(card):
 		return "card is not in hand"
-	if card.cost() > player.energy:
+	var spent := card_play_cost(card)
+	if spent > player.energy:
 		return "not enough energy"
 	var drone_err := _drone_play_error(card)
 	if drone_err != "":
@@ -111,10 +122,11 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 		return "card requires a target system"
 	if target_system == &"hull" and not card.def.can_target_hull():
 		return "%s needs a subsystem, not the hull" % card.def.name
-
-	var play_cost := card.cost()
+	if player.damage_as_virus and target_system != &"" and target_system != &"hull" \
+			and not card.def.has_suppress(card.upgraded):
+		return "%s can only target the hull" % card.def.name
 	var exhausts := card.has_keyword(&"exhaust")
-	player.energy -= play_cost
+	player.energy -= spent
 	EventBus.energy_changed.emit(player.energy, player.max_energy)
 	EventBus.card_played.emit(card, [target_system])
 
@@ -131,7 +143,7 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 	if phase == Phase.PLAYER:
 		if exhausts:
 			_fire_improvement_triggers(&"card_exhausted")
-		if play_cost == 0:
+		if spent == 0:
 			_fire_improvement_triggers(&"zero_cost_played")
 		_note_hand_empty()
 	_check_end()
@@ -257,6 +269,7 @@ func _tick_virus(who: Combatant) -> void:
 		return
 	var dealt := int(result["damage"])
 	EventBus.hull_damaged.emit(who, dealt)
+	notify_hull_damaged(who, dealt)
 	var tick_ev := {
 		"type": "virus_tick",
 		"target": who.display_name,
@@ -276,8 +289,39 @@ func _tick_virus(who: Combatant) -> void:
 	EventBus.effect_resolved.emit(decay_ev)
 	_check_end()
 
+## Energy actually spent to play `card` this turn. Hot Swap discounts the
+## first play of each player turn by 1 (min 0).
+func card_play_cost(card: CardInstance) -> int:
+	if card == null:
+		return 0
+	var n := card.cost()
+	if player != null and player.hot_swap and cards_played_this_turn == 0:
+		return maxi(0, n - 1)
+	return n
+
+## Apply virus stacks, with Probe Tip boosting the first application.
+## Returns the stacks actually added.
+func grant_virus(target: Combatant, amount: int) -> int:
+	if target == null or amount <= 0:
+		return 0
+	var n := amount
+	if player != null and player.probe_tip and target == enemy and not _virus_boosted:
+		n += 1
+		_virus_boosted = true
+	target.add_virus(n)
+	return n
+
+func notify_hull_damaged(who: Combatant, amount: int) -> void:
+	if who == null or who != player or amount <= 0:
+		return
+	_fire_improvement_triggers(&"hull_damaged")
+
 func _fire_improvement_triggers(when: StringName) -> void:
-	if phase != Phase.PLAYER or player == null:
+	if player == null or phase == Phase.DONE:
+		return
+	# Exhaust / zero-cost / empty-hand stay player-turn only. Victory payout
+	# and Bleed Valve can fire on the enemy turn (or as the fight ends).
+	if when != &"combat_won" and when != &"hull_damaged" and phase != Phase.PLAYER:
 		return
 	for t in improvement_triggers:
 		if StringName(t.get("when", "")) != when:
@@ -289,7 +333,7 @@ func _fire_improvement_triggers(when: StringName) -> void:
 		resolver.run([{"op": op, "amount": amount}], {
 			"source": player, "opponent": enemy, "target_system": &"",
 		})
-		if phase != Phase.PLAYER:
+		if phase == Phase.DONE:
 			return
 
 ## Fire `hand_empty` once when the hand hits 0 during the player turn.
@@ -317,6 +361,8 @@ func _check_end() -> void:
 func _finish(won: bool) -> void:
 	if phase == Phase.DONE:
 		return
+	if won:
+		_fire_improvement_triggers(&"combat_won")
 	phase = Phase.DONE
 	victory = won
 	var rewards := {"credits": pending_credits if won else 0}

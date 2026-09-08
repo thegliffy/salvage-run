@@ -667,7 +667,8 @@ func _rebuild_hand() -> void:
 	_hand_epoch += 1
 	var epoch := _hand_epoch
 	selected = null
-	var fresh: Array = _hand.set_cards(combat.deck.hand, combat.player.energy)
+	var fresh: Array = _hand.set_cards(combat.deck.hand, combat.player.energy,
+		combat.card_play_cost)
 	_highlight_targets(false)
 	if _pending_draw > 0:
 		var start := maxi(0, fresh.size() - _pending_draw)
@@ -699,6 +700,13 @@ func _highlight_targets(on: bool) -> void:
 		# A suppression-only card has nothing to do to a bare hull, so do not
 		# invite the click.
 		want_hull = want_enemy and selected.card.def.can_target_hull()
+		# Pure Payload: damage cannot be aimed at subsystems. Suppress still
+		# may pick a system (Computer Spike, Weak Point, EMP).
+		if combat != null and combat.player != null and combat.player.damage_as_virus \
+				and not selected.card.def.has_suppress(selected.card.upgraded):
+			want_enemy = false
+			if selected.card.def.can_target_hull():
+				want_hull = true
 	_hull_highlight = want_hull
 	_set_hull_highlight(want_hull)
 	for sid in _enemy_views:
@@ -746,6 +754,11 @@ func _on_card_clicked(view: CardView) -> void:
 
 func _on_enemy_system_clicked(sid: StringName) -> void:
 	if selected == null or selected.card.def.target != CardDef.Target.ENEMY_SYSTEM:
+		return
+	if combat.player.damage_as_virus \
+			and not selected.card.def.has_suppress(selected.card.upgraded):
+		_log_line("%s can only target the hull." % selected.card.display_name(),
+			UITheme.TEXT_FAINT)
 		return
 	_play(selected.card, sid)
 
@@ -942,7 +955,7 @@ func _on_combat_ended(victory: bool, _rewards: Dictionary) -> void:
 ## Debug helper for the screenshot pass: shoot the hull, then end the turn.
 func _debug_autoplay_turn() -> void:
 	for card in combat.deck.hand.duplicate():
-		if card.cost() > combat.player.energy:
+		if combat.card_play_cost(card) > combat.player.energy:
 			continue
 		var t: StringName = &""
 		if card.def.needs_target():

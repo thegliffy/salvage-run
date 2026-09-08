@@ -39,7 +39,7 @@ func selected_view() -> CardView:
 
 ## Rebuild from a list of CardInstance. Returns the views, newest last, so the
 ## caller can hand them to the draw animation.
-func set_cards(instances: Array, energy: int) -> Array[CardView]:
+func set_cards(instances: Array, energy: int, cost_of: Callable = Callable()) -> Array[CardView]:
 	for v in _views:
 		v.queue_free()
 	_views.clear()
@@ -49,7 +49,10 @@ func set_cards(instances: Array, energy: int) -> Array[CardView]:
 	for inst in instances:
 		var v := CardView.new()
 		v.setup(inst)
-		v.set_playable(inst.cost() <= energy, energy)
+		var shown := inst.cost()
+		if cost_of.is_valid():
+			shown = int(cost_of.call(inst))
+		v.set_playable(shown <= energy, energy, shown)
 		v.pivot_offset = CardView.CARD_SIZE * 0.5
 		v.clicked.connect(_on_clicked)
 		v.mouse_entered.connect(_on_enter.bind(v))
