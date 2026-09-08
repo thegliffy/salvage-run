@@ -2,12 +2,15 @@ class_name MapGenerator
 extends RefCounted
 ## Slay-the-Spire-style sector map: a layered DAG left → right.
 ##
-## Layout: start (left) → N stop layers → boss (right). Edges only go forward
-## one layer, so there is no backtracking. Node types on the stop layers are
-## rolled from NODE_TYPES; start and boss are fixed.
+## A run is three of these maps. Each: start (left) → N stop layers → boss
+## (right). Edges only go forward one layer, so there is no backtracking.
+## Node types on the stop layers are rolled from NODE_TYPES; start and boss
+## are fixed. Beating a non-final boss generates the next sector.
 
 ## How many columns of playable stops sit between the entry and the boss.
-const STOPS_BEFORE_BOSS := 15
+const STOPS_BEFORE_BOSS := 10
+## A run is three sectors. The sector-3 boss is the final, run-ending fight.
+const SECTOR_COUNT := 3
 
 ## Relative weights for stop-layer nodes. Must sum to whatever; weighted() normalises.
 const NODE_TYPES := {
@@ -48,7 +51,7 @@ static func generate(sector: int, stops_before_boss: int = STOPS_BEFORE_BOSS) ->
 				"enemy": &"",
 			}
 			if t == "combat" or t == "elite" or t == "boss":
-				node["enemy"] = _enemy_for(t, layer, layers)
+				node["enemy"] = _enemy_for(t, layer, layers, sector)
 			nodes.append(node)
 			row.append(id)
 			id += 1
@@ -85,20 +88,27 @@ static func _type_for(layer: int, layers: int) -> String:
 		return "boss"
 	return String(Rng.weighted(&"map", NODE_TYPES))
 
-## Pick an enemy id for a combat-bearing node. Depth biases harder regulars
-## later in the sector without needing a separate scaling table yet.
-static func _enemy_for(node_type: String, layer: int, layers: int) -> StringName:
+## Pick an enemy id for a combat-bearing node. Sector is the ladder: act 1
+## bosses are tier-2 gunships, later bosses are the dreadnought. Regulars stay
+## tier 1 so reward payouts still key off node type, not a tougher hull.
+static func _enemy_for(node_type: String, layer: int, layers: int, sector: int) -> StringName:
 	match node_type:
 		"boss":
-			return _pick_tier(3)
+			return _pick_tier(2 if sector <= 1 else 3)
 		"elite":
 			return _pick_tier(2)
 		_:
-			# First third of the sector prefers scouts; later mixes in raiders.
 			var progress := float(layer) / float(maxi(layers - 1, 1))
-			if progress < 0.35:
+			if sector <= 1 and progress < 0.35:
 				return _pick_tier(1, true)
+			if sector >= 2:
+				return _pick_named(&"raider", 1)
 			return _pick_tier(1, false)
+
+static func _pick_named(id: StringName, fallback_tier: int) -> StringName:
+	if Database.enemy(id) != null:
+		return id
+	return _pick_tier(fallback_tier)
 
 static func _pick_tier(tier: int, prefer_weak: bool = false) -> StringName:
 	var pool: Array = Database.enemies_of_tier(tier)
@@ -120,5 +130,10 @@ static func options_from(map: Dictionary, node_id: int) -> Array:
 		out.append(map["nodes"][e])
 	return out
 
-static func label_for(node_type: String) -> String:
+static func label_for(node_type: String, sector: int = 1) -> String:
+	if node_type == "boss" and sector >= SECTOR_COUNT:
+		return "FINAL"
 	return TYPE_LABEL.get(node_type, node_type.to_upper())
+
+static func is_final_sector(sector: int) -> bool:
+	return sector >= SECTOR_COUNT

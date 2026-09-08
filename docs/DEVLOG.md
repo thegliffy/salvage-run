@@ -389,3 +389,24 @@ Playable PC demo: title → unlock shop → map → combat/shop/chest → reward
 - **Audio / Steam / enemy depth scaling** not started.
 
 See ROADMAP.md.
+
+---
+
+## 2026-09-08 — Card rebalance + 3×10 sectors
+
+Kyle's cards-by-module sheet is the new base/upgrade table. Shared cards
+(laser_burst, armor_brace, dead_weight, raise_deflector, …) changed once.
+Upgrades can now drop Exhaust (`upgrade.keywords: []`) so Ammo Drum+ and Divert
+Power+ match the sheet. Plasma Bolt is 2-cost with a +1 energy rider; Ion Haze
+is 0-cost system damage + self-harm (kept `kind: status` as the Plasma Cycler
+dud). Execute Protocol only gains homing on the upgrade.
+
+The run is three sectors of ~10 stops + boss. Sector 1 boss is the gunship
+(still a boss payout); sector 2/3 bosses are the dreadnought; sector 3 is the
+finale. Valuation uses the sector you actually reached. The sim walks those
+maps instead of a canned 7-fight ladder.
+
+**Shepherd** hull (unlock 650): 1 weapon / 3 hull / 6 utility, Deflector Mk I,
+and a Drone Launcher. Two drones tick at the start of your turn after shield
+regen (Attack 2 / Repair 2 / Screen 2). Protocol cards set the wing's standing
+order. Offline `drones` subsystem silences them.

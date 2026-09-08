@@ -233,14 +233,28 @@ That is the ship-level counterpart to stripping a single card.
 
 ## 11. The sector map
 
-One sector: start → ~15 stop layers → boss, as a left-to-right layered DAG
-(`MapGenerator`). Node weights are ~70% combat / 10% shop / 10% elite / 10%
-chest. Edges only go forward one layer; every node is reachable.
+Three sectors (acts): each is start → **10 stop layers** → boss, as a
+left-to-right layered DAG (`MapGenerator`). Beating a sector-1 or sector-2 boss
+pays boss rewards, then generates the next sector. The **sector-3 boss is the
+final**, run-ending fight. Node weights on each sector are ~70% combat / 10%
+shop / 10% elite / 10% chest. Edges only go forward one layer; every node is
+reachable.
+
+Enemy ladder reuses the existing roster rather than a new bestiary:
+
+| Sector | Regulars | Elites | Boss |
+|---|---|---|---|
+| 1 | scouts, then raiders | gunship | gunship |
+| 2–3 | raiders | gunship | dreadnought (final in 3) |
+
+Boss *payouts* still key off node type, so the act-1 gunship boss pays rare loot
+the same way the dreadnought does. Valuation uses the sector you actually
+reached — no more faking "sector 3" at the sale.
 
 **Why StS-shaped:** the fixed three-fight ladder could not express route
-choices (shop vs elite vs safe fights), and the sim's "ladder" was already
-lying about how deep a run felt. The map is the smallest structure that makes
-shops, chests, and elites into decisions rather than scripted beats.
+choices (shop vs elite vs safe fights). Three shorter sectors give a mid-run
+boss beat and a true finale without stretching one map to session-breaking
+length.
 
 ## 12. Meta unlocks are additive
 
@@ -262,20 +276,15 @@ parts to zero, which removes their cards for the rest of the run unless repaired
 That may be too swingy — a mid-run weapons loss can be unrecoverable. Options:
 partial wear instead of total, or cheap field repairs between every node.
 
-**Sector count.** The live game is one long sector (~15 stops + boss). FTL runs
-8 sectors; Slay the Spire runs 3 acts. For a mobile session length, 3 shorter
-sectors may still be better — the map generator already takes a `sector` index.
+**Starter-ship unlocks.** Brawler is free, Tank (450) and Shepherd (650) are
+the first hull unlocks. More hulls can still be added without breaking additive
+pool unlocks.
 
-**Starter-ship unlocks.** Pool unlocks alone make the first hours feel samey.
-A small set of deliberately-strong starter hulls to steal would give a visible
-power curve without breaking the additive meta.
-
-**Balance.** The 200-run sim currently wins around **37%**, with a large share of
-losses as **stalls** against shield-regenerating enemies (gunship / dreadnought).
-That is intentionally tougher than the old ~50% ladder figure — the map is
-longer and soft combat rewards hull shooting — but stalls remain the defect to
-fix first. Either enemy `shield_regen` is too high relative to card damage, or
-the player lacks enough shield-stripping tools.
+**Balance.** The simulator now walks the live 3×10 map, so the old ~37% figure
+(a canned 7-fight ladder) is not comparable. Stalls against shield-regenerating
+gunship / dreadnought remain the defect to watch. Either enemy `shield_regen`
+is too high relative to card damage, or the player lacks enough shield-stripping
+tools.
 
 **Dead content.** The play histogram still flags cards the pilot rarely reaches
 for (Ammo Drum, and several burst-energy / status cards). Coolant Leak and

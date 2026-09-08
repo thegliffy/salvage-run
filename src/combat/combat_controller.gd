@@ -20,6 +20,14 @@ var victory: bool = false
 var pending_credits: int = 0
 var events: Array[Dictionary] = []
 
+## Drone wing: each filled slot ticks once at the start of your turn, after
+## shield regen. Standing order defaults to Attack; protocol cards change it.
+const DRONE_ATTACK := 2
+const DRONE_REPAIR := 2
+const DRONE_SHIELD := 2
+var drone_slots: int = 0
+var drone_mode: StringName = &"attack"
+
 # Link back to the run so subsystem destruction can wear down real parts.
 var loadout: ShipLoadout = null
 
@@ -36,6 +44,8 @@ func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) 
 	phase = Phase.SETUP
 	turn = 0
 	pending_credits = int(enemy_def.reward.get("credits", 0))
+	drone_slots = profile.drone_slots
+	drone_mode = &"attack"
 	events.clear()
 	EventBus.combat_started.emit(self)
 	brain.choose_intent()
@@ -51,6 +61,7 @@ func begin_player_turn() -> void:
 	# Overshield expires at the start of your turn, then regen fills toward cap.
 	player.clear_overshield()
 	player.shield = mini(player.max_shield, player.shield + player.effective_shield_regen())
+	_tick_drones()
 	deck.draw(player.draw_per_turn)
 	EventBus.energy_changed.emit(player.energy, player.max_energy)
 	EventBus.turn_began.emit(&"player")
@@ -83,6 +94,32 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 
 	_check_end()
 	return ""
+
+## Drones fire at the start of your turn, after shield regen / overshield drop.
+## Offline `drones` subsystem silences the wing for the turn (soft control).
+func _tick_drones() -> void:
+	if drone_slots <= 0 or phase == Phase.DONE:
+		return
+	var ds: ShipSystem = player.system(&"drones")
+	if ds != null and not ds.is_active():
+		log_event({"type": "offline", "target": "Drones"})
+		return
+	var op: Dictionary
+	match drone_mode:
+		&"repair":
+			op = {"op": "repair_hull", "amount": DRONE_REPAIR}
+		&"shield":
+			op = {"op": "shield", "amount": DRONE_SHIELD}
+		_:
+			op = {"op": "damage_system", "amount": DRONE_ATTACK, "homing": true}
+	for i in drone_slots:
+		if phase == Phase.DONE:
+			return
+		resolver.run([op], {
+			"source": player, "opponent": enemy, "target_system": &"",
+		})
+	log_event({"type": "drones", "mode": String(drone_mode), "count": drone_slots})
+	_check_end()
 
 func end_player_turn() -> void:
 	if phase != Phase.PLAYER:

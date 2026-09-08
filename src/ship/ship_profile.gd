@@ -17,6 +17,8 @@ var mass: int = 0
 var draw_per_turn: int = 5
 ## Player subsystem auto-repair. Zero unless a rare improvement grants it.
 var system_regen: int = 0
+## Filled drone bays. Each ticks once at the start of the player's turn.
+var drone_slots: int = 0
 var systems: Array = []             # [{id, name, integrity, part_uids}]
 var deck: Array[StringName] = []    # card ids
 var warnings: Array[String] = []    # e.g. "power deficit", surfaced in shipyard

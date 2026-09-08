@@ -29,6 +29,10 @@ var icon: String = ""                 # filename under res://assets/icons/
 var upgrade_text: String = ""
 var upgrade_cost: int = -1
 var upgrade_effects: Array = []
+var upgrade_keywords: Array[StringName] = []
+## True when the upgrade block sets `keywords` (including an empty list that
+## drops Exhaust). False means the upgraded card keeps the base keywords.
+var _upgrade_keywords_override := false
 
 func from_dict(def_id: StringName, d: Dictionary) -> String:
 	id = def_id
@@ -60,10 +64,17 @@ func from_dict(def_id: StringName, d: Dictionary) -> String:
 		upgrade_text = up.get("text", text)
 		upgrade_cost = int(up.get("cost", cost))
 		upgrade_effects = up.get("effects", effects)
+		if up.has("keywords"):
+			_upgrade_keywords_override = true
+			for k in up.get("keywords", []):
+				upgrade_keywords.append(StringName(k))
 	return ""
 
-func has_keyword(k: StringName) -> bool:
-	return keywords.has(k)
+func keywords_for(upgraded: bool) -> Array[StringName]:
+	return upgrade_keywords if (upgraded and _upgrade_keywords_override) else keywords
+
+func has_keyword(k: StringName, upgraded: bool = false) -> bool:
+	return keywords_for(upgraded).has(k)
 
 func effects_for(upgraded: bool) -> Array:
 	return upgrade_effects if (upgraded and not upgrade_effects.is_empty()) else effects

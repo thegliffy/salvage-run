@@ -3,8 +3,8 @@
 **v0.15** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
-across a sector map to the boss, then sell what you built for salvage that
-unlocks new parts — and new hulls — to steal next time.
+across three sectors to the final boss, then sell what you built for salvage
+that unlocks new parts — and new hulls — to steal next time.
 
 FTL's subsystem targeting, Slay the Spire's card economy and map, and a run-end
 sale that turns "how good was this ship" into a number you spend.
@@ -13,7 +13,7 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-293 tests passing · playable PC demo
+360 tests passing · playable PC demo
 ```
 
 ---
@@ -77,14 +77,14 @@ budget, deck, and the painted ship view.
 
 ## Status: playable PC demo
 
-Title → salvage unlock shop → sector map → combat / shop / chest → rewards →
-… → boss → ship sale, end to end.
+Title → salvage unlock shop → sector map (×3) → combat / shop / chest → rewards →
+… → sector boss → next sector → … → final boss → ship sale, end to end.
 
-**Working:** StS-style sector map (~15 stops), combat with hull as the primary
-target and soft subsystem control, typed-slot ship loadout, power-budget UI,
-tiered rewards (skip = field repair), ship status overlay, ship improvements,
-jettison, card stripping, run-end appraisal, meta unlock shop (parts + hulls),
-overshield, Brawler / Tank starters, meta saves.
+**Working:** three StS-style sectors (~10 stops + boss each), combat with hull as
+the primary target and soft subsystem control, typed-slot ship loadout,
+power-budget UI, tiered rewards (skip = field repair), ship status overlay, ship
+improvements, jettison, card stripping, run-end appraisal, meta unlock shop
+(parts + hulls), overshield, Brawler / Tank / Shepherd starters, meta saves.
 
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -142,9 +142,11 @@ Destroyed subsystems stay targetable — shots at the wreckage spill into the hu
 
 ### The sector map
 
-Start on the left, boss on the right, ~15 stop layers between. Node mix is
-roughly **70% combat / 10% shop / 10% elite / 10% chest**. You only enter nodes
-linked from your current position — same reachability rules as Slay the Spire.
+Three sectors. Each is start on the left, boss on the right, **10 stop layers**
+between. Beat a sector boss to enter the next map; the sector-3 boss is the
+finale. Node mix is roughly **70% combat / 10% shop / 10% elite / 10% chest**.
+You only enter nodes linked from your current position — same reachability
+rules as Slay the Spire.
 
 ### Rewards scale with the fight
 
@@ -190,7 +192,7 @@ is the point:
   Hull integrity (72%)                   43
   Elite kills x2                         90
   subtotal                              282
-  Sector 3 + boss                      x2.31
+  Sector 3 of 3 + boss                x2.63
   TOTAL                                 651 salvage
 ```
 

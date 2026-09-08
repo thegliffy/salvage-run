@@ -156,6 +156,7 @@ func compile() -> ShipProfile:
 		prof.evasion += int(d.stats.get("evasion", 0))
 		prof.draw_per_turn += int(d.stats.get("draw", 0))
 		prof.system_regen += int(d.stats.get("system_regen", 0))
+		prof.drone_slots += int(d.stats.get("drone_slots", 0))
 
 		if not systems_acc.has(d.system):
 			systems_acc[d.system] = {

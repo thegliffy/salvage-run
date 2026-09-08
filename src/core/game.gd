@@ -2,8 +2,9 @@ extends Node
 ## Run flow and scene routing.
 ##
 ## Holds the RunState between screens so each screen can be a dumb view. The
-## player picks nodes on the sector map; this router turns each node type into
-## the matching screen and returns to the map when the node is done.
+## player picks nodes on a three-sector map; this router turns each node type
+## into the matching screen, advances to the next sector after a non-final
+## boss, and ends the run on the sector-3 finale.
 
 signal run_changed()
 
@@ -25,6 +26,9 @@ var pending_reward: Dictionary = {}
 var pending_enemy: StringName = &""
 ## Node id that produced the current combat; used to count elite kills.
 var pending_node_id: int = -1
+## True after a non-final sector boss: the next reward-screen exit generates
+## the following sector's map instead of returning to the current one.
+var pending_sector_advance: bool = false
 
 func _ready() -> void:
 	meta = SaveSystem.load_meta()
@@ -41,6 +45,7 @@ func start_run(run_seed: int = -1, ship_id: StringName = &"brawler") -> void:
 	run.start(StarterShips.make(ship_id), run_seed)
 	pending_enemy = &""
 	pending_node_id = -1
+	pending_sector_advance = false
 	meta.runs_started += 1
 	run_changed.emit()
 	goto_map()
@@ -87,17 +92,27 @@ func finish_combat(c: CombatController) -> void:
 	if c.victory and ntype == "elite":
 		run.elites_killed += 1
 	if c.victory and ntype == "boss":
-		run.boss_killed = true
-	if not run.alive or (c.victory and ntype == "boss"):
+		if run.is_final_sector():
+			run.boss_killed = true
+			_end_run()
+			return
+		pending_sector_advance = true
+	if not run.alive:
 		_end_run()
 		return
 	# Build the payout before leaving, so it reflects the enemy just beaten.
-	pending_reward = RewardPool.build(run, meta, Database.enemy(pending_enemy))
+	# Node type, not hull tier, decides whether this pays like a regular /
+	# elite / boss — sector-1's gunship boss is still a boss payout.
+	pending_reward = RewardPool.build(run, meta, Database.enemy(pending_enemy), ntype)
 	run_changed.emit()
 	get_tree().change_scene_to_file(SCENE_REWARD)
 
 ## Called by the reward screen once a part is taken or skipped.
 func after_reward() -> void:
+	if pending_sector_advance:
+		pending_sector_advance = false
+		run.advance_sector()
+		run_changed.emit()
 	goto_map()
 
 func after_shop() -> void:
@@ -107,7 +122,6 @@ func after_chest() -> void:
 	goto_map()
 
 func _end_run() -> void:
-	run.sector = 3 if run.boss_killed else 2
 	last_valuation = Valuation.appraise(run)
 	meta.record_sale(last_valuation)
 	SaveSystem.save_meta(meta)

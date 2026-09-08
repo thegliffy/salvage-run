@@ -43,6 +43,25 @@ static func tank() -> ShipLoadout:
 	_install(g, &"ion_thrusters")
 	return g
 
+## One weapon, extra utility bays, Deflector shields, and a two-drone wing.
+## Drones tick at the start of your turn (after shield regen).
+static func shepherd() -> ShipLoadout:
+	var g := ShipLoadout.new("Shepherd")
+	g.capacity = {
+		ShipLoadout.SLOT_WEAPON: 1,
+		ShipLoadout.SLOT_HULL: 3,
+		ShipLoadout.SLOT_UTILITY: 6,
+	}
+	g.base_hull = 30
+	g.base_power = 4
+	g.base_draw = 5
+	g.base_shield = 0
+	g.base_shield_regen = 0
+	_install(g, &"burst_laser")
+	_install(g, &"deflector_mk1")
+	_install(g, &"drone_launcher")
+	return g
+
 ## Back-compat alias used by older call sites / saves.
 static func salvager() -> ShipLoadout:
 	return brawler()
@@ -51,6 +70,8 @@ static func make(id: StringName) -> ShipLoadout:
 	match id:
 		&"tank":
 			return tank()
+		&"shepherd":
+			return shepherd()
 		_:
 			return brawler()
 
@@ -69,6 +90,12 @@ static func choices() -> Array:
 			"name": "Tank",
 			"blurb": "3 weapons · 4 energy · Deflector Mk I (10 shield, +2/turn)",
 			"unlock_cost": 450,
+		},
+		{
+			"id": &"shepherd",
+			"name": "Shepherd",
+			"blurb": "1 weapon · 6 utility · Deflector Mk I · two drones each turn",
+			"unlock_cost": 650,
 		},
 	]
 

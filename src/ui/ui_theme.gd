@@ -427,7 +427,7 @@ static func card_tip(card: CardInstance, energy: int = -1) -> String:
 
 static func _card_keywords(card: CardInstance) -> Array[StringName]:
 	var out: Array[StringName] = []
-	for k in card.def.keywords:
+	for k in card.def.keywords_for(card.upgraded):
 		if not out.has(k):
 			out.append(k)
 	var hay := card.text().to_lower()

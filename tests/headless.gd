@@ -71,6 +71,9 @@ func _run_tests() -> int:
 	_test_ui_copy()
 	_test_meta_progression()
 	_test_map()
+	_test_card_balance()
+	_test_sectors()
+	_test_drones()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
 	return 1 if _failed > 0 else 0
 
@@ -163,6 +166,19 @@ func _test_compile() -> void:
 	_check("tank starts with the Deflector Mk I", tank.has_system(&"shields"))
 	_eq("tank still starts with three parts", tank_ship.parts.size(), 3)
 	_check("tank stays in its power budget", tank.warnings.is_empty(), str(tank.warnings))
+
+	var shep_ship := StarterShips.shepherd()
+	var shep := shep_ship.compile()
+	_eq("shepherd name", shep.display_name, "Shepherd")
+	_eq("shepherd has one weapon slot", shep_ship.slot_capacity(ShipLoadout.SLOT_WEAPON), 1)
+	_eq("shepherd has extra utility slots", shep_ship.slot_capacity(ShipLoadout.SLOT_UTILITY), 6)
+	_eq("shepherd keeps three hull slots", shep_ship.slot_capacity(ShipLoadout.SLOT_HULL), 3)
+	_eq("shepherd starts with three parts", shep_ship.parts.size(), 3)
+	_eq("shepherd has two drone slots", shep.drone_slots, 2)
+	_eq("shepherd deflector is 10 shield", shep.max_shield, 10)
+	_check("shepherd starts with the Drone Launcher", shep.has_system(&"drones"))
+	_check("shepherd stays in its power budget", shep.warnings.is_empty(), str(shep.warnings))
+	_eq("shepherd deck is 3 parts x 3 cards", shep.deck.size(), 9)
 
 	# Wrecked parts contribute nothing.
 	var before := prof.deck.size()
@@ -691,11 +707,22 @@ func _test_rewards() -> void:
 	_check("mini-boss improvement is common or uncommon",
 		elite != null and [&"common", &"uncommon"].has(elite.rarity),
 		"got %s" % (elite.rarity if elite else "null"))
-	var boss: ImprovementDef = RewardPool.build(run, meta, Database.enemy(&"dreadnought"))["improvement"]
-	_check("boss improvement is rare", boss != null and boss.rarity == &"rare",
-		"got %s" % (boss.rarity if boss else "null"))
+	var boss_imp: ImprovementDef = RewardPool.build(run, meta, Database.enemy(&"dreadnought"))["improvement"]
+	_check("boss improvement is rare", boss_imp != null and boss_imp.rarity == &"rare",
+		"got %s" % (boss_imp.rarity if boss_imp else "null"))
 	var boss_parts: Array = RewardPool.build(run, meta, Database.enemy(&"dreadnought"))["parts"]
 	_check("boss offers a rare part", boss_parts.any(func(o): return o["rarity"] == &"rare"))
+
+	# Node type, not hull tier, decides payout: a sector-1 gunship boss still
+	# pays rare loot even though the enemy itself is tier 2.
+	var s1_boss: Dictionary = RewardPool.build(run, meta, Database.enemy(&"gunship"), "boss")
+	var s1_imp: ImprovementDef = s1_boss["improvement"]
+	_check("act-1 boss still pays a rare improvement",
+		s1_imp != null and s1_imp.rarity == &"rare",
+		"got %s" % (s1_imp.rarity if s1_imp else "null"))
+	_eq("act-1 boss payout tier", int(s1_boss["tier"]), 3)
+	_eq("regular combat payout stays common even if we pass node type",
+		int(RewardPool.build(run, meta, Database.enemy(&"raider"), "combat")["tier"]), 1)
 
 	# Improvements change the ship, not the deck.
 	var deck_before: int = run.profile.deck.size()
@@ -832,9 +859,11 @@ func _test_meta_progression() -> void:
 	_check("starters unlocked", meta.unlocked.size() > 0)
 	_check("brawler starts unlocked", meta.is_ship_unlocked(&"brawler"))
 	_check("tank starts locked", not meta.is_ship_unlocked(&"tank"))
+	_check("shepherd starts locked", not meta.is_ship_unlocked(&"shepherd"))
 	_check("tank is the cheapest ship unlock", meta.unlockable_ships().size() >= 1
 		and meta.unlockable_ships()[0]["id"] == &"tank")
 	_eq("tank unlock cost", StarterShips.unlock_cost(&"tank"), 450)
+	_eq("shepherd unlock cost", StarterShips.unlock_cost(&"shepherd"), 650)
 	var dearest_part := 0
 	for p in meta.unlockable():
 		dearest_part = maxi(dearest_part, p.unlock_cost)
@@ -847,6 +876,11 @@ func _test_meta_progression() -> void:
 	_eq("tank unlock spends salvage", meta.salvage, 0)
 	_check("tank now unlocked", meta.is_ship_unlocked(&"tank"))
 	_check("cannot unlock tank twice", not meta.unlock_ship(&"tank"))
+	_check("shepherd still locked after tank", not meta.is_ship_unlocked(&"shepherd"))
+	meta.salvage = StarterShips.unlock_cost(&"shepherd")
+	_check("shepherd unlock succeeds when affordable", meta.unlock_ship(&"shepherd"))
+	_eq("shepherd unlock spends salvage", meta.salvage, 0)
+	_check("shepherd now unlocked", meta.is_ship_unlocked(&"shepherd"))
 
 	_check("locked parts exist to buy", meta.unlockable().size() > 0)
 
@@ -864,6 +898,7 @@ func _test_meta_progression() -> void:
 	meta2.from_dict(d)
 	_check("save round-trip keeps unlocks", meta2.is_unlocked(target.id))
 	_check("save round-trip keeps ship unlocks", meta2.is_ship_unlocked(&"tank"))
+	_check("save round-trip keeps shepherd unlock", meta2.is_ship_unlocked(&"shepherd"))
 	_eq("save round-trip keeps salvage", meta2.salvage, meta.salvage)
 
 	# Old saves without unlocked_ships still get free starters.
@@ -871,14 +906,17 @@ func _test_meta_progression() -> void:
 	meta3.from_dict({"salvage": 0, "unlocked": []})
 	_check("legacy save still unlocks brawler", meta3.is_ship_unlocked(&"brawler"))
 	_check("legacy save keeps tank locked", not meta3.is_ship_unlocked(&"tank"))
+	_check("legacy save keeps shepherd locked", not meta3.is_ship_unlocked(&"shepherd"))
 
 func _test_map() -> void:
 	print("map")
 	Rng.seed_run(99)
 	var m := MapGenerator.generate(1)
-	_eq("layer count (start + 15 stops + boss)", m["by_layer"].size(),
+	_eq("layer count (start + 10 stops + boss)", m["by_layer"].size(),
 		MapGenerator.STOPS_BEFORE_BOSS + 2)
 	_eq("stops field", m["stops"], MapGenerator.STOPS_BEFORE_BOSS)
+	_eq("default stop count", MapGenerator.STOPS_BEFORE_BOSS, 10)
+	_eq("three sectors in a run", MapGenerator.SECTOR_COUNT, 3)
 	_check("single entry", m["by_layer"][0].size() == 1)
 	_check("entry is start", m["nodes"][m["entry"]]["type"] == "start")
 	_check("boss is last", m["nodes"].back()["type"] == "boss")
@@ -933,6 +971,166 @@ func _test_map() -> void:
 	if chest_imp != null:
 		_check("chest improvement not already installed", before.find(chest_imp.id) == -1)
 
+func _test_card_balance() -> void:
+	print("card balance")
+	_eq("laser_burst cost", Database.card(&"laser_burst").cost, 1)
+	_eq("laser_burst damage", _op_amt(&"laser_burst", false, "damage_system"), 5)
+	_eq("laser_burst+ damage", _op_amt(&"laser_burst", true, "damage_system"), 7)
+	_eq("overheat damage", _op_amt(&"overheat", false, "damage_system"), 8)
+	_eq("overheat+ damage", _op_amt(&"overheat", true, "damage_system"), 10)
+	_eq("overheat self-harm", _op_amt(&"overheat", false, "damage_self_hull"), 3)
+
+	var bolt: CardDef = Database.card(&"plasma_bolt")
+	_eq("plasma_bolt cost", bolt.cost, 2)
+	_eq("plasma_bolt damage", _op_amt(&"plasma_bolt", false, "damage_system"), 5)
+	_eq("plasma_bolt shield", _op_amt(&"plasma_bolt", false, "shield"), 3)
+	_eq("plasma_bolt energy", _op_amt(&"plasma_bolt", false, "energy"), 1)
+	_eq("plasma_bolt+ damage", _op_amt(&"plasma_bolt", true, "damage_system"), 8)
+	_eq("plasma_bolt+ energy", _op_amt(&"plasma_bolt", true, "energy"), 1)
+
+	var haze: CardDef = Database.card(&"ion_haze")
+	_eq("ion_haze cost", haze.cost, 0)
+	_eq("ion_haze targets a system", haze.target, CardDef.Target.ENEMY_SYSTEM)
+	_eq("ion_haze damage", _op_amt(&"ion_haze", false, "damage_system"), 2)
+	_eq("ion_haze+ damage", _op_amt(&"ion_haze", true, "damage_system"), 4)
+	_eq("ion_haze self-harm", _op_amt(&"ion_haze", false, "damage_self_hull"), 2)
+	_eq("ion_haze+ self-harm stays 2", _op_amt(&"ion_haze", true, "damage_self_hull"), 2)
+
+	_eq("breach_missile pierce", _op_amt(&"breach_missile", false, "damage_system"), 5)
+	_eq("breach_missile+ pierce", _op_amt(&"breach_missile", true, "damage_system"), 8)
+	_eq("salvo hit", _op_amt(&"salvo", false, "damage_system", 0), 3)
+	_eq("salvo second hit", _op_amt(&"salvo", false, "damage_system", 1), 3)
+	_eq("salvo+ hit", _op_amt(&"salvo", true, "damage_system", 0), 5)
+
+	_eq("ammo_drum draw", _op_amt(&"ammo_drum", false, "draw"), 2)
+	_eq("ammo_drum+ draw stays 2", _op_amt(&"ammo_drum", true, "draw"), 2)
+	_check("ammo_drum exhausts", Database.card(&"ammo_drum").has_keyword(&"exhaust", false))
+	_check("ammo_drum+ drops exhaust", not Database.card(&"ammo_drum").has_keyword(&"exhaust", true))
+
+	_eq("divert_power energy", _op_amt(&"divert_power", false, "energy"), 2)
+	_eq("divert_power+ energy stays 2", _op_amt(&"divert_power", true, "energy"), 2)
+	_check("divert_power exhausts", Database.card(&"divert_power").has_keyword(&"exhaust", false))
+	_check("divert_power+ drops exhaust", not Database.card(&"divert_power").has_keyword(&"exhaust", true))
+
+	_check("coolant_leak exhausts", Database.card(&"coolant_leak").has_keyword(&"exhaust", false))
+	_check("coolant_leak+ still exhausts", Database.card(&"coolant_leak").has_keyword(&"exhaust", true))
+
+	var exe: CardDef = Database.card(&"execute_protocol")
+	_eq("execute hull", _op_amt(&"execute_protocol", false, "damage_hull"), 12)
+	_eq("execute+ hull", _op_amt(&"execute_protocol", true, "damage_hull"), 17)
+	_check("base execute can be dodged", not bool(exe.effects_for(false)[0].get("homing", false)))
+	_check("execute+ cannot be dodged", bool(exe.effects_for(true)[0].get("homing", false)))
+
+	# Shared cards that the sheet left at their current numbers.
+	_eq("raise_deflector shield", _op_amt(&"raise_deflector", false, "shield"), 8)
+	_eq("armor_brace shield", _op_amt(&"armor_brace", false, "shield"), 5)
+	_eq("dead_weight shield", _op_amt(&"dead_weight", false, "shield"), 8)
+	_eq("seal_breach repair", _op_amt(&"seal_breach", false, "repair_hull"), 7)
+	_eq("vulture_strike hull", _op_amt(&"vulture_strike", false, "damage_hull"), 5)
+	_eq("shield_dump+ bonus", _op_amt(&"shield_dump", true, "damage_system"), 8)
+
+	# Playing the upgraded energy card must discard, not exhaust.
+	Rng.seed_run(3)
+	var c := CombatController.new()
+	c.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	var up := CardInstance.create(Database.card(&"divert_power"), true)
+	c.deck.hand.append(up)
+	c.player.energy = 9
+	_eq("upgraded divert_power plays", c.play_card(up), "")
+	_check("upgraded divert_power discarded", c.deck.discard_pile.has(up))
+	_check("upgraded divert_power not exhausted", not c.deck.exhaust_pile.has(up))
+
+func _op_amt(id: StringName, upgraded: bool, op: String, idx: int = 0) -> int:
+	var n := 0
+	for e in Database.card(id).effects_for(upgraded):
+		if String(e.get("op", "")) != op:
+			continue
+		if n == idx:
+			return int(e.get("amount", e.get("turns", 0)))
+		n += 1
+	return -999
+
+func _test_sectors() -> void:
+	print("sectors")
+	Rng.seed_run(11)
+	var run := RunState.new()
+	run.start(StarterShips.salvager(), 11)
+	_eq("starts in sector 1", run.sector, 1)
+	_eq("sector-1 map has 10 stops", int(run.map["stops"]), 10)
+	_check("sector 1 is not final", not run.is_final_sector())
+	_check("not on the boss yet", not run.at_boss())
+	_eq("sector-1 boss is tier 2", Database.enemy(run.map["nodes"].back()["enemy"]).tier, 2)
+
+	run.advance_sector()
+	_eq("advance_sector reaches 2", run.sector, 2)
+	_eq("new map is also 10 stops", int(run.map["stops"]), 10)
+	_eq("standing on the new entry", run.current_node, run.map["entry"])
+	_check("entry is start", MapGenerator.node_at(run.map, run.current_node)["type"] == "start")
+	_eq("sector-2 boss is tier 3", Database.enemy(run.map["nodes"].back()["enemy"]).tier, 3)
+	_check("sector 2 is not final", not run.is_final_sector())
+
+	run.advance_sector()
+	_eq("advance_sector reaches 3", run.sector, 3)
+	_check("sector 3 is final", run.is_final_sector())
+	_eq("sector-3 boss is tier 3", Database.enemy(run.map["nodes"].back()["enemy"]).tier, 3)
+	_eq("final boss label", MapGenerator.label_for("boss", 3), "FINAL")
+	_eq("mid boss label", MapGenerator.label_for("boss", 1), "BOSS")
+
+	# Later-sector regulars should be raiders, not scouts.
+	var saw_raider := false
+	var saw_scout_combat := false
+	for node in run.map["nodes"]:
+		if String(node["type"]) != "combat":
+			continue
+		var eid := StringName(node["enemy"])
+		if eid == &"raider":
+			saw_raider = true
+		if eid == &"scout_drone":
+			saw_scout_combat = true
+	_check("sector 3 regulars include raiders", saw_raider)
+	_check("sector 3 regulars are not scouts", not saw_scout_combat)
+
+func _test_drones() -> void:
+	print("drones")
+	Rng.seed_run(21)
+	var ship := StarterShips.shepherd()
+	var c := CombatController.new()
+	c.setup(ship.compile(), Database.enemy(&"scout_drone"), ship)
+	_eq("combat copied two drone slots", c.drone_slots, 2)
+	_eq("drones default to attack", c.drone_mode, &"attack")
+	var total := 0
+	for sid in c.enemy.systems:
+		total += c.enemy.systems[sid].integrity
+	# 2 drones × 2 homing damage on turn 1, before the player plays.
+	_eq("attack drones chip 4 integrity on turn start", total, 6)
+
+	var proto := CardInstance.create(Database.card(&"drone_repair"))
+	c.deck.hand.append(proto)
+	c.player.energy = 9
+	_eq("repair pattern plays", c.play_card(proto), "")
+	_eq("wing switches to repair", c.drone_mode, &"repair")
+
+	var screen := CardInstance.create(Database.card(&"drone_screen"))
+	c.deck.hand.append(screen)
+	_eq("screen pattern plays", c.play_card(screen), "")
+	_eq("wing switches to screen", c.drone_mode, &"shield")
+
+	# Offline drones subsystem silences the wing.
+	c.drone_mode = &"attack"
+	var ds: ShipSystem = c.player.system(&"drones")
+	_check("shepherd has a drones subsystem", ds != null)
+	ds.take_damage(ds.max_integrity)
+	var hull_before: int = c.enemy.hull
+	var sys_before := 0
+	for sid2 in c.enemy.systems:
+		sys_before += c.enemy.systems[sid2].integrity
+	c._tick_drones()
+	var sys_after := 0
+	for sid3 in c.enemy.systems:
+		sys_after += c.enemy.systems[sid3].integrity
+	_eq("offline drones deal no hull", c.enemy.hull, hull_before)
+	_eq("offline drones deal no system damage", sys_after, sys_before)
+
 # --- Balance simulator -------------------------------------------------------
 
 func _run_sim(count: int, base_seed: int) -> void:
@@ -979,44 +1177,91 @@ func _simulate_run(run_seed: int, verbose: bool = false,
 		tally: Dictionary = {}) -> Dictionary:
 	var run := RunState.new()
 	run.start(StarterShips.salvager(), run_seed)
-	var ladder: Array[StringName] = [&"scout_drone", &"raider", &"scout_drone",
-		&"gunship", &"raider", &"gunship", &"dreadnought"]
 	var total_turns := 0
 	var died_at := "survived"
-
 	var first := true
-	for enemy_id in ladder:
-		var c := run.make_combat(enemy_id)
-		if c == null:
-			break
-		var turns := _autoplay(c, verbose and first, tally)
-		first = false
-		total_turns += turns
-		var stalled := c.phase != CombatController.Phase.DONE
-		run.finish_combat(c)
-		if stalled:
-			died_at = "STALL:" + String(enemy_id)
-			run.alive = false
-			break
-		if not run.alive:
-			died_at = String(enemy_id)
-			break
-		if enemy_id == &"dreadnought":
-			run.boss_killed = true
-		if enemy_id == &"gunship":
-			run.elites_killed += 1
-		# Between fights, spend credits repairing the worst-worn part, and
-		# cut one dud card the way a player passing a salvage node would.
-		_auto_repair(run)
-		_auto_reward(run, enemy_id)
-		_auto_strip(run)
+	var guard := 0
 
-	run.sector = 3 if run.boss_killed else 2
+	# Walk the real 3-sector maps so the yardstick matches the live run length.
+	while run.alive and not run.boss_killed and guard < 80:
+		guard += 1
+		var opts: Array = run.options()
+		if opts.is_empty():
+			died_at = "s%d:dead-end" % run.sector
+			break
+		var node: Dictionary = _pick_sim_node(opts, run)
+		run.advance_to(int(node["id"]))
+		var ntype := String(node["type"])
+		match ntype:
+			"combat", "elite", "boss":
+				var enemy_id := StringName(node.get("enemy", &"scout_drone"))
+				var c := run.make_combat(enemy_id)
+				if c == null:
+					died_at = "s%d:missing:%s" % [run.sector, String(enemy_id)]
+					break
+				var turns := _autoplay(c, verbose and first, tally)
+				first = false
+				total_turns += turns
+				var stalled := c.phase != CombatController.Phase.DONE
+				run.finish_combat(c)
+				if stalled:
+					died_at = "s%d:STALL:%s" % [run.sector, String(enemy_id)]
+					run.alive = false
+					break
+				if not run.alive:
+					died_at = "s%d:%s" % [run.sector, String(enemy_id)]
+					break
+				if ntype == "elite":
+					run.elites_killed += 1
+				if ntype == "boss" and run.is_final_sector():
+					run.boss_killed = true
+					break
+				_auto_repair(run)
+				_auto_reward(run, enemy_id, ntype)
+				_auto_strip(run)
+				if ntype == "boss":
+					run.advance_sector()
+			"shop":
+				_auto_shop(run)
+			"chest":
+				_auto_chest(run)
+
 	var v := Valuation.appraise(run)
 	if verbose:
 		print(Valuation.format_receipt(v))
 	return {"won": run.boss_killed, "salvage": v["total"], "turns": total_turns,
 		"died_at": died_at, "deck_size": run.profile.deck.size()}
+
+## Prefer shops when hurt, skip elites when the hull is thin, otherwise take
+## the first option. Ties keep edge order so a seed stays reproducible.
+func _pick_sim_node(opts: Array, run: RunState) -> Dictionary:
+	var hull_frac := 1.0
+	if run.profile.max_hull > 0:
+		hull_frac = float(run.hull_carryover) / float(run.profile.max_hull)
+	var best: Dictionary = opts[0]
+	var best_score := _sim_node_score(best, hull_frac, run.credits)
+	for i in range(1, opts.size()):
+		var node: Dictionary = opts[i]
+		var score := _sim_node_score(node, hull_frac, run.credits)
+		if score > best_score:
+			best = node
+			best_score = score
+	return best
+
+func _sim_node_score(node: Dictionary, hull_frac: float, credits: int) -> float:
+	match String(node["type"]):
+		"shop":
+			return 8.0 if hull_frac < 0.6 or credits >= 50 else 3.0
+		"chest":
+			return 6.0
+		"combat":
+			return 5.0
+		"elite":
+			return 7.0 if hull_frac > 0.55 else 1.0
+		"boss":
+			return 4.0
+		_:
+			return 0.0
 
 ## The simulator's pilot.
 ##
@@ -1210,6 +1455,9 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 				score -= amount * W_SELF_HARM
 			"credits":
 				score += amount * W_CREDITS
+			"set_drone_mode":
+				# Standing order is already Attack; switching is a small tempo play.
+				score += 1.5
 	return score
 
 func _worst_own_system(c: CombatController) -> StringName:
@@ -1221,13 +1469,13 @@ func _worst_own_system(c: CombatController) -> StringName:
 	return worst.id if worst != null else &""
 
 
-## Take a battle reward the way the reward screen does, scaled by enemy tier:
-## a part from every win, plus an improvement from mini-bosses and bosses.
-func _auto_reward(run: RunState, enemy_id: StringName) -> void:
+## Take a battle reward the way the reward screen does. Node type decides
+## regular / elite / boss payout; enemy id is only for credits and the pool.
+func _auto_reward(run: RunState, enemy_id: StringName, node_type: String = "") -> void:
 	var enemy: EnemyDef = Database.enemy(enemy_id)
 	if enemy == null:
 		return
-	var pack := RewardPool.build(run, _sim_meta_state(), enemy)
+	var pack := RewardPool.build(run, _sim_meta_state(), enemy, node_type)
 	var imp: ImprovementDef = pack["improvement"]
 	if imp != null:
 		run.ship.add_improvement(imp.id)
@@ -1269,6 +1517,22 @@ func _auto_repair(run: RunState) -> void:
 			inst.wear = 0
 			run.recompile()
 			return
+
+func _auto_shop(run: RunState) -> void:
+	_auto_repair(run)
+	_auto_strip(run)
+	var stock: Array = RewardPool.shop_stock(run, _sim_meta_state(), 3)
+	for o in stock:
+		if o["can_install"] and run.credits >= int(o["price"]):
+			run.add_credits(-int(o["price"]))
+			RewardPool.claim(run, o)
+			return
+
+func _auto_chest(run: RunState) -> void:
+	var imp: ImprovementDef = RewardPool.chest_improvement(run)
+	if imp != null:
+		run.ship.add_improvement(imp.id)
+		run.recompile()
 
 ## Which cards the pilot actually reached for. A card sitting at the bottom of
 ## this list is either badly costed or badly targeted -- it is the fastest way

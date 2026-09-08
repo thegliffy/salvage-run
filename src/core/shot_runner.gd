@@ -33,7 +33,7 @@ static func run(host: Node, out_dir: String) -> void:
 	var seen: Dictionary = {}
 	var guard := 0
 	var _fx_done := false
-	while guard < 120:
+	while guard < 400:
 		guard += 1
 		var screen := host.get_tree().current_scene
 		var name: String = screen.get_script().resource_path.get_file()

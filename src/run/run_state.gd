@@ -113,3 +113,18 @@ func at_boss() -> bool:
 	if not is_valid_node(current_node):
 		return false
 	return MapGenerator.node_at(map, current_node)["type"] == "boss"
+
+func is_final_sector() -> bool:
+	return MapGenerator.is_final_sector(sector)
+
+func at_final_boss() -> bool:
+	return at_boss() and is_final_sector()
+
+## After a non-final sector boss: generate the next sector's map and stand on
+## its entry. Hull, ship, and credits carry over FTL-style.
+func advance_sector() -> Dictionary:
+	sector += 1
+	map = MapGenerator.generate(sector)
+	current_node = map["entry"]
+	EventBus.node_entered.emit(MapGenerator.node_at(map, current_node))
+	return map

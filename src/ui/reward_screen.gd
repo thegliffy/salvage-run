@@ -40,17 +40,13 @@ func _ready() -> void:
 	chrome.add_child(UITheme.expand())
 
 	_reward = Game.pending_reward
-	var tier := int(_reward.get("tier", 1))
-	var title := "SALVAGE RECOVERED"
-	if tier == 2:
-		title = "MINI-BOSS DOWN"
-	elif tier >= 3:
-		title = "SECTOR BOSS DOWN"
-	_heading = UITheme.label(title, 24, UITheme.GOOD, "Black")
+	_heading = UITheme.label(_reward_heading(), 24, UITheme.GOOD, "Black")
 	col.add_child(_heading)
-	col.add_child(UITheme.label(
-		"Take a part — skip to field-repair the hull.",
-		12, UITheme.TEXT_DIM, "SemiBold"))
+	var hint := "Take a part — skip to field-repair the hull."
+	if Game.pending_sector_advance:
+		hint = "Then sector %d of %d." % [
+			Game.run.sector + 1, MapGenerator.SECTOR_COUNT]
+	col.add_child(UITheme.label(hint, 12, UITheme.TEXT_DIM, "SemiBold"))
 
 	# Credits and the improvement are automatic; only the part is a choice.
 	var imp: ImprovementDef = _reward.get("improvement")
@@ -153,10 +149,19 @@ func _refresh() -> void:
 			_list.add_child(_jettison_row(inst))
 	else:
 		_skip_btn.visible = true
-		_heading.text = "SALVAGE RECOVERED" if int(_reward.get("tier", 1)) == 1 \
-			else ("MINI-BOSS DOWN" if int(_reward.get("tier", 1)) == 2 else "SECTOR BOSS DOWN")
+		_heading.text = _reward_heading()
 		for offer in _reward.get("parts", []):
 			_list.add_child(_offer_row(offer))
+
+func _reward_heading() -> String:
+	if Game.pending_sector_advance:
+		return "SECTOR %d CLEAR" % Game.run.sector
+	var tier := int(_reward.get("tier", 1))
+	if tier == 2:
+		return "MINI-BOSS DOWN"
+	if tier >= 3:
+		return "SECTOR BOSS DOWN"
+	return "SALVAGE RECOVERED"
 
 func _rebuild_power_panel() -> void:
 	for c in _power_panel.get_children():

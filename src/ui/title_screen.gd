@@ -14,7 +14,7 @@ func _ready() -> void:
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel",
 		UITheme.panel(UITheme.PANEL, UITheme.ACCENT, 1, 6, 28))
-	card.custom_minimum_size.x = 680
+	card.custom_minimum_size.x = 860
 	centre.add_child(card)
 
 	var col := VBoxContainer.new()
