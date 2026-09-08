@@ -19,6 +19,9 @@ var turn: int = 0
 var victory: bool = false
 var pending_credits: int = 0
 var events: Array[Dictionary] = []
+## Successful player plays this turn, not counting a card currently resolving.
+## Static Buildup (and the sim preview) add one so the resolving card counts.
+var cards_played_this_turn: int = 0
 
 ## Drone bays: empty until a launch card fills a slot. Occupied drones tick
 ## once at the start of the player's turn, after shield regen / overshield
@@ -49,6 +52,7 @@ func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) 
 	drone_slots = profile.drone_slots
 	drones.clear()
 	events.clear()
+	cards_played_this_turn = 0
 	EventBus.combat_started.emit(self)
 	brain.choose_intent()
 	begin_player_turn()
@@ -58,6 +62,7 @@ func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) 
 func begin_player_turn() -> void:
 	turn += 1
 	phase = Phase.PLAYER
+	cards_played_this_turn = 0
 	player.energy = player.max_energy
 	player.tick_systems()
 	# Overshield expires at the start of your turn, then regen fills toward cap.
@@ -98,6 +103,7 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 	else:
 		deck.discard(card)
 
+	cards_played_this_turn += 1
 	_check_end()
 	return ""
 

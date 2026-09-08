@@ -1226,5 +1226,31 @@
       ]
     },
     "icon": "blue_b_05.png"
+  },
+  "static_buildup": {
+    "name": "Static Buildup",
+    "kind": "attack",
+    "rarity": "uncommon",
+    "cost": 1,
+    "target": "enemy_system",
+    "text": "Deal damage equal to twice the number of cards played this turn.",
+    "effects": [
+      {
+        "op": "damage_system",
+        "amount": 2,
+        "scale_by": "cards_played_this_turn"
+      }
+    ],
+    "upgrade": {
+      "text": "Deal damage equal to three times the number of cards played this turn.",
+      "effects": [
+        {
+          "op": "damage_system",
+          "amount": 3,
+          "scale_by": "cards_played_this_turn"
+        }
+      ]
+    },
+    "icon": "red_gr_04.png"
   }
 }

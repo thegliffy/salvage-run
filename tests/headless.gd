@@ -74,6 +74,7 @@ func _run_tests() -> int:
 	_test_card_balance()
 	_test_sectors()
 	_test_drones()
+	_test_static_coil()
 	_test_ui_fit()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
 	return 1 if _failed > 0 else 0
@@ -1085,6 +1086,15 @@ func _test_card_balance() -> void:
 	_eq("overcharge drones+ times", _op_amt(&"overcharge_drones", true, "overcharge_drones"), 3)
 	_check("old protocol attack card is gone", Database.card(&"drone_attack") == null)
 
+	var buildup: CardDef = Database.card(&"static_buildup")
+	_eq("static_buildup cost", buildup.cost, 1)
+	_eq("static_buildup rarity", buildup.rarity, &"uncommon")
+	_eq("static_buildup targets a system", buildup.target, CardDef.Target.ENEMY_SYSTEM)
+	_eq("static_buildup scale", _op_amt(&"static_buildup", false, "damage_system"), 2)
+	_eq("static_buildup+ scale", _op_amt(&"static_buildup", true, "damage_system"), 3)
+	_eq("static_buildup scale_by", String(buildup.effects[0].get("scale_by", "")), "cards_played_this_turn")
+	_check("static_buildup may target the hull", buildup.can_target_hull())
+
 	# Playing the upgraded energy card must discard, not exhaust.
 	Rng.seed_run(3)
 	var c := CombatController.new()
@@ -1255,6 +1265,113 @@ func _test_drones() -> void:
 	var oc_off := CardInstance.create(Database.card(&"overcharge_drones"))
 	c3.deck.hand.append(oc_off)
 	_eq("overcharge refused while offline", c3.play_card(oc_off), "drone launcher is offline")
+
+func _test_static_coil() -> void:
+	print("static coil")
+	var coil: PartDef = Database.part(&"static_coil")
+	_check("static_coil exists", coil != null)
+	_eq("static_coil slot", coil.slot, ShipLoadout.SLOT_UTILITY)
+	_eq("static_coil tier", coil.tier, 2)
+	_eq("static_coil system", coil.system, &"support")
+	_eq("static_coil mass", coil.mass, 2)
+	_eq("static_coil integrity", coil.integrity, 8)
+	_eq("static_coil power_draw", coil.power_draw, 1)
+	_eq("static_coil power_gen", coil.power_gen, 0)
+	_eq("static_coil base_value", coil.base_value, 100)
+	_eq("static_coil unlock_cost", coil.unlock_cost, 175)
+	_eq("static_coil icon filename", coil.icon, "static_coil.png")
+	_eq("static_coil grants 3 cards", coil.grants.size(), 3)
+	_eq("static_coil grants 2 afterburners", coil.grants.count(&"afterburner"), 2)
+	_eq("static_coil grants static_buildup", coil.grants.count(&"static_buildup"), 1)
+	_check("afterburner is reused, not duplicated", Database.card(&"afterburner") != null)
+
+	var ship := ShipLoadout.new("Coil")
+	ship.capacity = {ShipLoadout.SLOT_WEAPON: 4, ShipLoadout.SLOT_HULL: 3,
+		ShipLoadout.SLOT_UTILITY: 4}
+	_check("installs in a utility slot", ship.install(coil) != null)
+	var prof := ship.compile()
+	_eq("compiled deck is the three grants", prof.deck.size(), 3)
+	_eq("compiled afterburners", prof.deck.count(&"afterburner"), 2)
+	_eq("compiled static_buildup", prof.deck.count(&"static_buildup"), 1)
+
+	var icon := UITheme.module_icon(coil)
+	_check("static coil icon is a TextureRect", icon is TextureRect)
+	if icon.texture == null:
+		_check("missing static_coil.png hides the TextureRect", not icon.visible)
+	else:
+		_check("static_coil.png wired when present", icon.visible)
+	icon.free()
+
+	var meta := MetaState.new()
+	meta.grant_starting_unlocks()
+	_check("static_coil starts locked", not meta.is_unlocked(&"static_coil"))
+	_check("static_coil is in the unlock shop", meta.unlockable().any(
+		func(p: PartDef): return p.id == &"static_coil"))
+	_eq("tier 2 offers as uncommon", RewardPool.RARITY_BY_TIER[2], &"uncommon")
+
+	# Damage = 2 × cards played this turn, including this card.
+	Rng.seed_run(31)
+	var c := CombatController.new()
+	c.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c.enemy.evasion = 0
+	c.enemy.shield = 0
+	c.player.energy = 9
+	_eq("play count starts at 0", c.cards_played_this_turn, 0)
+
+	var first := CardInstance.create(Database.card(&"static_buildup"))
+	c.deck.hand.append(first)
+	var hull0: int = c.enemy.hull
+	_eq("static_buildup plays as first card", c.play_card(first, &"hull"), "")
+	_eq("first-card static_buildup deals 2", c.enemy.hull, hull0 - 2)
+	_eq("play count is 1 after first card", c.cards_played_this_turn, 1)
+
+	# Two afterburners then Static Buildup: 2 × 3 = 6.
+	Rng.seed_run(32)
+	var c2 := CombatController.new()
+	c2.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c2.enemy.evasion = 0
+	c2.enemy.shield = 0
+	c2.player.energy = 9
+	var ab1 := CardInstance.create(Database.card(&"afterburner"))
+	var ab2 := CardInstance.create(Database.card(&"afterburner"))
+	var sb := CardInstance.create(Database.card(&"static_buildup"))
+	c2.deck.hand.append(ab1)
+	c2.deck.hand.append(ab2)
+	c2.deck.hand.append(sb)
+	_eq("afterburner 1 plays", c2.play_card(ab1), "")
+	_eq("afterburner 2 plays", c2.play_card(ab2), "")
+	var hull2: int = c2.enemy.hull
+	_eq("static_buildup as third card plays", c2.play_card(sb, &"hull"), "")
+	_eq("third-card static_buildup deals 6", c2.enemy.hull, hull2 - 6)
+	_eq("play count is 3 after the package", c2.cards_played_this_turn, 3)
+
+	# Preview / sim scoring uses the same +1 as resolution.
+	c2.cards_played_this_turn = 3
+	var preview := c2.resolver.scaled_amount({
+		"op": "damage_system", "amount": 2, "scale_by": "cards_played_this_turn",
+	}, {"source": c2.player, "opponent": c2.enemy})
+	_eq("scaled_amount includes the card being considered", preview, 8)
+
+	# Upgrade is 3× cards played.
+	Rng.seed_run(33)
+	var c3 := CombatController.new()
+	c3.setup(StarterShips.salvager().compile(), Database.enemy(&"scout_drone"))
+	c3.enemy.evasion = 0
+	c3.enemy.shield = 0
+	c3.player.energy = 9
+	var pad := CardInstance.create(Database.card(&"afterburner"))
+	c3.deck.hand.append(pad)
+	_eq("pad play", c3.play_card(pad), "")
+	var up := CardInstance.create(Database.card(&"static_buildup"), true)
+	c3.deck.hand.append(up)
+	var hull3: int = c3.enemy.hull
+	_eq("upgraded static_buildup plays", c3.play_card(up, &"hull"), "")
+	_eq("upgraded second-card deals 6", c3.enemy.hull, hull3 - 6)
+
+	# Counter resets at the start of the next player turn.
+	c3.cards_played_this_turn = 5
+	c3.begin_player_turn()
+	_eq("play count resets next turn", c3.cards_played_this_turn, 0)
 
 # --- Balance simulator -------------------------------------------------------
 
