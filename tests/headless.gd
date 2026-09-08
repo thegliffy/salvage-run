@@ -1547,9 +1547,9 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 				else:
 					var reps := amount if amount > 0 else 2
 					for d in c.drones:
-						var kind := StringName(d.get("type", &"attack"))
+						var drone_kind := StringName(d.get("type", &"attack"))
 						var amt := int(d.get("amount", 2))
-						if kind == &"shield":
+						if drone_kind == &"shield":
 							score += amt * W_SHIELD * reps
 						else:
 							score += amt * W_SYSTEM_DAMAGE * 2.0 * reps
