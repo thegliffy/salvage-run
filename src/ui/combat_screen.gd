@@ -112,11 +112,12 @@ func _build() -> void:
 	root.add_theme_constant_override("separation", 10)
 	margin.add_child(root)
 
-	# Header
+	# Header: title left, two drone rings top-center, banner + SHIP right.
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	root.add_child(head)
 	head.add_child(UITheme.chrome_mark())
+	head.add_child(UITheme.expand())
 	_drone_bay = _build_drone_bay()
 	head.add_child(_drone_bay)
 	head.add_child(UITheme.expand())
