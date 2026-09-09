@@ -44,7 +44,7 @@ const RARITY_COLOUR := {
 const MODULE_ART_DIR := "res://assets/modules/"
 const DRONE_SLOT_DIR := "res://assets/ui/drone_slots/"
 ## Shared card back for draw / shuffle ghosts and pile thumbs.
-## TODO(art): drop AD artwork at this path (1152×1712). See docs/ASSETS.md.
+## AD art lives here (1152×1712). See docs/ASSETS.md.
 const CARD_BACK_ART := "res://assets/ui/card_back.png"
 ## Design size at 720p; canvas_items stretch scales this with the window.
 const MODULE_ICON_SIZE := 80

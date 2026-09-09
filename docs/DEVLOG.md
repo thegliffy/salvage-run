@@ -457,9 +457,9 @@ vanishing mid-flight. Play also aimed the discard at `discard_pos - CARD_BACK
 about a card-height off the pile.
 
 Canonical back path is `assets/ui/card_back.png` (not `assets/frames/` — that
-folder is kind faces). Interim PNG is a tinted framed back; AD replaces it in
-place at 1152×1712. `CardFx` uses a keep-aspect TextureRect, pile thumbs share
-it, and missing art still falls back to a framed panel.
+folder is kind faces). AD industrial plate + cyan wrench ships there.
+`CardFx` uses a keep-aspect TextureRect, pile thumbs share it, and missing art
+still falls back to a framed panel.
 
 Timings: play 0.26/0.22 CUBIC+BACK 1.12× → 0.40/0.36 QUINT/SINE 1.06× with a
 slight arc; draw 0.28 → 0.40; shuffle 0.34 random chaos → 0.52 leftward ribbon,

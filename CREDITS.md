@@ -8,8 +8,9 @@ Game design, direction, systems work, UI implementation, and the card frame
 artwork. All design decisions — the ship-as-deck concept, subsystem targeting,
 the typed-slot loadout, tiered rewards, and the run-end ship sale — are theirs.
 
-The interim `assets/ui/card_back.png` is a project placeholder (tinted tech
-frame + hatch + chevron) until Art Director artwork lands at that same path.
+`assets/ui/card_back.png` (industrial plate + cyan wrench) and
+`assets/ui/logo_wrench.png` are Art Director work, dropped at the canonical
+UI path. `scripts/make_card_back.py` is a fallback generator only.
 
 Development assistance from Claude (Anthropic).
 

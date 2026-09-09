@@ -15,7 +15,7 @@ What `assets/` needs, what ships with this repository, and what does not.
 | `assets/portraits/*.png` | Enemy portraits (`UITheme.art()` via `content/enemies.json` `portrait`) | Redistributable painted industrial ships — ships with the repo |
 | `assets/modules/*.png` | Part / module icons (`UITheme.art()` via `content/parts.json` `icon`, default `<part_id>.png`) | Project art — unified painted 3D isometric hardware; ships with the repo |
 | `assets/ui/drone_slots/*.png` | Combat drone bay chips (empty ring, attack red, shield blue) | Project art — ships with the repo |
-| `assets/ui/card_back.png` | Shared card back (draw / shuffle ghosts, pile thumbs) | Interim placeholder until AD art — ships with the repo |
+| `assets/ui/card_back.png` | Shared card back (draw / shuffle ghosts, pile thumbs) | Art Director — industrial plate + cyan wrench |
 
 Attribution: **Exo** designed by Natanael Gama. Card icons derived from
 [Game-icons.net](https://game-icons.net) (CC-BY 3.0), tinted per card kind.
@@ -130,12 +130,11 @@ The back is shared chrome, same family as the drone-bay chips.
 |---|---|
 | `card_back.png` | `UITheme.card_back_texture()` → `CardFx` draw/shuffle ghosts, combat DRAW / DISCARD thumbs |
 
-**TODO(art):** replace this file in place with Art Director artwork. Keep
+Art Director artwork ships here (industrial plate + cyan wrench). Keep
 **1152×1712** (or any size with that exact ratio — `140 / 208`, same as
 `CardView.CARD_SIZE` and `assets/frames/*.png`) so `TextureRect` keep-aspect
-never stretches the glow. Interim file is a tinted framed back (navy hatch +
-tech-frame lightning + chevron). `scripts/make_card_back.py` rebuilds the
-placeholder only; do not run it over AD art.
+never stretches. `scripts/make_card_back.py` rebuilds a framed *placeholder*
+only — do **not** run it over AD art. To iterate, replace this PNG in place.
 
 Missing file: `UITheme.art()` returns null and `CardFx` falls back to a tinted
 `PanelContainer` rail. Combat pile thumbs hide. The game still runs.

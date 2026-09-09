@@ -27,8 +27,8 @@ const SHUFFLE_ARC := 168.0
 ## (140×208) so backs never stretch. The old 30×42 chips read as blank pips.
 const CARD_BACK := Vector2(70, 104) * 1.15
 
-## Canonical drop path for AD art. Interim placeholder ships here until then.
-## TODO(art): replace assets/ui/card_back.png in place (1152×1712, card ratio).
+## Canonical drop path. AD art ships here; replace in place to iterate.
+## Do not also put a copy in assets/frames/ (that folder is kind faces).
 const CARD_BACK_PATH := "res://assets/ui/card_back.png"
 
 
