@@ -199,15 +199,14 @@ static func _expire(layer: Control, node: Node, seconds: float) -> void:
 
 # --- Ghost construction ------------------------------------------------------
 
-## Aspect-correct card back. A raised plate sits under the art so a dark PNG
-## still reads as a card on the combat UI. TextureRect when AD (or the interim
-## PNG) is present; plate-only otherwise.
+## Aspect-correct card back. Kyle: black scrap plate; cyan is the wrench only —
+## no extra accent rail around the ghost. TextureRect when the PNG is present;
+## a charcoal plate otherwise.
 static func _card_back() -> Control:
 	var wrap := Control.new()
 	wrap.custom_minimum_size = CARD_BACK
 	wrap.size = CARD_BACK
 	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	wrap.add_child(_plate(CARD_BACK, UITheme.ACCENT_DIM))
 	var tex := UITheme.card_back_texture()
 	if tex != null:
 		var r := TextureRect.new()
@@ -221,6 +220,8 @@ static func _card_back() -> Control:
 		r.offset_bottom = 0
 		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		wrap.add_child(r)
+	else:
+		wrap.add_child(_plate(CARD_BACK, UITheme.TEXT_FAINT, Color("12161c")))
 	return wrap
 
 
