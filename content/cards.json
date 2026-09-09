@@ -1372,5 +1372,261 @@
       ]
     },
     "icon": "blue_b_24.png"
+  },
+  "hardpoint_optimization": {
+    "name": "Hardpoint Optimization",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 3,
+    "target": "none",
+    "text": "This fight: +1 damage on attacks from this part. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "calibrate",
+        "stat": "damage",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "This fight: +2 damage on attacks from this part. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "calibrate",
+          "stat": "damage",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "hardpoint_optimization.png"
+  },
+  "deflector_tune": {
+    "name": "Deflector Tune",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 3,
+    "target": "none",
+    "text": "This fight: +1 on shield gains from this part's cards. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "calibrate",
+        "stat": "shield",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "This fight: +2 on shield gains from this part's cards. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "calibrate",
+          "stat": "shield",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "deflector_tune.png"
+  },
+  "evasion_calibrate": {
+    "name": "Evasion Calibrate",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 3,
+    "target": "none",
+    "text": "This fight: +10 evasion. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "calibrate",
+        "stat": "evasion",
+        "amount": 10
+      }
+    ],
+    "upgrade": {
+      "text": "This fight: +15 evasion. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "calibrate",
+          "stat": "evasion",
+          "amount": 15
+        }
+      ]
+    },
+    "icon": "evasion_calibrate.png"
+  },
+  "hull_reinforcement": {
+    "name": "Hull Reinforcement",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 3,
+    "target": "none",
+    "text": "This fight: +2 on repair amounts from this part's cards. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "calibrate",
+        "stat": "repair",
+        "amount": 2
+      }
+    ],
+    "upgrade": {
+      "text": "This fight: +3 on repair amounts from this part's cards. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "calibrate",
+          "stat": "repair",
+          "amount": 3
+        }
+      ]
+    },
+    "icon": "hull_reinforcement.png"
+  },
+  "sensor_sweep": {
+    "name": "Sensor Sweep",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 3,
+    "target": "none",
+    "text": "This fight: suppress from this part's cards lasts +1 turn. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "calibrate",
+        "stat": "suppress",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "This fight: suppress from this part's cards lasts +2 turns. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "calibrate",
+          "stat": "suppress",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "sensor_sweep.png"
+  },
+  "drone_overclock": {
+    "name": "Drone Overclock",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 3,
+    "target": "none",
+    "text": "This fight: occupied drones tick +1 (attack damage and shield gain). Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "calibrate",
+        "stat": "drone",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "This fight: occupied drones tick +2 (attack damage and shield gain). Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "calibrate",
+          "stat": "drone",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "drone_overclock.png"
+  },
+  "reactor_tune": {
+    "name": "Reactor Tune",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 3,
+    "target": "none",
+    "text": "This fight: +1 on energy gains from this part's cards. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "calibrate",
+        "stat": "energy",
+        "amount": 1
+      }
+    ],
+    "upgrade": {
+      "text": "This fight: +2 on energy gains from this part's cards. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "calibrate",
+          "stat": "energy",
+          "amount": 2
+        }
+      ]
+    },
+    "icon": "reactor_tune.png"
+  },
+  "salvage_protocol": {
+    "name": "Salvage Protocol",
+    "kind": "tech",
+    "rarity": "common",
+    "cost": 3,
+    "target": "none",
+    "text": "This fight: +10 on credit gains from this part's cards. Exhaust.",
+    "keywords": [
+      "exhaust"
+    ],
+    "effects": [
+      {
+        "op": "calibrate",
+        "stat": "credits",
+        "amount": 10
+      }
+    ],
+    "upgrade": {
+      "text": "This fight: +15 on credit gains from this part's cards. Exhaust.",
+      "keywords": [
+        "exhaust"
+      ],
+      "effects": [
+        {
+          "op": "calibrate",
+          "stat": "credits",
+          "amount": 15
+        }
+      ]
+    },
+    "icon": "salvage_protocol.png"
   }
 }

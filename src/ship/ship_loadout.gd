@@ -10,7 +10,7 @@ extends RefCounted
 ## What limits a ship instead is three soft costs, none of them spatial:
 ##   - power   : draw beyond reactor output costs energy every turn
 ##   - mass    : heavier ships dodge worse
-##   - the deck: every part adds three cards, so a big ship draws badly
+##   - the deck: every part adds four cards, so a big ship draws badly
 ##
 ## None of them ever refuse a part. Slots are the only hard limit, and their
 ## job is to shape WHAT you carry, not how much.
@@ -151,6 +151,7 @@ func compile() -> ShipProfile:
 
 		for cid in inst.granted_cards():
 			prof.deck.append(cid)
+			prof.deck_sources.append(inst.uid)
 
 		prof.power += d.power_gen
 		power_draw += d.power_draw

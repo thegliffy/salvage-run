@@ -37,7 +37,7 @@ costing a whole drag-and-drop shipyard screen and buying nothing.
 |---|---|
 | Power | draw beyond hull output cuts energy every turn |
 | Mass | heavier ships dodge worse |
-| Deck | every part adds three cards, so a big ship draws badly |
+| Deck | every part adds four cards, so a big ship draws badly |
 
 None of them ever *refuse* a part. Slots are the only hard limit, and their job
 is to shape **what** you carry, not how much. Deck dilution is the real
@@ -188,7 +188,7 @@ answer is to make the animation wait on the event, not the reverse.
 
 ## 8. Card removal: strip a mount
 
-Every part grants **three** cards, and each part can have **exactly one** of them
+Every part grants **four** cards, and each part can have **exactly one** of them
 stripped, permanently, for the rest of the run. The service lives at the store.
 It costs **run credits** that scale with how many mounts you've already stripped
 this run, and it still cuts that part's **sale value** by 25%.
@@ -200,7 +200,7 @@ buttons) if `run.credits` cannot cover it. Charge lives in `SalvageYard.strip()`
 so every caller — shop UI, leftover salvage screen, sim — hits the same path.
 
 **Why one per part:** thinning is capped by construction. A ship can never fall
-below two thirds of its cards, so there is no degenerate five-card deck. The
+below three quarters of its cards, so there is no degenerate five-card deck. The
 limit is a rule the player can see. The escalating credit cost is the *soft*
 pressure against stripping every mount, not a substitute for that floor.
 
@@ -219,15 +219,27 @@ in sale value made strips free during the run; paying only in credits would
 let a rich run thin the deck with no yard consequence. Both costs are load-
 bearing.
 
-**Content shape.** The three cards are a designed package, not three copies:
+**Content shape.** The four cards are a designed package, not four copies:
 
 - *Teaching parts* (tier 1) run two core cards plus a clear dud, so the first
   strip is satisfying rather than agonising. The duds use `kind: "status"`,
   which gives drawback cards a home without needing a curse system.
 - *Choice parts* (tier 2–3) run three cards pulling in different directions, so
   stripping declares what the ship is for.
+- Every part's **fourth** card is a Calibrate tech (cost 3, Exhaust): a
+  fight-long buff, usually scoped to cards granted by that mount. Shared card
+  defs (`hardpoint_optimization`, `deflector_tune`, …) are reused across parts
+  with the same effect, the way `armor_brace` already is.
 
-**Consequence:** removal is load-bearing, not optional. Seven parts is a 21-card
+**Calibrate.** Playing the card stamps a fight-only bonus on the combatant.
+Per-part stats (damage, shield gain, repair, suppress duration, energy, credits)
+key off `CardInstance.source_part_uid`, so two Burst Lasers do not buff each
+other and a Repair Bay's Armor Brace does not inherit Armor Plating's Hull
+Reinforcement. Evasion Calibrate is ship-wide. Drone Overclock adds to occupied
+drone ticks (attack damage and shield gain), not to the printed launch amount.
+Bonuses die with the fight; they are not compile stats.
+
+**Consequence:** removal is load-bearing, not optional. Seven parts is a 28-card
 deck, which cycles sluggishly at 5–6 draws a turn. Stripping is what keeps deck
 size honest as a ship grows.
 

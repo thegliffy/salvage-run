@@ -54,6 +54,14 @@ violet_p_03.png
 violet_p_04.png
 violet_p_05.png
 violet_p_06.png
+hardpoint_optimization.png
+deflector_tune.png
+evasion_calibrate.png
+hull_reinforcement.png
+sensor_sweep.png
+drone_overclock.png
+reactor_tune.png
+salvage_protocol.png
 ```
 
 Optional commercially licensed packs go in `commercial/` (gitignored) and must

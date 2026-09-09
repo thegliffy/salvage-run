@@ -465,3 +465,16 @@ Timings: play 0.26/0.22 CUBIC+BACK 1.12× → 0.40/0.36 QUINT/SINE 1.06× with a
 slight arc; draw 0.28 → 0.40; shuffle 0.34 random chaos → 0.52 leftward ribbon,
 fade only after landing. Hand fan `TWEEN_TIME` 0.12 BACK → 0.20 CUBIC.
 
+---
+
+## 2026-09-09 — Calibrate (fourth card)
+
+Every part now grants four cards. The new one is a cost-3 Exhaust tech that
+stamps a fight-long buff — usually scoped to cards from that mount, with
+Evasion Calibrate ship-wide and Drone Overclock on occupied ticks. Shared defs
+(`hardpoint_optimization`, `armor_brace`-style) keep the JSON small.
+
+`CardInstance.source_part_uid` is the scope key. Compile writes a parallel
+`deck_sources` array so two Burst Lasers do not buff each other. Strip floor
+is three quarters, not two thirds. Icons are filename-only until art lands.
+

@@ -12,7 +12,7 @@ var uid: int = 0           # stable id for save/load and UI diffing
 ## Index into def.grants of the card stripped from this mount, or -1.
 ##
 ## A single int, not a list: one strip per part, so a ship can never be
-## thinned past two thirds of its cards. The store also charges run credits
+## thinned past three quarters of its cards. The store also charges run credits
 ## that scale with how many mounts are already stripped (see SalvageYard).
 var stripped_index: int = -1
 

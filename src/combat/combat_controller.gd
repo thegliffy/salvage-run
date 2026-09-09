@@ -55,7 +55,7 @@ func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) 
 	enemy = Combatant.from_enemy(enemy_def)
 	loadout = ship
 	deck = Deck.new()
-	deck.build(profile.deck)
+	deck.build(profile.deck, profile.deck_sources)
 	brain = EnemyBrain.new(enemy_def, enemy)
 	phase = Phase.SETUP
 	turn = 0
@@ -132,6 +132,7 @@ func play_card(card: CardInstance, target_system: StringName = &"") -> String:
 
 	resolver.run(card.effects(), {
 		"source": player, "opponent": enemy, "target_system": target_system,
+		"card": card,
 	})
 
 	if exhausts:
@@ -208,6 +209,8 @@ func _tick_drones(times: int = 1) -> void:
 func _activate_drone(d: Dictionary) -> void:
 	var kind := StringName(d.get("type", &"attack"))
 	var amt := int(d.get("amount", DRONE_ATTACK if kind == &"attack" else DRONE_SHIELD))
+	if player != null:
+		amt += player.calibrate_bonus(&"drone")
 	var op: Dictionary
 	if kind == &"shield":
 		op = {"op": "shield", "amount": amt}

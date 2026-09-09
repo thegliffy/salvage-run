@@ -118,7 +118,7 @@ The hull has typed slots. **Brawler** is the default — **4 weapon, 3 hull, 4
 utility**. **Tank** starts with 3 weapon slots and a Deflector (shields).
 **Shepherd** is **1 weapon / 3 hull / 6 utility**, with a Deflector and a
 Drone Launcher (two empty bays you fill by playing launch cards).
-Each installed part grants three cards. Bolt on a Missile Rack and
+Each installed part grants four cards. Bolt on a Missile Rack and
 `Breach Missile` enters your deck; jettison that part and its cards leave
 with it. Deckbuilding and ship building are the same action.
 
@@ -133,7 +133,7 @@ is three soft costs:
 |---|---|
 | Power | draw beyond the hull's output cuts your energy every turn |
 | Mass | heavier ships dodge worse |
-| Deck | every part adds three cards, so a big ship draws badly |
+| Deck | every part adds four cards, so a big ship draws badly |
 
 The hull generates the power — no module does — so energy is a property of the
 ship rather than a mandatory part every build has to carry. Overdraw shows as a
@@ -177,14 +177,14 @@ rules as Slay the Spire.
 two reward types never compete for the same decision.
 
 Skipping a part offer **field-repairs 15% of max hull**. You can also **jettison**
-an installed part: the slot frees up and all three of its cards leave the deck.
+an installed part: the slot frees up and all four of its cards leave the deck.
 
 ### Trimming the deck
 
-Each part can have exactly **one** of its three cards stripped, permanently, at a
+Each part can have exactly **one** of its four cards stripped, permanently, at a
 store. The first strip costs **40 credits**, then 65, 90, … (`40 + 25 ×` mounts
 already stripped this run). Stripping also cuts that part's **sale value** by
-25%. Because the cap is one per part, a ship can never fall below two thirds of
+25%. Because the cap is one per part, a ship can never fall below three quarters of
 its cards.
 
 ### Meta unlocks
