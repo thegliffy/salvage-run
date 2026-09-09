@@ -13,7 +13,7 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-950 tests passing · playable PC demo
+951 tests passing · playable PC demo
 ```
 
 ---
