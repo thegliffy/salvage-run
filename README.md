@@ -1,6 +1,6 @@
 # Salvage Run
 
-**v0.25** · by **thegliffy**
+**v0.26** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
 across three sectors to the final boss, then sell what you built for salvage
@@ -40,13 +40,13 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.25-win64.zip` from the
-[v0.25 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.25),
+**Windows:** download `SalvageRun-v0.26-win64.zip` from the
+[v0.26 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.26),
 unzip, run `SalvageRun.exe`. Single self-contained executable — no installer,
 no separate data files.
 
-**Linux:** download `SalvageRun-v0.25-linux64.zip` from the same
-[v0.25 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.25),
+**Linux:** download `SalvageRun-v0.26-linux64.zip` from the same
+[v0.26 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.26),
 unzip, run `./salvage-run.x86_64`.
 
 **From source:**
@@ -92,14 +92,20 @@ Title → salvage unlock shop → sector map (×3) → combat / shop / chest →
 the primary target and soft subsystem control, typed-slot ship loadout,
 power-budget UI, tiered rewards (skip = field repair), ship status overlay,
 self-destruct (confirmed scuttle → wreck sale), ship
-improvements, jettison, card stripping, run-end appraisal, meta unlock shop
-(parts + hulls), overshield, Brawler / Tank / Shepherd starters, meta saves.
+improvements, jettison, card stripping, module forging, run-end appraisal,
+meta unlock shop (parts + hulls), overshield, Brawler / Tank / Shepherd
+starters, meta saves.
 
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-### What's new in v0.25
+### What's new in v0.26
 
+- **Module Forge** at the store: pay credits to forge a mount for the rest of
+  the run; all remaining cards from that module play as upgraded (`Name+`),
+  **card names render green**. Cost is **80 credits**, then 120, 160, …
+  (`80 + 40 ×` forges already done) — always more expensive than Strip
+  (`40 + 25 ×` strips).
 - **Calibrate:** every module's fourth card — cost **3**, keyword **Exhaust**,
   a fight-long buff scoped to that part. Hardpoint Optimization, Deflector Tune,
   Evasion Calibrate, Hull Reinforcement, Sensor Sweep, Drone Overclock, Reactor
