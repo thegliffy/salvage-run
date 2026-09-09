@@ -82,6 +82,7 @@ func _run_tests() -> int:
 	_test_card_fx()
 	_test_improvement_triggers()
 	_test_common_improvements()
+	_test_calibrate()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
 	return 1 if _failed > 0 else 0
 
@@ -311,8 +312,10 @@ func _test_compile() -> void:
 	_check("has weapons system", prof.has_system(&"weapons"))
 	_check("has armor system", prof.has_system(&"armor"))
 	_check("brawler starts with no shield capacity", prof.max_shield == 0)
-	_eq("starter deck is 3 parts x 3 cards", prof.deck.size(), 9)
+	_eq("starter deck is 3 parts x 4 cards", prof.deck.size(), 12)
 	_eq("laser granted twice by burst laser", prof.deck.count(&"laser_burst"), 2)
+	_eq("deck sources match deck size", prof.deck_sources.size(), 12)
+	_check("starter includes hardpoint_optimization", prof.deck.has(&"hardpoint_optimization"))
 	_eq("starter ship is the Brawler", prof.display_name, "Brawler")
 	_check("hull includes base", prof.max_hull >= 30)
 	_check("ship is self-powered without a reactor", prof.power > 0)
@@ -345,7 +348,7 @@ func _test_compile() -> void:
 	_check("shepherd deck overcharges drones", shep.deck.has(&"overcharge_drones"))
 	_check("old drone protocol cards are gone", not shep.deck.has(&"drone_attack"))
 	_check("shepherd stays in its power budget", shep.warnings.is_empty(), str(shep.warnings))
-	_eq("shepherd deck is 3 parts x 3 cards", shep.deck.size(), 9)
+	_eq("shepherd deck is 3 parts x 4 cards", shep.deck.size(), 12)
 
 	# Wrecked parts contribute nothing.
 	var before := prof.deck.size()
@@ -791,10 +794,10 @@ func _test_strip() -> void:
 	run.start(StarterShips.salvager(), 31)
 
 	var deck_before: int = run.profile.deck.size()
-	_eq("starter ship is 3 parts x 3 cards", deck_before, 9)
+	_eq("starter ship is 3 parts x 4 cards", deck_before, 12)
 
 	var opts := SalvageYard.options(run)
-	_eq("every mount on every part is offered", opts.size(), 3 * 3)
+	_eq("every mount on every part is offered", opts.size(), 3 * 4)
 	_check("options carry a value cost", int(opts[0]["value_cost"]) > 0)
 	_eq("first strip credit cost is 40", int(opts[0]["credit_cost"]),
 		SalvageYard.STRIP_CREDIT_BASE)
@@ -868,7 +871,7 @@ func _test_strip() -> void:
 	_eq("second strip succeeds", SalvageYard.strip(run, other, 0), "")
 	_eq("second strip debit 65", run.credits, credits_mid - second_cost)
 
-	# Thinning has a floor: you can never cut past two thirds.
+	# Thinning has a floor: you can never cut past three quarters.
 	var floor_run := RunState.new()
 	floor_run.start(StarterShips.salvager(), 32)
 	var triple := SalvageYard.STRIP_CREDIT_BASE \
@@ -878,7 +881,7 @@ func _test_strip() -> void:
 	var floor_credits: int = floor_run.credits
 	for inst in floor_run.ship.parts:
 		SalvageYard.strip(floor_run, inst, 0)
-	_eq("every part stripped once", floor_run.profile.deck.size(), 6)
+	_eq("every part stripped once", floor_run.profile.deck.size(), 9)
 	_eq("three strips cost 40+65+90", floor_run.credits, floor_credits - triple)
 	var still_strippable := 0
 	for inst in floor_run.ship.parts:
@@ -891,7 +894,7 @@ func _test_strip() -> void:
 
 	# Strips must survive save/load along with the rest of the ship.
 	var round_trip := ShipLoadout.from_dict(floor_run.ship.to_dict())
-	_eq("strips survive serialisation", round_trip.compile().deck.size(), 6)
+	_eq("strips survive serialisation", round_trip.compile().deck.size(), 9)
 
 func _test_rewards() -> void:
 	print("rewards")
@@ -2103,9 +2106,10 @@ func _test_static_coil() -> void:
 	_eq("static_coil base_value", coil.base_value, 100)
 	_eq("static_coil unlock_cost", coil.unlock_cost, 175)
 	_eq("static_coil icon filename", coil.icon, "static_coil.png")
-	_eq("static_coil grants 3 cards", coil.grants.size(), 3)
+	_eq("static_coil grants 4 cards", coil.grants.size(), 4)
 	_eq("static_coil grants 2 afterburners", coil.grants.count(&"afterburner"), 2)
 	_eq("static_coil grants static_buildup", coil.grants.count(&"static_buildup"), 1)
+	_eq("static_coil grants deflector_tune", coil.grants.count(&"deflector_tune"), 1)
 	_check("afterburner is reused, not duplicated", Database.card(&"afterburner") != null)
 
 	var ship := ShipLoadout.new("Coil")
@@ -2113,7 +2117,7 @@ func _test_static_coil() -> void:
 		ShipLoadout.SLOT_UTILITY: 4}
 	_check("installs in a utility slot", ship.install(coil) != null)
 	var prof := ship.compile()
-	_eq("compiled deck is the three grants", prof.deck.size(), 3)
+	_eq("compiled deck is the four grants", prof.deck.size(), 4)
 	_eq("compiled afterburners", prof.deck.count(&"afterburner"), 2)
 	_eq("compiled static_buildup", prof.deck.count(&"static_buildup"), 1)
 
@@ -2223,16 +2227,17 @@ func _test_virus() -> void:
 	_check("signal_injector unlock is below rare weapons",
 		inj.unlock_cost < rare_gun.unlock_cost)
 	_eq("signal_injector icon filename", inj.icon, "signal_injector.png")
-	_eq("signal_injector grants 3 cards", inj.grants.size(), 3)
+	_eq("signal_injector grants 4 cards", inj.grants.size(), 4)
 	_eq("signal_injector grants 2 computer_spike", inj.grants.count(&"computer_spike"), 2)
 	_eq("signal_injector grants 1 firewall_bypass", inj.grants.count(&"firewall_bypass"), 1)
+	_eq("signal_injector grants hardpoint_optimization", inj.grants.count(&"hardpoint_optimization"), 1)
 
 	var ship := ShipLoadout.new("Injector")
 	ship.capacity = {ShipLoadout.SLOT_WEAPON: 4, ShipLoadout.SLOT_HULL: 3,
 		ShipLoadout.SLOT_UTILITY: 4}
 	_check("installs in a weapon slot", ship.install(inj) != null)
 	var prof := ship.compile()
-	_eq("compiled deck is the three grants", prof.deck.size(), 3)
+	_eq("compiled deck is the four grants", prof.deck.size(), 4)
 	_eq("compiled computer_spike", prof.deck.count(&"computer_spike"), 2)
 	_eq("compiled firewall_bypass", prof.deck.count(&"firewall_bypass"), 1)
 
@@ -2384,7 +2389,7 @@ func _test_virus() -> void:
 		arr.unlock_cost >= mini(lance.unlock_cost, cannon.unlock_cost)
 		and arr.unlock_cost <= maxi(lance.unlock_cost, cannon.unlock_cost))
 	_eq("contagion_array icon filename", arr.icon, "contagion_array.png")
-	_eq("contagion_array grants 3 cards", arr.grants.size(), 3)
+	_eq("contagion_array grants 4 cards", arr.grants.size(), 4)
 	_eq("contagion_array grants infected_burst", arr.grants.count(&"infected_burst"), 1)
 	_eq("contagion_array grants payload_dump", arr.grants.count(&"payload_dump"), 1)
 	_eq("contagion_array reuses firewall_bypass", arr.grants.count(&"firewall_bypass"), 1)
@@ -2395,7 +2400,7 @@ func _test_virus() -> void:
 		ShipLoadout.SLOT_UTILITY: 4}
 	_check("contagion_array installs in a weapon slot", rare_ship.install(arr) != null)
 	var rare_prof := rare_ship.compile()
-	_eq("contagion compiled deck is the three grants", rare_prof.deck.size(), 3)
+	_eq("contagion compiled deck is the four grants", rare_prof.deck.size(), 4)
 	_eq("compiled infected_burst", rare_prof.deck.count(&"infected_burst"), 1)
 	_eq("compiled payload_dump", rare_prof.deck.count(&"payload_dump"), 1)
 	_eq("compiled reused firewall_bypass", rare_prof.deck.count(&"firewall_bypass"), 1)
@@ -2603,6 +2608,272 @@ func _find_event(c: CombatController, kind: String) -> Dictionary:
 		if String(e.get("type", "")) == kind:
 			return e
 	return {}
+
+func _test_calibrate() -> void:
+	print("calibrate")
+	var expected := {
+		&"burst_laser": &"hardpoint_optimization",
+		&"plasma_cycler": &"hardpoint_optimization",
+		&"missile_rack": &"hardpoint_optimization",
+		&"emp_projector": &"hardpoint_optimization",
+		&"signal_injector": &"hardpoint_optimization",
+		&"aegis_rail": &"hardpoint_optimization",
+		&"capacitor_cannon": &"hardpoint_optimization",
+		&"carrion_lance": &"hardpoint_optimization",
+		&"contagion_array": &"hardpoint_optimization",
+		&"deflector_mk1": &"deflector_tune",
+		&"shield_capacitor": &"deflector_tune",
+		&"static_coil": &"deflector_tune",
+		&"ion_thrusters": &"evasion_calibrate",
+		&"armor_plating": &"hull_reinforcement",
+		&"ablative_plating": &"hull_reinforcement",
+		&"blast_doors": &"hull_reinforcement",
+		&"repair_bay": &"hull_reinforcement",
+		&"sensor_array": &"sensor_sweep",
+		&"drone_launcher": &"drone_overclock",
+		&"power_relay": &"reactor_tune",
+		&"overcharge_rig": &"reactor_tune",
+		&"salvage_arm": &"salvage_protocol",
+	}
+	_eq("every part has a Calibrate mapping", expected.size(), Database.parts.size())
+	var missing: PackedStringArray = []
+	for pid in Database.parts:
+		if not expected.has(pid):
+			missing.append(String(pid))
+	_check("Calibrate mapping covers every part", missing.is_empty(), str(missing))
+	for pid in expected:
+		var p: PartDef = Database.part(pid)
+		_check("%s exists" % String(pid), p != null)
+		if p == null:
+			continue
+		_eq("%s grants 4 cards" % String(pid), p.grants.size(), 4)
+		_eq("%s 4th card" % String(pid), p.grants[3], expected[pid])
+
+	var ids: Array[StringName] = [
+		&"hardpoint_optimization", &"deflector_tune", &"evasion_calibrate",
+		&"hull_reinforcement", &"sensor_sweep", &"drone_overclock",
+		&"reactor_tune", &"salvage_protocol",
+	]
+	var icon_of := {
+		&"hardpoint_optimization": "hardpoint_optimization.png",
+		&"deflector_tune": "deflector_tune.png",
+		&"evasion_calibrate": "evasion_calibrate.png",
+		&"hull_reinforcement": "hull_reinforcement.png",
+		&"sensor_sweep": "sensor_sweep.png",
+		&"drone_overclock": "drone_overclock.png",
+		&"reactor_tune": "reactor_tune.png",
+		&"salvage_protocol": "salvage_protocol.png",
+	}
+	for cid in ids:
+		var def: CardDef = Database.card(cid)
+		_check("%s exists" % String(cid), def != null)
+		if def == null:
+			continue
+		_eq("%s kind is tech" % String(cid), def.kind, &"tech")
+		_eq("%s cost 3" % String(cid), def.cost, 3)
+		_eq("%s target none" % String(cid), def.target, CardDef.Target.NONE)
+		_check("%s exhausts" % String(cid), def.has_keyword(&"exhaust", false))
+		_check("%s+ still exhausts" % String(cid), def.has_keyword(&"exhaust", true))
+		_eq("%s icon" % String(cid), def.icon, icon_of[cid])
+		_eq("%s calibrate op" % String(cid),
+			String(def.effects[0].get("op", "")), "calibrate")
+		_check("%s+ bumps the bonus" % String(cid),
+			int(def.effects_for(true)[0].get("amount", 0))
+			> int(def.effects_for(false)[0].get("amount", 0)))
+
+	_eq("hardpoint +1/+2", _op_amt(&"hardpoint_optimization", false, "calibrate"), 1)
+	_eq("hardpoint+ +2", _op_amt(&"hardpoint_optimization", true, "calibrate"), 2)
+	_eq("deflector +1/+2", _op_amt(&"deflector_tune", false, "calibrate"), 1)
+	_eq("evasion +10/+15", _op_amt(&"evasion_calibrate", false, "calibrate"), 10)
+	_eq("evasion+", _op_amt(&"evasion_calibrate", true, "calibrate"), 15)
+	_eq("hull +2/+3", _op_amt(&"hull_reinforcement", false, "calibrate"), 2)
+	_eq("sensor +1/+2", _op_amt(&"sensor_sweep", false, "calibrate"), 1)
+	_eq("drone +1/+2", _op_amt(&"drone_overclock", false, "calibrate"), 1)
+	_eq("reactor +1/+2", _op_amt(&"reactor_tune", false, "calibrate"), 1)
+	_eq("salvage +10/+15", _op_amt(&"salvage_protocol", false, "calibrate"), 10)
+	_eq("salvage+", _op_amt(&"salvage_protocol", true, "calibrate"), 15)
+
+	# Hardpoint: +1 damage on attacks from that mount, not self-damage.
+	Rng.seed_run(41)
+	var gun := ShipLoadout.new("Gun")
+	var burst_inst := gun.install(Database.part(&"burst_laser"))
+	var c := CombatController.new()
+	c.setup(gun.compile(), Database.enemy(&"scout_drone"), gun)
+	c.enemy.evasion = 0
+	c.enemy.shield = 0
+	c.player.energy = 9
+	var ho := _take_card(c, &"hardpoint_optimization", burst_inst.uid)
+	var laser := _take_card(c, &"laser_burst", burst_inst.uid)
+	_check("hardpoint card found", ho != null)
+	_check("laser from the same mount found", laser != null)
+	_eq("hardpoint plays", c.play_card(ho), "")
+	_eq("hardpoint exhausted", c.deck.exhaust_pile.has(ho), true)
+	_eq("hardpoint damage bonus", c.player.calibrate_bonus(&"damage", burst_inst.uid), 1)
+	var hull0: int = c.enemy.hull
+	_eq("buffed laser plays", c.play_card(laser, &"hull"), "")
+	_eq("hardpoint adds +1 to laser", c.enemy.hull, hull0 - 6)
+
+	var heat := _take_card(c, &"overheat", burst_inst.uid)
+	_check("overheat from the same mount found", heat != null)
+	var own0: int = c.player.hull
+	var hull1: int = c.enemy.hull
+	_eq("overheat plays", c.play_card(heat, &"hull"), "")
+	_eq("overheat attack gets +1", c.enemy.hull, hull1 - 9)
+	_eq("overheat self-damage is unbuffed", c.player.hull, own0 - 3)
+
+	# Two copies of the same part: bonus is per mount, not per card def.
+	Rng.seed_run(42)
+	var dual := ShipLoadout.new("Dual")
+	dual.capacity[ShipLoadout.SLOT_WEAPON] = 4
+	var a := dual.install(Database.part(&"burst_laser"))
+	var b := dual.install(Database.part(&"burst_laser"))
+	var c2 := CombatController.new()
+	c2.setup(dual.compile(), Database.enemy(&"scout_drone"), dual)
+	c2.enemy.evasion = 0
+	c2.enemy.shield = 0
+	c2.player.energy = 9
+	var ho_a := _take_card(c2, &"hardpoint_optimization", a.uid)
+	var laser_a := _take_card(c2, &"laser_burst", a.uid)
+	var laser_b := _take_card(c2, &"laser_burst", b.uid)
+	_eq("hardpoint A plays", c2.play_card(ho_a), "")
+	var h_a: int = c2.enemy.hull
+	_eq("laser A is buffed", c2.play_card(laser_a, &"hull"), "")
+	_eq("mount A laser deals 6", c2.enemy.hull, h_a - 6)
+	var h_b: int = c2.enemy.hull
+	_eq("laser B is not buffed", c2.play_card(laser_b, &"hull"), "")
+	_eq("mount B laser deals 5", c2.enemy.hull, h_b - 5)
+
+	# Shared armor_brace: Hull Reinforcement only buffs its own mount.
+	Rng.seed_run(43)
+	var hull := ShipLoadout.new("Hull")
+	hull.capacity[ShipLoadout.SLOT_HULL] = 3
+	hull.capacity[ShipLoadout.SLOT_UTILITY] = 4
+	var plate := hull.install(Database.part(&"armor_plating"))
+	var bay := hull.install(Database.part(&"repair_bay"))
+	var c3 := CombatController.new()
+	c3.setup(hull.compile(), Database.enemy(&"scout_drone"), hull)
+	c3.player.energy = 9
+	c3.player.hull = 10
+	var hr := _take_card(c3, &"hull_reinforcement", plate.uid)
+	var brace_plate := _take_card(c3, &"armor_brace", plate.uid)
+	var brace_bay := _take_card(c3, &"armor_brace", bay.uid)
+	_eq("hull reinforcement plays", c3.play_card(hr), "")
+	c3.player.hull = 10
+	_eq("plating brace plays", c3.play_card(brace_plate), "")
+	_eq("plating brace repairs 5", c3.player.hull, 15)
+	c3.player.hull = 10
+	_eq("bay brace plays", c3.play_card(brace_bay), "")
+	_eq("bay brace still repairs 3", c3.player.hull, 13)
+
+	# Evasion is ship-wide.
+	Rng.seed_run(44)
+	var thr := ShipLoadout.new("Thr")
+	var thr_inst := thr.install(Database.part(&"ion_thrusters"))
+	var c4 := CombatController.new()
+	c4.setup(thr.compile(), Database.enemy(&"scout_drone"), thr)
+	c4.player.energy = 9
+	var eva0 := c4.player.effective_evasion()
+	var eva := _take_card(c4, &"evasion_calibrate", thr_inst.uid)
+	_eq("evasion calibrate plays", c4.play_card(eva), "")
+	_eq("evasion calibrate is +10", c4.player.effective_evasion(), eva0 + 10)
+
+	# Suppress duration from that part's cards.
+	Rng.seed_run(45)
+	var sens := ShipLoadout.new("Sens")
+	var sens_inst := sens.install(Database.part(&"sensor_array"))
+	var c5 := CombatController.new()
+	c5.setup(sens.compile(), Database.enemy(&"scout_drone"), sens)
+	c5.player.energy = 9
+	var sweep := _take_card(c5, &"sensor_sweep", sens_inst.uid)
+	var scan := _take_card(c5, &"targeting_scan", sens_inst.uid)
+	_eq("sensor sweep plays", c5.play_card(sweep), "")
+	_eq("targeting scan plays", c5.play_card(scan, &"weapons"), "")
+	_eq("suppress lasts 2 turns", c5.enemy.system(&"weapons").offline_turns, 2)
+
+	# Shield / energy / credits from that part's cards.
+	Rng.seed_run(46)
+	var defl := ShipLoadout.new("Defl")
+	var defl_inst := defl.install(Database.part(&"deflector_mk1"))
+	var c6 := CombatController.new()
+	c6.setup(defl.compile(), Database.enemy(&"scout_drone"), defl)
+	c6.player.energy = 9
+	c6.player.shield = 0
+	var tune := _take_card(c6, &"deflector_tune", defl_inst.uid)
+	var raise := _take_card(c6, &"raise_deflector", defl_inst.uid)
+	_eq("deflector tune plays", c6.play_card(tune), "")
+	_eq("raise deflector plays", c6.play_card(raise), "")
+	_eq("shield gain is +1", c6.player.shield, 9)
+
+	Rng.seed_run(47)
+	var pwr := ShipLoadout.new("Pwr")
+	var pwr_inst := pwr.install(Database.part(&"power_relay"))
+	var c7 := CombatController.new()
+	c7.setup(pwr.compile(), Database.enemy(&"scout_drone"), pwr)
+	c7.player.energy = 9
+	var rt := _take_card(c7, &"reactor_tune", pwr_inst.uid)
+	var div := _take_card(c7, &"divert_power", pwr_inst.uid)
+	_eq("reactor tune plays", c7.play_card(rt), "")
+	var e0: int = c7.player.energy
+	_eq("divert power plays", c7.play_card(div), "")
+	_eq("energy gain is +1", c7.player.energy, e0 + 3)
+
+	Rng.seed_run(48)
+	var arm := ShipLoadout.new("Arm")
+	var arm_inst := arm.install(Database.part(&"salvage_arm"))
+	var c8 := CombatController.new()
+	c8.setup(arm.compile(), Database.enemy(&"scout_drone"), arm)
+	c8.player.energy = 9
+	var reward0: int = c8.pending_credits
+	var proto := _take_card(c8, &"salvage_protocol", arm_inst.uid)
+	var claw := _take_card(c8, &"salvage_claw", arm_inst.uid)
+	_eq("salvage protocol plays", c8.play_card(proto), "")
+	_eq("salvage claw plays", c8.play_card(claw), "")
+	_eq("credit gain is +10", c8.pending_credits, reward0 + 30)
+
+	# Occupied drones tick +1; launch amount stays printed.
+	Rng.seed_run(49)
+	var dr := ShipLoadout.new("Dr")
+	dr.capacity[ShipLoadout.SLOT_UTILITY] = 4
+	var dr_inst := dr.install(Database.part(&"drone_launcher"))
+	var c9 := CombatController.new()
+	c9.setup(dr.compile(), Database.enemy(&"scout_drone"), dr)
+	c9.enemy.evasion = 0
+	c9.enemy.shield = 0
+	c9.player.energy = 9
+	var oc := _take_card(c9, &"drone_overclock", dr_inst.uid)
+	var launch := _take_card(c9, &"launch_attack_drone", dr_inst.uid)
+	_eq("drone overclock plays", c9.play_card(oc), "")
+	_eq("launch plays", c9.play_card(launch), "")
+	_eq("launch amount stays 2", int(c9.drones[0]["amount"]), 2)
+	var dealt_before := c9.events.size()
+	c9._tick_drones()
+	var tick_dmg := 0
+	for i in range(dealt_before, c9.events.size()):
+		var ev: Dictionary = c9.events[i]
+		var et := String(ev.get("type", ""))
+		if et == "system_damage" or et == "hull_damage":
+			tick_dmg += int(ev.get("amount", 0))
+	_eq("overclocked drone ticks 3", tick_dmg, 3)
+
+	# Fight-long: a new combat does not keep the bonus.
+	Rng.seed_run(50)
+	var c10 := CombatController.new()
+	c10.setup(gun.compile(), Database.enemy(&"scout_drone"), gun)
+	_eq("fresh fight has no calibrate", c10.player.calibrate_bonus(&"damage", burst_inst.uid), 0)
+
+func _take_card(c: CombatController, id: StringName, part_uid: int = -1) -> CardInstance:
+	var piles: Array = [c.deck.hand, c.deck.draw_pile, c.deck.discard_pile, c.deck.exhaust_pile]
+	for pile in piles:
+		for card in pile:
+			if card.def.id != id:
+				continue
+			if part_uid >= 0 and card.source_part_uid != part_uid:
+				continue
+			pile.erase(card)
+			if not c.deck.hand.has(card):
+				c.deck.hand.append(card)
+			return card
+	return null
 
 # --- Balance simulator -------------------------------------------------------
 
@@ -2852,7 +3123,8 @@ func _pick_target(c: CombatController, card: CardInstance) -> StringName:
 			return &""
 
 func _score_card(c: CombatController, card: CardInstance, target: StringName) -> float:
-	var ctx := {"source": c.player, "opponent": c.enemy, "target_system": target}
+	var ctx := {"source": c.player, "opponent": c.enemy, "target_system": target,
+		"card": card}
 	var intent := _intent_system(c)
 	var incoming := _expected_incoming(c)
 	var score := 0.0
@@ -2965,6 +3237,33 @@ func _score_card(c: CombatController, card: CardInstance, target: StringName) ->
 				var stacks := c.enemy.virus()
 				if stacks > 0:
 					score += stacks * W_HULL_DAMAGE
+			"calibrate":
+				var stat := StringName(op.get("stat", ""))
+				var uid := card.source_part_uid
+				if c.player.calibrate_bonus(stat, uid) > 0:
+					continue
+				# Fight-long setup. Cost 3, so leftover energy will take these
+				# over passing; they should not outrank a 1-cost attack.
+				match stat:
+					&"damage":
+						score += amount * 6.0 * W_HULL_DAMAGE
+					&"shield":
+						score += amount * 4.0 * W_SHIELD
+					&"evasion":
+						score += float(amount) * 0.4
+					&"repair":
+						score += amount * 3.0 * W_REPAIR_HULL
+					&"suppress":
+						score += amount * W_SUPPRESS * 3.0
+					&"drone":
+						score += amount * 5.0 * W_SYSTEM_DAMAGE * 2.0
+					&"energy":
+						score += amount * 4.0 * W_ENERGY
+					&"credits":
+						score += amount * 3.0 * W_CREDITS
+					_:
+						score += 4.0
+				score += 3.0
 	return score
 
 func _worst_own_system(c: CombatController) -> StringName:

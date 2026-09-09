@@ -98,7 +98,7 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 		"Shields\n%d max · +%d / turn\n---\nAbsorbs damage before hull. %s" % [
 			prof.max_shield, prof.shield_regen, over_blurb]))
 	srow.add_child(UITheme.metric("DECK", str(prof.deck.size()), UITheme.TEXT,
-		"Deck %d\n---\nThree cards per installed part. Bigger ships draw worse." % prof.deck.size()))
+		"Deck %d\n---\nFour cards per installed part. Bigger ships draw worse." % prof.deck.size()))
 
 	for w in prof.warnings:
 		if deficit > 0 and String(w).begins_with("Power deficit"):

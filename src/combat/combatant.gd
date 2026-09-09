@@ -40,6 +40,11 @@ var probe_tip: bool = false
 var signal_noise: bool = false
 ## Subtracted from effective evasion while this combatant has virus.
 var virus_evasion_mod: int = 0
+## Fight-long Calibrate bonuses. Per-part stats key on PartInstance.uid;
+## evasion and drone tick are ship-wide (see DESIGN.md Calibrate).
+var calibrate_by_part: Dictionary = {}  # StringName -> Dictionary[int, int]
+var calibrate_evasion: int = 0
+var calibrate_drone: int = 0
 
 var systems: Dictionary = {}    # StringName -> ShipSystem
 var statuses: Dictionary = {}   # StringName -> int stacks
@@ -143,6 +148,7 @@ func effective_evasion() -> int:
 		pass
 	if virus() > 0 and virus_evasion_mod != 0:
 		e -= virus_evasion_mod
+	e += calibrate_evasion
 	return maxi(0, e)
 
 func effective_shield_regen() -> int:
@@ -166,6 +172,32 @@ func virus() -> int:
 func add_virus(stacks: int) -> int:
 	add_status(STATUS_VIRUS, stacks)
 	return virus()
+
+## Record a fight-long Calibrate bonus. `part_uid` is ignored for ship-wide
+## stats (evasion, drone tick).
+func add_calibrate(stat: StringName, amount: int, part_uid: int = 0) -> void:
+	if amount == 0 or stat == &"":
+		return
+	match stat:
+		&"evasion":
+			calibrate_evasion += amount
+		&"drone":
+			calibrate_drone += amount
+		_:
+			if not calibrate_by_part.has(stat):
+				calibrate_by_part[stat] = {}
+			var m: Dictionary = calibrate_by_part[stat]
+			m[part_uid] = int(m.get(part_uid, 0)) + amount
+
+func calibrate_bonus(stat: StringName, part_uid: int = 0) -> int:
+	match stat:
+		&"evasion":
+			return calibrate_evasion
+		&"drone":
+			return calibrate_drone
+		_:
+			var m: Dictionary = calibrate_by_part.get(stat, {})
+			return int(m.get(part_uid, 0))
 
 ## Infected combatant's turn start: deal 1 hull per counter, then lose 1
 ## unless `no_decay` (Persistent Strain: player's virus on enemies holds).

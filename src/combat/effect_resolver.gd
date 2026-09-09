@@ -62,9 +62,10 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 				_emit({"type": "no_target", "op": kind,
 					"target": opponent.display_name})
 			else:
-				s.suppress(int(op.get("turns", 1)))
+				var turns := int(op.get("turns", 1)) + _calibrate_bonus(&"suppress", ctx)
+				s.suppress(turns)
 				_emit({"type": "suppress", "target": opponent.display_name,
-					"system": String(sid2), "turns": int(op.get("turns", 1))})
+					"system": String(sid2), "turns": turns})
 		"shield":
 			# Excess above max_shield is overshield — it still absorbs damage,
 			# then drops at the start of this combatant's next turn.
@@ -143,6 +144,16 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 			combat._tick_drones(times)
 			_emit({"type": "drone_overcharge", "times": times,
 				"count": combat.drones.size()})
+		"calibrate":
+			if source == null:
+				_emit({"type": "no_target", "op": kind})
+			else:
+				var stat := StringName(op.get("stat", ""))
+				var n := amount if amount != 0 else 1
+				var part_uid := _card_part_uid(ctx)
+				source.add_calibrate(stat, n, part_uid)
+				_emit({"type": "calibrate", "stat": String(stat), "amount": n,
+					"part_uid": part_uid, "target": source.display_name})
 		_:
 			push_warning("[EffectResolver] unknown op '%s'" % kind)
 
@@ -152,33 +163,59 @@ func _execute(op: Dictionary, ctx: Dictionary) -> void:
 func scaled_amount(op: Dictionary, ctx: Dictionary) -> int:
 	var base := int(op.get("amount", 0))
 	var scale: String = op.get("scale_by", "")
-	if scale == "":
-		return base
+	if scale != "":
+		var source: Combatant = ctx.get("source")
+		var opponent: Combatant = ctx.get("opponent")
+		match scale:
+			"own_active_systems":
+				base = base * source.active_systems().size()
+			"enemy_disabled_systems":
+				var n := 0
+				for s in opponent.targetable_systems():
+					if not s.is_active():
+						n += 1
+				# also count fully destroyed ones
+				for sid in opponent.systems:
+					if opponent.systems[sid].integrity <= 0:
+						n += 1
+				base = base * n
+			"missing_hull":
+				base = base * int(floor(float(source.max_hull - source.hull) / 10.0))
+			"cards_played_this_turn":
+				# Include the card being resolved (or scored for play). Completed
+				# plays live on CombatController; +1 is this card.
+				var n := 1
+				if combat != null:
+					n = combat.cards_played_this_turn + 1
+				base = base * n
+	return base + _calibrate_amount(op, ctx)
+
+func _card_part_uid(ctx: Dictionary) -> int:
+	var card: CardInstance = ctx.get("card")
+	return card.source_part_uid if card != null else 0
+
+func _calibrate_bonus(stat: StringName, ctx: Dictionary) -> int:
 	var source: Combatant = ctx.get("source")
-	var opponent: Combatant = ctx.get("opponent")
-	match scale:
-		"own_active_systems":
-			return base * source.active_systems().size()
-		"enemy_disabled_systems":
-			var n := 0
-			for s in opponent.targetable_systems():
-				if not s.is_active():
-					n += 1
-			# also count fully destroyed ones
-			for sid in opponent.systems:
-				if opponent.systems[sid].integrity <= 0:
-					n += 1
-			return base * n
-		"missing_hull":
-			return base * int(floor(float(source.max_hull - source.hull) / 10.0))
-		"cards_played_this_turn":
-			# Include the card being resolved (or scored for play). Completed
-			# plays live on CombatController; +1 is this card.
-			var n := 1
-			if combat != null:
-				n = combat.cards_played_this_turn + 1
-			return base * n
-	return base
+	if source == null:
+		return 0
+	return source.calibrate_bonus(stat, _card_part_uid(ctx))
+
+## Per-part Calibrate riders on amount-bearing ops. Suppress uses turns, not
+## amount, and is applied in _execute. Drone ticks add their bonus in
+## CombatController._activate_drone so launch amounts stay as printed.
+func _calibrate_amount(op: Dictionary, ctx: Dictionary) -> int:
+	match String(op.get("op", "")):
+		"damage_system", "damage_hull":
+			return _calibrate_bonus(&"damage", ctx)
+		"shield":
+			return _calibrate_bonus(&"shield", ctx)
+		"repair_system", "repair_hull":
+			return _calibrate_bonus(&"repair", ctx)
+		"energy":
+			return _calibrate_bonus(&"energy", ctx)
+		"credits":
+			return _calibrate_bonus(&"credits", ctx)
+	return 0
 
 func _resolve_target_system(op: Dictionary, ctx: Dictionary, own: bool = false) -> StringName:
 	# Explicit system on the op wins; otherwise use the player's chosen target.

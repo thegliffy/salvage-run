@@ -6,13 +6,18 @@ var def: CardDef
 var upgraded: bool = false
 var uid: int = 0
 var cost_override: int = -1   # temporary discounts, cleared each combat
+## PartInstance.uid that granted this copy. Calibrate bonuses key off this so
+## a shared card def (armor_brace, laser_burst) only buffs the mount it came
+## from. 0 means unknown / injected by tests.
+var source_part_uid: int = 0
 
 static var _next_uid: int = 1
 
-static func create(def: CardDef, upgraded: bool = false) -> CardInstance:
+static func create(def: CardDef, upgraded: bool = false, source_part_uid: int = 0) -> CardInstance:
 	var c := CardInstance.new()
 	c.def = def
 	c.upgraded = upgraded
+	c.source_part_uid = source_part_uid
 	c.uid = _next_uid
 	_next_uid += 1
 	return c

@@ -22,6 +22,9 @@ var system_regen: int = 0
 var drone_slots: int = 0
 var systems: Array = []             # [{id, name, integrity, part_uids}]
 var deck: Array[StringName] = []    # card ids
+## Parallel to `deck`: PartInstance.uid that granted each card. Combat stamps
+## this onto CardInstance so Calibrate can scope bonuses to one mount.
+var deck_sources: Array[int] = []
 var warnings: Array[String] = []    # e.g. "power deficit", surfaced in shipyard
 ## Compiled improvement combat hooks. Combat reads these, not the loadout.
 var triggers: Array = []            # [{when, op, amount}, ...]

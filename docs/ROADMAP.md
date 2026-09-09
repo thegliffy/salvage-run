@@ -19,7 +19,7 @@ What exists, and the order the rest should be built in.
 - [x] Ship status overlay (slots, power budget, deck, painted ship view)
 - [x] Power-budget / deficit UI on rewards and ship status
 - [x] Ship valuation with itemised receipt
-- [x] Card removal: three-card part packages, one strip per part, credits + sale penalty
+- [x] Card removal: four-card part packages, one strip per part, credits + sale penalty
 - [x] Meta state: salvage currency, part unlocks, save/load with migrations
 - [x] Title-screen Salvage Yard (meta unlock shop)
 - [x] Headless test suite (360 tests) and balance simulator with a content-aware

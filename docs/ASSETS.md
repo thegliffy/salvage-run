@@ -68,6 +68,12 @@ Virus cards that used to share art now have their own files:
 `payload_dump` → `blue_b_24.png`, `infected_burst` → `red_r_07.png`.
 Older cards keep their original filenames.
 
+Calibrate techs use card-id filenames (`hardpoint_optimization.png`,
+`deflector_tune.png`, `evasion_calibrate.png`, `hull_reinforcement.png`,
+`sensor_sweep.png`, `drone_overclock.png`, `reactor_tune.png`,
+`salvage_protocol.png`). PNGs land in a follow-up; missing files are null-safe
+via `UITheme.art()`.
+
 ### Enemy portraits — 4 PNGs in `assets/portraits/`
 
 Painted industrial ships, square with transparency:

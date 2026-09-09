@@ -10,7 +10,8 @@
     "grants": [
       "laser_burst",
       "laser_burst",
-      "overheat"
+      "overheat",
+      "hardpoint_optimization"
     ],
     "base_value": 60,
     "unlock_cost": 0,
@@ -31,7 +32,8 @@
     "grants": [
       "raise_deflector",
       "raise_deflector",
-      "static_discharge"
+      "static_discharge",
+      "deflector_tune"
     ],
     "base_value": 55,
     "unlock_cost": 0,
@@ -51,7 +53,8 @@
     "grants": [
       "evasive_burn",
       "evasive_burn",
-      "afterburner"
+      "afterburner",
+      "evasion_calibrate"
     ],
     "base_value": 55,
     "unlock_cost": 0,
@@ -72,7 +75,8 @@
     "grants": [
       "targeting_scan",
       "weak_point",
-      "sensor_ghost"
+      "sensor_ghost",
+      "sensor_sweep"
     ],
     "base_value": 70,
     "unlock_cost": 0,
@@ -89,7 +93,8 @@
     "grants": [
       "breach_missile",
       "salvo",
-      "ammo_drum"
+      "ammo_drum",
+      "hardpoint_optimization"
     ],
     "base_value": 110,
     "unlock_cost": 150,
@@ -113,7 +118,8 @@
     "grants": [
       "emp_pulse",
       "feedback_spike",
-      "system_scramble"
+      "system_scramble",
+      "hardpoint_optimization"
     ],
     "base_value": 120,
     "unlock_cost": 200,
@@ -138,7 +144,8 @@
     "grants": [
       "computer_spike",
       "computer_spike",
-      "firewall_bypass"
+      "firewall_bypass",
+      "hardpoint_optimization"
     ],
     "base_value": 120,
     "unlock_cost": 200,
@@ -161,7 +168,8 @@
     "grants": [
       "patch_kit",
       "armor_brace",
-      "damage_control"
+      "damage_control",
+      "hull_reinforcement"
     ],
     "base_value": 100,
     "unlock_cost": 175,
@@ -181,7 +189,8 @@
     "grants": [
       "armor_brace",
       "armor_brace",
-      "dead_weight"
+      "dead_weight",
+      "hull_reinforcement"
     ],
     "base_value": 80,
     "unlock_cost": 120,
@@ -199,7 +208,8 @@
     "grants": [
       "salvage_claw",
       "scrap_grab",
-      "magnetic_drag"
+      "magnetic_drag",
+      "salvage_protocol"
     ],
     "base_value": 90,
     "unlock_cost": 100,
@@ -217,7 +227,8 @@
     "grants": [
       "vulture_strike",
       "laser_burst",
-      "execute_protocol"
+      "execute_protocol",
+      "hardpoint_optimization"
     ],
     "base_value": 200,
     "unlock_cost": 400,
@@ -239,7 +250,8 @@
     "grants": [
       "armor_brace",
       "patch_kit",
-      "dead_weight"
+      "dead_weight",
+      "hull_reinforcement"
     ],
     "base_value": 70,
     "unlock_cost": 0,
@@ -260,7 +272,8 @@
     "grants": [
       "raise_deflector",
       "reflective_field",
-      "static_discharge"
+      "static_discharge",
+      "deflector_tune"
     ],
     "base_value": 130,
     "unlock_cost": 180,
@@ -287,7 +300,8 @@
     "grants": [
       "seal_breach",
       "armor_brace",
-      "dead_weight"
+      "dead_weight",
+      "hull_reinforcement"
     ],
     "base_value": 120,
     "unlock_cost": 160,
@@ -306,7 +320,8 @@
     "grants": [
       "divert_power",
       "divert_power",
-      "coolant_leak"
+      "coolant_leak",
+      "reactor_tune"
     ],
     "base_value": 55,
     "unlock_cost": 0
@@ -322,7 +337,8 @@
     "grants": [
       "reactor_surge",
       "overcharge",
-      "power_spike"
+      "power_spike",
+      "reactor_tune"
     ],
     "base_value": 190,
     "unlock_cost": 320,
@@ -345,7 +361,8 @@
     "grants": [
       "plasma_bolt",
       "plasma_bolt",
-      "ion_haze"
+      "ion_haze",
+      "hardpoint_optimization"
     ],
     "base_value": 70,
     "unlock_cost": 90,
@@ -369,7 +386,8 @@
     "grants": [
       "banked_charge",
       "rail_spike",
-      "field_bleed"
+      "field_bleed",
+      "hardpoint_optimization"
     ],
     "base_value": 140,
     "unlock_cost": 180,
@@ -393,7 +411,8 @@
     "grants": [
       "shield_dump",
       "mirror_lance",
-      "thermal_vent"
+      "thermal_vent",
+      "hardpoint_optimization"
     ],
     "base_value": 220,
     "unlock_cost": 380,
@@ -418,7 +437,8 @@
     "grants": [
       "infected_burst",
       "payload_dump",
-      "firewall_bypass"
+      "firewall_bypass",
+      "hardpoint_optimization"
     ],
     "base_value": 210,
     "unlock_cost": 390,
@@ -440,7 +460,8 @@
     "grants": [
       "launch_attack_drone",
       "launch_shield_drone",
-      "overcharge_drones"
+      "overcharge_drones",
+      "drone_overclock"
     ],
     "base_value": 70,
     "unlock_cost": 0,
@@ -459,7 +480,8 @@
     "grants": [
       "afterburner",
       "afterburner",
-      "static_buildup"
+      "static_buildup",
+      "deflector_tune"
     ],
     "base_value": 100,
     "unlock_cost": 175,

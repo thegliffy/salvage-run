@@ -305,7 +305,7 @@ func _offer_row(offer: Dictionary) -> Control:
 			take.disabled = true
 			UITheme.tip(take, "No free %s slot." % String(def.slot))
 	else:
-		UITheme.tip(take, "Install %s\n---\nAdds its three cards to the deck. Check power draw first." % def.name)
+		UITheme.tip(take, "Install %s\n---\nAdds its four cards to the deck. Check power draw first." % def.name)
 	take.pressed.connect(func():
 		var before_uids: Dictionary = {}
 		for inst in Game.run.ship.parts:
