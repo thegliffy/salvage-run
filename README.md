@@ -13,7 +13,7 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-914 tests passing · playable PC demo
+950 tests passing · playable PC demo
 ```
 
 ---
@@ -266,6 +266,7 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 | `assets/icons/` | Redistributable tinted card icons (`cards.json` `icon`) |
 | `assets/portraits/` | Redistributable enemy portraits (`enemies.json` `portrait`) |
 | `assets/modules/` | Part / module icons (`parts.json` `icon`, default `<part_id>.png`) |
+| `assets/ui/card_back.png` | Shared card back for draw / shuffle ghosts and pile thumbs |
 | `docs/ui-shots/` | README screenshots |
 | `tests/` | Headless test suite and balance simulator |
 

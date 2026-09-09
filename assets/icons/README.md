@@ -21,6 +21,7 @@ red_r_03.png
 red_r_04.png
 red_r_05.png
 red_r_06.png
+red_r_07.png
 blue_b_01.png
 blue_b_02.png
 blue_b_03.png
@@ -42,6 +43,9 @@ blue_b_18.png
 blue_b_19.png
 blue_b_20.png
 blue_b_21.png
+blue_b_22.png
+blue_b_23.png
+blue_b_24.png
 green_g_01.png
 green_g_02.png
 violet_p_01.png

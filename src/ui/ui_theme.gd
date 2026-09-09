@@ -43,6 +43,10 @@ const RARITY_COLOUR := {
 
 const MODULE_ART_DIR := "res://assets/modules/"
 const DRONE_SLOT_DIR := "res://assets/ui/drone_slots/"
+## Shared card back for draw / shuffle ghosts and pile thumbs.
+## Dark scrap plate + flat cyan wrench. Card ratio (140:208). See docs/ASSETS.md.
+const CARD_BACK_ART := "res://assets/ui/card_back.png"
+const LOGO_WRENCH_ART := "res://assets/ui/logo_wrench.png"
 ## Design size at 720p; canvas_items stretch scales this with the window.
 const MODULE_ICON_SIZE := 80
 const MODULE_ICON_COMPACT := 64
@@ -314,6 +318,15 @@ static func module_icon(def: PartDef, px: int = MODULE_ICON_SIZE) -> TextureRect
 	else:
 		tex.visible = false
 	return tex
+
+## Card back for pile chrome and CardFx ghosts. Null when the PNG is missing
+## so FX can fall back to a tinted framed panel.
+static func card_back_texture() -> Texture2D:
+	return art(CARD_BACK_ART)
+
+## Flat cyan wrench mark. Null when the PNG is missing.
+static func logo_wrench_texture() -> Texture2D:
+	return art(LOGO_WRENCH_ART)
 
 ## Combat bay chip: empty ring, attack (red), or shield (blue). Null when the
 ## PNG is missing so combat can fall back to StyleBox circles.

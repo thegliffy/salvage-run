@@ -446,3 +446,22 @@ That is the hull-loss pipeline — `Valuation.appraise` applies the 40% wreck
 recovery and the sale screen reads as a towed wreck, then back to title.
 Mid-combat scuttle skips `finish_combat` so it cannot land on a reward screen.
 
+---
+
+## 2026-09-09 — Card FX polish
+
+Play / draw / shuffle are still ghosts — combat does not wait. The old
+`_card_back()` was a 30×42 StyleBox chip, so reshuffle read as blank pips
+vanishing mid-flight. Play also aimed the discard at `discard_pos - CARD_BACK
+* 0.5` while the ghost's pivot was the full card centre, so the visual landed
+about a card-height off the pile.
+
+Canonical back path is `assets/ui/card_back.png` (not `assets/frames/` — that
+folder is kind faces). AD industrial plate + cyan wrench ships there.
+`CardFx` uses a keep-aspect TextureRect, pile thumbs share it, and missing art
+still falls back to a framed panel.
+
+Timings: play 0.26/0.22 CUBIC+BACK 1.12× → 0.40/0.36 QUINT/SINE 1.06× with a
+slight arc; draw 0.28 → 0.40; shuffle 0.34 random chaos → 0.52 leftward ribbon,
+fade only after landing. Hand fan `TWEEN_TIME` 0.12 BACK → 0.20 CUBIC.
+

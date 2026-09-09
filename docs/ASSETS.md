@@ -15,9 +15,11 @@ What `assets/` needs, what ships with this repository, and what does not.
 | `assets/portraits/*.png` | Enemy portraits (`UITheme.art()` via `content/enemies.json` `portrait`) | Redistributable painted industrial ships — ships with the repo |
 | `assets/modules/*.png` | Part / module icons (`UITheme.art()` via `content/parts.json` `icon`, default `<part_id>.png`) | Project art — unified painted 3D isometric hardware; ships with the repo |
 | `assets/ui/drone_slots/*.png` | Combat drone bay chips (empty ring, attack red, shield blue) | Project art — ships with the repo |
+| `assets/ui/card_back.png` | Shared card back (draw / shuffle ghosts, pile thumbs) | Art Director — industrial plate + cyan wrench |
 
 Attribution: **Exo** designed by Natanael Gama. Card icons derived from
 [Game-icons.net](https://game-icons.net) (CC-BY 3.0), tinted per card kind.
+Card frames and the interim card back are **thegliffy** / project art.
 
 `ShipView` bolts installed modules onto hardpoints on that hull (weapons dorsal,
 hull plating belly, utilities aft). If the PNG is missing, it falls back to a
@@ -49,16 +51,22 @@ kind colour. You lose that piece of art, not the game.
 `content/cards.json` `icon`, `content/enemies.json` `portrait`, and
 `content/parts.json` `icon` (or the `<part_id>.png` default) exactly.
 
-### Card icons — 31 PNGs in `assets/icons/`
+### Card icons — PNGs in `assets/icons/`
 
 Flat Game-icons glyphs, tinted by kind colour (red attack, blue tech, green
-manoeuvre, violet status):
+manoeuvre, violet status). Every card `icon` filename is unique.
 
 - Attack: `red_gr_01.png`, `red_gr_03.png`, `red_gr_04.png`, `red_gr_06.png`,
-  `red_gr_07.png`, `red_gr_08.png`, `red_gr_09.png`, `red_r_01.png`
-- Tech: `blue_b_01.png` through `blue_b_17.png`
+  `red_gr_07.png`, `red_gr_08.png`, `red_gr_09.png`, `red_gr_10.png`,
+  `red_r_01.png` through `red_r_07.png`
+- Tech: `blue_b_01.png` through `blue_b_24.png`
 - Manoeuvre: `green_g_01.png`, `green_g_02.png`
-- Status: `violet_p_01.png` through `violet_p_04.png`
+- Status: `violet_p_01.png` through `violet_p_06.png`
+
+Virus cards that used to share art now have their own files:
+`computer_spike` → `blue_b_22.png`, `firewall_bypass` → `blue_b_23.png`,
+`payload_dump` → `blue_b_24.png`, `infected_burst` → `red_r_07.png`.
+Older cards keep their original filenames.
 
 ### Enemy portraits — 4 PNGs in `assets/portraits/`
 
@@ -117,6 +125,25 @@ loads them; combat falls back to StyleBox circles if a file is absent.
 
 Do not commit `contact_sheet.png` (gitignored); it is source reference, not a
 game asset.
+
+### Card back — `assets/ui/card_back.png`
+
+**This is the one drop path.** Do not also put a copy in `assets/frames/` —
+that folder is kind-coloured *faces* (attack / tech / manoeuvre / status).
+The back is shared chrome, same family as the drone-bay chips.
+
+| File | Used by |
+|---|---|
+| `card_back.png` | `UITheme.card_back_texture()` → `CardFx` draw/shuffle ghosts, combat DRAW / DISCARD thumbs |
+
+Art Director artwork ships here (industrial plate + cyan wrench). Keep
+**1152×1712** (or any size with that exact ratio — `140 / 208`, same as
+`CardView.CARD_SIZE` and `assets/frames/*.png`) so `TextureRect` keep-aspect
+never stretches. `scripts/make_card_back.py` rebuilds a framed *placeholder*
+only — do **not** run it over AD art. To iterate, replace this PNG in place.
+
+Missing file: `UITheme.art()` returns null and `CardFx` falls back to a tinted
+`PanelContainer` rail. Combat pile thumbs hide. The game still runs.
 
 Godot 4 writes a sibling `.import` sidecar the first time the editor (or
 `godot --headless --import`) sees a new PNG. Commit those sidecars with the

@@ -1283,7 +1283,7 @@
         }
       ]
     },
-    "icon": "blue_b_04.png"
+    "icon": "blue_b_22.png"
   },
   "firewall_bypass": {
     "name": "Firewall Bypass",
@@ -1309,7 +1309,7 @@
         }
       ]
     },
-    "icon": "blue_b_13.png"
+    "icon": "blue_b_23.png"
   },
   "infected_burst": {
     "name": "Infected Burst",
@@ -1341,7 +1341,7 @@
         }
       ]
     },
-    "icon": "red_r_03.png"
+    "icon": "red_r_07.png"
   },
   "payload_dump": {
     "name": "Payload Dump",
@@ -1371,6 +1371,6 @@
         }
       ]
     },
-    "icon": "blue_b_18.png"
+    "icon": "blue_b_24.png"
   }
 }
