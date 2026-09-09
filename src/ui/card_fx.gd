@@ -275,7 +275,8 @@ static func _card_ghost(card: CardInstance, size: Vector2) -> Control:
 	col.offset_bottom = -size.y * 0.16
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wrap.add_child(col)
-	var title := UITheme.label(card.display_name(), 13, UITheme.TEXT, "SemiBold")
+	var title := UITheme.label(card.display_name(), 13,
+		UITheme.card_name_colour(card.upgraded), "SemiBold")
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)

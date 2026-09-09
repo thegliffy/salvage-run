@@ -1,14 +1,15 @@
 extends Control
-## Store node: buy parts with run credits, and strip a card from a mount.
+## Store node: buy parts with run credits, strip a card, or forge a mount.
 ##
-## Stripping used to live on dedicated salvage nodes. With the StS-style map
-## those are gone, so the store is where you both spend credits and thin the
-## deck — the two mid-run ship edits that are not combat rewards.
+## Stripping and forging used to live on dedicated salvage nodes. With the
+## StS-style map those are gone, so the store is where you spend credits to
+## thin the deck or stamp remaining grants as upgraded for the rest of the run.
 
 var _stock: Array = []
 var _credits: Label
 var _list: VBoxContainer
 var _strip_list: VBoxContainer
+var _forge_list: VBoxContainer
 
 func _ready() -> void:
 	_stock = RewardPool.shop_stock(Game.run, Game.meta)
@@ -50,7 +51,7 @@ func _build() -> void:
 	head.add_child(cred_box)
 
 	col.add_child(UITheme.label(
-		"Buy a part — or strip one card from a mount. Strips cost credits, and cut sale value.",
+		"Buy a part, strip one card from a mount, or forge a mount so its remaining cards play upgraded.",
 		14, UITheme.TEXT_DIM))
 	col.add_child(UITheme.spacer(4))
 
@@ -78,6 +79,15 @@ func _build() -> void:
 	_strip_list.add_theme_constant_override("separation", 6)
 	body.add_child(_strip_list)
 
+	body.add_child(UITheme.spacer(6))
+	body.add_child(UITheme.label("FORGE A MOUNT", 16, UITheme.TEXT, "Bold"))
+	body.add_child(UITheme.label(
+		"One mount, rest of the run. Remaining cards play upgraded (green Name+). Costs 80, then 120, 160…",
+		12, UITheme.TEXT_FAINT))
+	_forge_list = VBoxContainer.new()
+	_forge_list.add_theme_constant_override("separation", 6)
+	body.add_child(_forge_list)
+
 	var leave := UITheme.ghost_button("  LEAVE STORE  ")
 	UITheme.tip(leave, "Leave store\n---\nReturns to the sector map. Stock does not persist.")
 	leave.pressed.connect(func(): Game.after_shop())
@@ -86,7 +96,7 @@ func _build() -> void:
 func _refresh() -> void:
 	var run: RunState = Game.run
 	_credits.text = "CREDITS  %d" % run.credits
-	UITheme.tip(_credits, "Credits\n%d\n---\nSpent here on parts and strips. Leftovers convert 1:1 at the sale." % run.credits)
+	UITheme.tip(_credits, "Credits\n%d\n---\nSpent here on parts, strips, and forges. Leftovers convert 1:1 at the sale." % run.credits)
 
 	for c in _list.get_children():
 		c.queue_free()
@@ -105,6 +115,15 @@ func _refresh() -> void:
 		_strip_list.add_child(_strip_row(inst))
 	if not any_strip:
 		_strip_list.add_child(UITheme.label("No mounts left to strip.", 14, UITheme.TEXT_FAINT))
+
+	for c in _forge_list.get_children():
+		c.queue_free()
+	var any_forge := false
+	for inst in run.ship.parts:
+		any_forge = true
+		_forge_list.add_child(_forge_row(inst))
+	if not any_forge:
+		_forge_list.add_child(UITheme.label("Nothing installed to forge.", 14, UITheme.TEXT_FAINT))
 
 func _offer_row(offer: Dictionary) -> Control:
 	var def: PartDef = offer["def"]
@@ -161,8 +180,7 @@ func _offer_row(offer: Dictionary) -> Control:
 		var cd: CardDef = Database.card(cid)
 		if cd == null:
 			continue
-		var chip := UITheme.chip(cd.name, UITheme.KIND_COLOUR.get(cd.kind, UITheme.ACCENT))
-		UITheme.tip(chip, UITheme.card_tip(CardInstance.create(cd)))
+		var chip := UITheme.card_chip(CardInstance.create(cd))
 		cards.add_child(chip)
 
 	var price_tip := "%d credits" % price
@@ -214,10 +232,11 @@ func _strip_row(inst: PartInstance) -> Control:
 	var name := UITheme.label(inst.def.name, 15, UITheme.TEXT, "SemiBold")
 	if inst.can_strip():
 		UITheme.tip(name, UITheme.part_tip(inst.def,
-			"Strip costs %d credits and cuts sale value by 25%% (−%d)." % [cost, delta]))
+			"Strip costs %d credits and cuts sale value by 25%% (−%d)." % [cost, delta],
+			inst.upgraded))
 	else:
 		UITheme.tip(name, UITheme.part_tip(inst.def,
-			"Already stripped. Sale value is 25% lower."))
+			"Already stripped. Sale value is 25% lower.", inst.upgraded))
 	h.add_child(name)
 
 	if inst.can_strip():
@@ -232,25 +251,85 @@ func _strip_row(inst: PartInstance) -> Control:
 		if cd == null:
 			continue
 		var stripped_this: bool = inst.stripped_index == i
-		var b := UITheme.button(cd.name,
-			UITheme.PANEL_RAISED if stripped_this else UITheme.HOSTILE)
-		b.add_theme_color_override("font_color",
-			UITheme.TEXT_FAINT if stripped_this else UITheme.BG)
+		var preview := CardInstance.create(cd, inst.upgraded)
+		var fill := UITheme.PANEL_RAISED if stripped_this or inst.upgraded else UITheme.HOSTILE
+		var b := UITheme.button(preview.display_name(), fill)
+		if stripped_this:
+			b.add_theme_color_override("font_color", UITheme.TEXT_FAINT)
+		elif inst.upgraded:
+			b.add_theme_color_override("font_color", UITheme.GOOD)
+			b.add_theme_color_override("font_hover_color", UITheme.GOOD)
+			b.add_theme_color_override("font_pressed_color", UITheme.GOOD)
+		else:
+			b.add_theme_color_override("font_color", UITheme.BG)
 		b.disabled = stripped_this or not inst.can_strip() or not can_afford
 		if stripped_this:
-			b.text = "✖ " + cd.name
-			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd)) + "\n---\nAlready stripped from this mount.")
+			b.text = "✖ " + preview.display_name()
+			UITheme.tip(b, UITheme.card_tip(preview) + "\n---\nAlready stripped from this mount.")
 		elif not inst.can_strip():
-			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd)) + "\n---\nThis mount is already stripped.")
+			UITheme.tip(b, UITheme.card_tip(preview) + "\n---\nThis mount is already stripped.")
 		elif not can_afford:
-			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd))
+			UITheme.tip(b, UITheme.card_tip(preview)
 				+ "\n---\nNeed %d credits (have %d)." % [cost, run.credits])
 		else:
-			UITheme.tip(b, UITheme.card_tip(CardInstance.create(cd))
+			UITheme.tip(b, UITheme.card_tip(preview)
 				+ "\n---\nStrip this card for %d credits. Also cuts this part's sale value by 25%%." % cost)
 		var idx := i
 		b.pressed.connect(func():
 			SalvageYard.strip(Game.run, inst, idx)
 			_refresh())
 		h.add_child(b)
+	return row
+
+func _forge_row(inst: PartInstance) -> Control:
+	var run: RunState = Game.run
+	var cost := SalvageYard.forge_cost(run)
+	var can_afford := run.credits >= cost
+	var already := inst.upgraded
+	var row := UITheme.box(UITheme.PANEL, Color(0, 0, 0, 0), 0, 3, 10)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	row.add_child(h)
+
+	var name_c := UITheme.GOOD if already else UITheme.TEXT
+	var name := UITheme.label(inst.def.name, 15, name_c, "SemiBold")
+	if already:
+		UITheme.tip(name, UITheme.part_tip(inst.def,
+			"Already forged. Remaining cards play upgraded for the rest of the run.", true))
+	else:
+		UITheme.tip(name, UITheme.part_tip(inst.def,
+			"Forge costs %d credits. Remaining cards play upgraded; sale value ×1.4." % cost,
+			false))
+	h.add_child(name)
+
+	if already:
+		h.add_child(UITheme.badge("FORGED", UITheme.GOOD))
+	else:
+		var price := UITheme.label("%d credits" % cost,
+			13, UITheme.TEXT_FAINT if not can_afford else UITheme.WARN, "SemiBold")
+		UITheme.tip(price, "%d credits now. Remaining grants play as Name+ for the rest of the run." % cost)
+		h.add_child(price)
+
+	# Preview remaining grants as upgraded (honours a strip). Stripped cards stay gone.
+	for cid in inst.granted_cards():
+		var cd: CardDef = Database.card(cid)
+		if cd == null:
+			continue
+		h.add_child(UITheme.card_chip(CardInstance.create(cd, true, inst.uid)))
+
+	var forge := UITheme.button("  FORGE  ", UITheme.GOOD)
+	forge.disabled = already or not can_afford
+	if already:
+		forge.text = "  FORGED  "
+		UITheme.tip(forge, "Already forged. One forge per mount.")
+	elif not can_afford:
+		UITheme.tip(forge, "Need %d credits (have %d)." % [cost, run.credits])
+	else:
+		UITheme.tip(forge, "Forge %s for %d credits. Remaining cards play upgraded." % [
+			inst.def.name, cost])
+	UITheme.row_cta(forge)
+	forge.pressed.connect(func():
+		SalvageYard.forge(Game.run, inst)
+		_refresh())
+	h.add_child(forge)
 	return row

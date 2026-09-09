@@ -55,7 +55,7 @@ func setup(profile: ShipProfile, enemy_def: EnemyDef, ship: ShipLoadout = null) 
 	enemy = Combatant.from_enemy(enemy_def)
 	loadout = ship
 	deck = Deck.new()
-	deck.build(profile.deck, profile.deck_sources)
+	deck.build(profile.deck, profile.deck_sources, profile.deck_upgraded)
 	brain = EnemyBrain.new(enemy_def, enemy)
 	phase = Phase.SETUP
 	turn = 0

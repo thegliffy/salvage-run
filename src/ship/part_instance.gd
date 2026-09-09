@@ -17,7 +17,8 @@ var uid: int = 0           # stable id for save/load and UI diffing
 var stripped_index: int = -1
 
 ## Value lost by stripping a mount. Still applied on sale; the store also
-## charges run credits (SalvageYard.credit_cost).
+## charges run credits (SalvageYard.credit_cost). Forging sets `upgraded` and
+## raises sale value ×1.4; remaining grants then play as upgraded cards.
 const STRIP_VALUE_PENALTY := 0.25
 
 static var _next_uid: int = 1
@@ -44,6 +45,16 @@ func is_stripped() -> bool:
 ## A part with only one card left cannot be stripped to nothing.
 func can_strip() -> bool:
 	return not is_stripped() and def.grants.size() > 1
+
+func can_forge() -> bool:
+	return not upgraded
+
+## Returns "" on success, or why the forge was refused.
+func forge() -> String:
+	if upgraded:
+		return "%s has already been forged" % def.name
+	upgraded = true
+	return ""
 
 ## Returns "" on success, or why the strip was refused.
 func strip(index: int) -> String:

@@ -152,6 +152,7 @@ func compile() -> ShipProfile:
 		for cid in inst.granted_cards():
 			prof.deck.append(cid)
 			prof.deck_sources.append(inst.uid)
+			prof.deck_upgraded.append(inst.upgraded)
 
 		prof.power += d.power_gen
 		power_draw += d.power_draw

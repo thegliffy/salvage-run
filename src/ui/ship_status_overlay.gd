@@ -158,7 +158,7 @@ static func open(host: Control, preview_layer: Control, on_close: Callable) -> v
 	deck_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	deck_list.add_theme_constant_override("separation", 4)
 	deck_scroll.add_child(deck_list)
-	_fill_deck_list(deck_list, prof.deck, preview_layer, on_close)
+	_fill_deck_list(deck_list, prof.deck, preview_layer, on_close, prof.deck_upgraded)
 
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 12)
@@ -286,19 +286,26 @@ static func _collect_texts(n: Node, out: PackedStringArray) -> void:
 		_collect_texts(c, out)
 
 ## First-seen order with duplicate counts. The run deck is derived from the
-## ship, so this is the list combat will shuffle.
-static func tally_deck(deck: Array) -> Array:
+## ship, so this is the list combat will shuffle. Optional `upgraded` is
+## parallel to `deck`; forged copies tally separately from the base card.
+static func tally_deck(deck: Array, upgraded: Array = []) -> Array:
 	var counts: Dictionary = {}
-	var order: Array[StringName] = []
-	for cid in deck:
-		var id := cid as StringName
-		if not counts.has(id):
-			counts[id] = 0
-			order.append(id)
-		counts[id] += 1
+	var order: Array = []
+	for i in deck.size():
+		var id := deck[i] as StringName
+		var up := bool(upgraded[i]) if i < upgraded.size() else false
+		var key := "%s|%d" % [String(id), 1 if up else 0]
+		if not counts.has(key):
+			counts[key] = 0
+			order.append({"id": id, "upgraded": up, "key": key})
+		counts[key] += 1
 	var out: Array = []
-	for id in order:
-		out.append({"id": id, "count": int(counts[id])})
+	for entry in order:
+		out.append({
+			"id": entry["id"],
+			"count": int(counts[entry["key"]]),
+			"upgraded": bool(entry["upgraded"]),
+		})
 	return out
 
 ## Focused deck list for the reward and map screens. Same rows and card
@@ -346,6 +353,7 @@ static func open_deck(host: Control, preview_layer: Control, on_close: Callable)
 
 	var run: RunState = Game.run
 	var deck: Array = run.profile.deck
+	var upgraded: Array = run.profile.deck_upgraded
 
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 16)
@@ -370,7 +378,7 @@ static func open_deck(host: Control, preview_layer: Control, on_close: Callable)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 4)
 	scroll.add_child(list)
-	_fill_deck_list(list, deck, preview_layer, on_close)
+	_fill_deck_list(list, deck, preview_layer, on_close, upgraded)
 
 	var close_foot := UITheme.ghost_button("  CLOSE  ")
 	close_foot.pressed.connect(on_close)
@@ -385,12 +393,13 @@ static func close(host: Control, preview_layer: Control = null) -> void:
 	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 static func _fill_deck_list(list: VBoxContainer, deck: Array, preview_layer: Control,
-		on_close: Callable) -> void:
+		on_close: Callable, upgraded: Array = []) -> void:
 	if deck.is_empty():
 		list.add_child(UITheme.label("No cards — the ship is empty.", 13, UITheme.TEXT_FAINT))
 		return
-	for entry in tally_deck(deck):
-		list.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close))
+	for entry in tally_deck(deck, upgraded):
+		list.add_child(_deck_row(entry["id"], int(entry["count"]), preview_layer, on_close,
+			bool(entry.get("upgraded", false))))
 
 static func _slot_block(run: RunState, slot: StringName) -> Control:
 	var used := run.ship.installed_in(slot)
@@ -444,10 +453,14 @@ static func _part_row(inst: PartInstance) -> Control:
 	var name := inst.def.name
 	if inst.is_wrecked():
 		name += "  (wrecked)"
-	elif inst.is_stripped():
-		name += "  (stripped)"
-	info.add_child(UITheme.label(name, 13,
-		UITheme.HOSTILE if inst.is_wrecked() else UITheme.TEXT, "SemiBold"))
+	else:
+		if inst.is_stripped():
+			name += "  (stripped)"
+		if inst.upgraded:
+			name += "  (forged)"
+	var name_c := UITheme.HOSTILE if inst.is_wrecked() \
+		else (UITheme.GOOD if inst.upgraded else UITheme.TEXT)
+	info.add_child(UITheme.label(name, 13, name_c, "SemiBold"))
 	var bits: PackedStringArray = []
 	if inst.def.power_draw > 0:
 		bits.append("−%d power" % inst.def.power_draw)
@@ -457,9 +470,14 @@ static func _part_row(inst: PartInstance) -> Control:
 	var extra := ""
 	if inst.is_wrecked():
 		extra = "Wrecked — cards gone until repaired."
-	elif inst.is_stripped():
-		extra = "Stripped — one card already cut from this mount."
-	UITheme.tip(row, UITheme.part_tip(inst.def, extra))
+	else:
+		if inst.is_stripped():
+			extra = "Stripped — one card already cut from this mount."
+		if inst.upgraded:
+			if extra != "":
+				extra += " "
+			extra += "Forged — remaining cards play upgraded."
+	UITheme.tip(row, UITheme.part_tip(inst.def, extra, inst.upgraded))
 	return row
 
 static func _improvements_block(run: RunState) -> Control:
@@ -507,10 +525,11 @@ static func _improvement_row(imp: ImprovementDef) -> Control:
 	return row
 
 static func _deck_row(card_id: StringName, count: int, preview_layer: Control,
-		_on_close: Callable) -> Control:
+		_on_close: Callable, upgraded: bool = false) -> Control:
 	var cd: CardDef = Database.card(card_id)
 	if cd == null:
 		return UITheme.label("· unknown card", 12, UITheme.TEXT_FAINT)
+	var preview := CardInstance.create(cd, upgraded)
 
 	var row := ThemedPanel.new()
 	row.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -520,8 +539,9 @@ static func _deck_row(card_id: StringName, count: int, preview_layer: Control,
 	h.add_theme_constant_override("separation", 8)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(h)
-	h.add_child(UITheme.label(str(cd.cost), 12, UITheme.KIND_COLOUR.get(cd.kind, UITheme.ACCENT), "Black"))
-	var name := UITheme.label(cd.name, 13, UITheme.TEXT, "SemiBold")
+	h.add_child(UITheme.label(str(preview.cost()), 12, UITheme.KIND_COLOUR.get(cd.kind, UITheme.ACCENT), "Black"))
+	var name := UITheme.label(preview.display_name(), 13,
+		UITheme.card_name_colour(upgraded), "SemiBold")
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(name)
@@ -529,18 +549,19 @@ static func _deck_row(card_id: StringName, count: int, preview_layer: Control,
 		h.add_child(UITheme.label("x%d" % count, 12, UITheme.TEXT_DIM, "Bold"))
 	h.add_child(UITheme.label(String(cd.kind), 11, UITheme.TEXT_FAINT))
 
-	UITheme.tip(row, UITheme.card_tip(CardInstance.create(cd)))
+	UITheme.tip(row, UITheme.card_tip(preview))
 	row.mouse_entered.connect(func():
-		_show_preview(cd, row, preview_layer))
+		_show_preview(cd, row, preview_layer, upgraded))
 	row.mouse_exited.connect(func():
 		_hide_preview(preview_layer))
 	return row
 
-static func _show_preview(cd: CardDef, anchor: Control, preview_layer: Control) -> void:
+static func _show_preview(cd: CardDef, anchor: Control, preview_layer: Control,
+		upgraded: bool = false) -> void:
 	_hide_preview(preview_layer)
 	if preview_layer == null or not is_instance_valid(preview_layer):
 		return
-	var inst := CardInstance.create(cd)
+	var inst := CardInstance.create(cd, upgraded)
 	var card := CardView.new()
 	card.setup(inst)
 	card.set_playable(true)
