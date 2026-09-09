@@ -12,7 +12,8 @@ var exhaust_pile: Array[CardInstance] = []
 
 var max_hand_size: int = 10
 
-func build(card_ids: Array[StringName], sources: Array = []) -> void:
+func build(card_ids: Array[StringName], sources: Array = [],
+		upgraded: Array = []) -> void:
 	draw_pile.clear()
 	hand.clear()
 	discard_pile.clear()
@@ -24,7 +25,8 @@ func build(card_ids: Array[StringName], sources: Array = []) -> void:
 			push_warning("[Deck] unknown card id '%s' skipped" % cid)
 			continue
 		var part_uid := int(sources[i]) if i < sources.size() else 0
-		draw_pile.append(CardInstance.create(def, false, part_uid))
+		var is_up := bool(upgraded[i]) if i < upgraded.size() else false
+		draw_pile.append(CardInstance.create(def, is_up, part_uid))
 	Rng.shuffle(&"combat", draw_pile)
 
 func draw(count: int) -> Array[CardInstance]:

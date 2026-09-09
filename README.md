@@ -184,6 +184,12 @@ already stripped this run). Stripping also cuts that part's **sale value** by
 25%. Because the cap is one per part, a ship can never fall below three quarters of
 its cards.
 
+The store also **forges** a mount: **80 credits**, then 120, 160, … (`80 + 40 ×`
+mounts already forged). Forging stamps remaining cards from that part as
+upgraded (`Name+`, green) for the rest of the run, and raises the part's sale
+value ×1.4. One forge per mount; always more expensive than a strip at the
+same step.
+
 ### Meta unlocks
 
 Between runs, the title screen's **Salvage Yard** spends salvage to unlock parts

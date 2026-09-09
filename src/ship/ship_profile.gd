@@ -25,6 +25,9 @@ var deck: Array[StringName] = []    # card ids
 ## Parallel to `deck`: PartInstance.uid that granted each card. Combat stamps
 ## this onto CardInstance so Calibrate can scope bonuses to one mount.
 var deck_sources: Array[int] = []
+## Parallel to `deck`: true when the granting part is forged. Combat stamps
+## this onto CardInstance.upgraded so remaining grants play as Name+.
+var deck_upgraded: Array[bool] = []
 var warnings: Array[String] = []    # e.g. "power deficit", surfaced in shipyard
 ## Compiled improvement combat hooks. Combat reads these, not the loadout.
 var triggers: Array = []            # [{when, op, amount}, ...]

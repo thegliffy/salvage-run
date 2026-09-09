@@ -152,7 +152,8 @@ func _build_content() -> void:
 	var name_left: float = PIP_CENTRE.x + half.x + NAME_GAP
 	var name_rect := Rect2(name_left, maxf(0.0, PIP_CENTRE.y - half.y * 1.3),
 		NAME_RIGHT - name_left, half.y * 2.6)
-	_name = UITheme.label(card.display_name(), 11, UITheme.TEXT, "SemiBold")
+	_name = UITheme.label(card.display_name(), 11,
+		UITheme.card_name_colour(card.upgraded), "SemiBold")
 	_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_name.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -243,6 +243,31 @@ Bonuses die with the fight; they are not compile stats.
 deck, which cycles sluggishly at 5–6 draws a turn. Stripping is what keeps deck
 size honest as a ship grows.
 
+## 8b. Module Forge
+
+The store's other service, next to Strip. Pay run credits to **forge one mount**
+for the rest of the run. Forging sets `PartInstance.upgraded = true` (sale value
+already ×1.4). While forged, **every card still granted by that part** —
+remaining grants only, honouring a strip — is created and played as upgraded
+(`CardInstance.upgraded = true`, each card's existing `upgrade` block in
+`content/cards.json`). Upgraded card names render **green** (`UITheme.GOOD`)
+with the existing `Name+` suffix.
+
+**Credit formula.** `80 + 40 × forges_already_done`, where `forges_already_done`
+is the count of currently installed parts with `upgraded == true` *before* this
+forge. First 80, second 120, third 160. The cost is strictly above Strip
+(`40 + 25 × strips`) at every matching step — Strip is not retuned. The store
+refuses (and disables the button) if unaffordable or already forged. One forge
+per mount; no unforge.
+
+Charge lives in `SalvageYard.forge()` so every caller — shop UI, leftover
+salvage screen, sim — hits the same path.
+
+**Why compile must stamp it:** the deck is *derived*. `compile()` writes a
+parallel `deck_upgraded` flag next to `deck` / `deck_sources`; `Deck.build()`
+passes it into `CardInstance.create`. Recording the upgrade only on an in-combat
+card would vanish on the next recompile. There is a test for exactly this.
+
 ## 9. The simulator's pilot
 
 `tests/headless.gd` scores cards from their **effect ops**, not from a list of
@@ -269,7 +294,9 @@ deadlock rather than by reasoning about it:
 
 The simulator also buys parts between fights out of run credits. Handing them
 out free was tried first and pushed the win rate to 98%: the ship outgrew the
-enemy ladder and the number stopped measuring anything.
+enemy ladder and the number stopped measuring anything. When the purse is flush
+it also forges a mount through `SalvageYard.forge()` (preferring weapons) so
+the upgraded-card curve is in the yardstick rather than sitting dead.
 
 ## 10. Rewards scale with the fight
 
@@ -291,7 +318,7 @@ worth seeking out rather than routing around.
 
 **Skipping a part is a real choice.** Skip the offer and you **field-repair 15%
 of max hull** (or leave with a full hull unchanged). You may also **jettison** an
-installed part: the slot frees up and all three of its cards leave the deck.
+installed part: the slot frees up and all four of its cards leave the deck.
 That is the ship-level counterpart to stripping a single card.
 
 ## 11. The sector map

@@ -204,9 +204,24 @@ static func badge(text: String, colour: Color, filled: bool = false) -> PanelCon
 	wrap.add_child(label(text, 11, fg, "Bold"))
 	return wrap
 
-static func chip(text: String, colour: Color = ACCENT) -> PanelContainer:
+## Upgraded card names use the combat "good" green. Same signal in hand,
+## tooltips, deck lists, and shop strip/forge previews.
+static func card_name_colour(upgraded: bool) -> Color:
+	return GOOD if upgraded else TEXT
+
+static func chip(text: String, colour: Color = ACCENT,
+		text_colour: Color = TEXT) -> PanelContainer:
 	var wrap := box(PANEL_RAISED, colour, 1, 3, 6)
-	wrap.add_child(label(text, 12, TEXT))
+	wrap.add_child(label(text, 12, text_colour))
+	return wrap
+
+## Name chip for a card copy. Forged / upgraded copies render Name+ in green.
+static func card_chip(card: CardInstance) -> PanelContainer:
+	if card == null or card.def == null:
+		return chip("?", TEXT_FAINT)
+	var wrap := chip(card.display_name(),
+		KIND_COLOUR.get(card.def.kind, ACCENT), card_name_colour(card.upgraded))
+	tip(wrap, card_tip(card))
 	return wrap
 
 static func metric(caption: String, value: String, colour: Color = TEXT,
@@ -374,10 +389,11 @@ static func make_tooltip(for_text: String) -> Control:
 	elif not lines.is_empty() and (lines[0].begins_with("⚡") or lines[0].contains("DEFICIT")):
 		kind = &"warn"
 	var warn := kind == &"warn"
-	var border := WARN if warn else ACCENT
+	var upgraded_name := not lines.is_empty() and str(lines[0]).ends_with("+")
+	var border := WARN if warn else (GOOD if upgraded_name else ACCENT)
 	var ink := INK_WARN if warn else PANEL
-	var title_c := WARN if warn else ACCENT
-	var rule_c := WARN if warn else ACCENT_DIM
+	var title_c := WARN if warn else (GOOD if upgraded_name else ACCENT)
+	var rule_c := WARN if warn else (GOOD if upgraded_name else ACCENT_DIM)
 	var wrap := PanelContainer.new()
 	wrap.add_theme_stylebox_override("panel", panel(ink, border, 2 if warn else 1, 4, 12))
 	wrap.custom_minimum_size.x = 268
@@ -467,7 +483,8 @@ static func _card_keywords(card: CardInstance) -> Array[StringName]:
 			out.append(k)
 	return out
 
-static func part_tip(def: PartDef, extra: String = "") -> String:
+static func part_tip(def: PartDef, extra: String = "",
+		upgraded: bool = false) -> String:
 	if def == null:
 		return ""
 	var bits: PackedStringArray = []
@@ -478,6 +495,8 @@ static func part_tip(def: PartDef, extra: String = "") -> String:
 	meta += " · %d mass" % def.mass
 	if def.power_gen > 0:
 		meta += " · +%d output" % def.power_gen
+	if upgraded:
+		meta += " · forged"
 	bits.append(meta)
 	bits.append("---")
 	if def.flavor != "":
@@ -486,7 +505,8 @@ static func part_tip(def: PartDef, extra: String = "") -> String:
 	for cid in def.grants:
 		var cd: CardDef = Database.card(cid)
 		if cd != null:
-			grants.append("%s (%d)" % [cd.name, cd.cost])
+			var shown := cd.name + ("+" if upgraded else "")
+			grants.append("%s (%d)" % [shown, cd.cost_for(upgraded)])
 	if not grants.is_empty():
 		bits.append("grants: %s" % ", ".join(grants))
 	if extra != "":

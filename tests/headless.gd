@@ -66,6 +66,7 @@ func _run_tests() -> int:
 	_test_overshield()
 	_test_shield_dump()
 	_test_strip()
+	_test_forge()
 	_test_rewards()
 	_test_valuation()
 	_test_self_destruct()
@@ -315,6 +316,8 @@ func _test_compile() -> void:
 	_eq("starter deck is 3 parts x 4 cards", prof.deck.size(), 12)
 	_eq("laser granted twice by burst laser", prof.deck.count(&"laser_burst"), 2)
 	_eq("deck sources match deck size", prof.deck_sources.size(), 12)
+	_eq("deck upgraded flags match deck size", prof.deck_upgraded.size(), 12)
+	_eq("starter grants are not forged", prof.deck_upgraded.count(true), 0)
 	_check("starter includes hardpoint_optimization", prof.deck.has(&"hardpoint_optimization"))
 	_eq("starter ship is the Brawler", prof.display_name, "Brawler")
 	_check("hull includes base", prof.max_hull >= 30)
@@ -896,6 +899,138 @@ func _test_strip() -> void:
 	var round_trip := ShipLoadout.from_dict(floor_run.ship.to_dict())
 	_eq("strips survive serialisation", round_trip.compile().deck.size(), 9)
 
+func _test_forge() -> void:
+	print("forge (module upgrade)")
+	Rng.seed_run(41)
+	var run := RunState.new()
+	run.start(StarterShips.salvager(), 41)
+
+	var inst: PartInstance = run.ship.parts[0]
+	_eq("first forge cost is 80", SalvageYard.forge_cost(run),
+		SalvageYard.FORGE_CREDIT_BASE)
+	_eq("first forge beats first strip", SalvageYard.forge_cost(run) > SalvageYard.credit_cost(run), true)
+	_eq("cannot afford first forge with 0 credits",
+		SalvageYard.forge_options(run)[0]["can_afford"], false)
+	_eq("starter offers every unforged mount", SalvageYard.forge_options(run).size(), 3)
+
+	_check("forge refused without credits", SalvageYard.forge(run, inst) != "")
+	_eq("credits unchanged on refuse", run.credits, 0)
+	_check("part not forged on refuse", not inst.upgraded)
+	_eq("deck flags stay cold on refuse", run.profile.deck_upgraded.count(true), 0)
+
+	run.add_credits(SalvageYard.FORGE_CREDIT_BASE)
+	var credits_before: int = run.credits
+	_eq("forge succeeds", SalvageYard.forge(run, inst), "")
+	_check("part reports itself forged", inst.upgraded)
+	_check("part cannot be forged twice", not inst.can_forge())
+	_eq("forge debit first cost", run.credits,
+		credits_before - SalvageYard.FORGE_CREDIT_BASE)
+	_eq("sale value ×1.4", inst.sale_value(),
+		int(round(float(inst.def.base_value) * 1.4)))
+	_eq("compile stamps remaining grants upgraded",
+		run.profile.deck_upgraded.count(true), inst.granted_cards().size())
+	for i in run.profile.deck.size():
+		if run.profile.deck_sources[i] == inst.uid:
+			_check("forged mount's compile flag is true", run.profile.deck_upgraded[i])
+
+	var deck := Deck.new()
+	deck.build(run.profile.deck, run.profile.deck_sources, run.profile.deck_upgraded)
+	var forged_combat := 0
+	for card in deck.draw_pile:
+		if card.source_part_uid == inst.uid:
+			_check("combat card from forge is upgraded", card.upgraded)
+			_check("upgraded display name has plus", card.display_name().ends_with("+"))
+			forged_combat += 1
+		else:
+			_check("unforged mount stays cold in combat", not card.upgraded)
+	_eq("combat copies match remaining grants", forged_combat, inst.granted_cards().size())
+
+	_eq("already-forged names the part, not credits",
+		SalvageYard.forge(run, inst).contains("forged"), true)
+	_eq("already-forged drops out of options", SalvageYard.forge_options(run).size(), 2)
+
+	# Cost scales with installed forged mounts: 80, then 120, then 160.
+	_eq("second forge costs 120", SalvageYard.forge_cost(run),
+		SalvageYard.FORGE_CREDIT_BASE + SalvageYard.FORGE_CREDIT_STEP)
+	var other: PartInstance = null
+	for p in run.ship.parts:
+		if p.can_forge():
+			other = p
+			break
+	_check("another mount is still forgeable", other != null)
+	_check("second forge refused until funded", SalvageYard.forge(run, other) != "")
+	_eq("credits stay 0 after unaffordable second forge", run.credits, 0)
+	run.add_credits(SalvageYard.forge_cost(run))
+	var second_cost := SalvageYard.forge_cost(run)
+	var credits_mid: int = run.credits
+	_eq("second forge succeeds", SalvageYard.forge(run, other), "")
+	_eq("second forge debit 120", run.credits, credits_mid - second_cost)
+	_eq("third forge costs 160", SalvageYard.forge_cost(run),
+		SalvageYard.FORGE_CREDIT_BASE + SalvageYard.FORGE_CREDIT_STEP * 2)
+
+	# Forge stays strictly above Strip at every step, including a mixed ship.
+	for n in 6:
+		var want_forge := SalvageYard.FORGE_CREDIT_BASE + SalvageYard.FORGE_CREDIT_STEP * n
+		var want_strip := SalvageYard.STRIP_CREDIT_BASE + SalvageYard.STRIP_CREDIT_STEP * n
+		_check("forge %d beats strip %d" % [want_forge, want_strip], want_forge > want_strip)
+
+	# Strip + forge together: remaining grants only, sale stacks ×1.4 and −25%.
+	var mixed := RunState.new()
+	mixed.start(StarterShips.salvager(), 42)
+	var mount: PartInstance = mixed.ship.parts[0]
+	mixed.add_credits(SalvageYard.STRIP_CREDIT_BASE + SalvageYard.FORGE_CREDIT_BASE)
+	_eq("strip then forge", SalvageYard.strip(mixed, mount, 0), "")
+	_eq("forge a stripped mount", SalvageYard.forge(mixed, mount), "")
+	_eq("stripped forged deck is 3 cards from that mount",
+		mixed.profile.deck_upgraded.count(true), 3)
+	_eq("stripped+forged sale stacks both modifiers", mount.sale_value(),
+		int(round(float(mount.def.base_value) * 1.4 * (1.0 - PartInstance.STRIP_VALUE_PENALTY))))
+	_check("stripped card is gone from a forged mount",
+		mount.granted_cards().size() == 3)
+
+	var forge_first := RunState.new()
+	forge_first.start(StarterShips.salvager(), 43)
+	var m2: PartInstance = forge_first.ship.parts[0]
+	forge_first.add_credits(SalvageYard.FORGE_CREDIT_BASE + SalvageYard.STRIP_CREDIT_BASE)
+	_eq("forge then strip", SalvageYard.forge(forge_first, m2), "")
+	_eq("strip a forged mount", SalvageYard.strip(forge_first, m2, 1), "")
+	_eq("forge-then-strip still three upgraded cards",
+		forge_first.profile.deck_upgraded.count(true), 3)
+
+	# Survives save/load and a bare recompile.
+	mixed.recompile()
+	_eq("forge survives a bare recompile", mixed.profile.deck_upgraded.count(true), 3)
+	var round_trip := ShipLoadout.from_dict(mixed.ship.to_dict())
+	_check("forge survives serialisation", round_trip.parts[0].upgraded)
+	_eq("serialised compile still stamps upgraded",
+		round_trip.compile().deck_upgraded.count(true), 3)
+
+	# Green name signal: helper + tooltip title, unit-testable without a window.
+	_eq("upgraded names use GOOD green", UITheme.card_name_colour(true), UITheme.GOOD)
+	_eq("base names stay TEXT", UITheme.card_name_colour(false), UITheme.TEXT)
+	var laser: CardDef = Database.card(&"laser_burst")
+	var up := CardInstance.create(laser, true)
+	_eq("upgraded display name keeps plus suffix", up.display_name(), laser.name + "+")
+	var popup := UITheme.make_tooltip(UITheme.card_tip(up))
+	var title := popup.get_child(0).get_child(0) as Label
+	_check("upgraded tooltip title exists", title != null)
+	if title != null:
+		_eq("upgraded tooltip title is green", title.get_theme_color("font_color"), UITheme.GOOD)
+		_eq("upgraded tooltip title is Name+", title.text, up.display_name())
+	popup.free()
+	var chip := UITheme.card_chip(up)
+	var chip_label := chip.get_child(0) as Label
+	_check("card chip label exists", chip_label != null)
+	if chip_label != null:
+		_eq("card chip name is green", chip_label.get_theme_color("font_color"), UITheme.GOOD)
+		_eq("card chip shows Name+", chip_label.text, up.display_name())
+	chip.free()
+	var cold := UITheme.make_tooltip(UITheme.card_tip(CardInstance.create(laser, false)))
+	var cold_title := cold.get_child(0).get_child(0) as Label
+	if cold_title != null:
+		_eq("base tooltip title stays accent", cold_title.get_theme_color("font_color"), UITheme.ACCENT)
+	cold.free()
+
 func _test_rewards() -> void:
 	print("rewards")
 	Rng.seed_run(77)
@@ -1150,6 +1285,13 @@ func _test_ui_copy() -> void:
 	_eq("deck tally sums to compiled size", tally_total, prof.deck.size())
 	_check("starter deck has a duplicate card", saw_dup)
 	_eq("tally keeps first-seen order", grouped[0]["id"], prof.deck[0])
+	_eq("untouched tally is not upgraded", grouped[0].get("upgraded", true), false)
+	var mixed_ids: Array[StringName] = [&"laser_burst", &"laser_burst", &"overheat"]
+	var mixed_up: Array = [true, false, true]
+	var mixed_tally := ShipStatusOverlay.tally_deck(mixed_ids, mixed_up)
+	_eq("forged copies tally apart from base", mixed_tally.size(), 3)
+	_eq("forged laser is first", mixed_tally[0]["upgraded"], true)
+	_eq("base laser is its own row", mixed_tally[1]["upgraded"], false)
 	var empty_tally := ShipStatusOverlay.tally_deck([])
 	_eq("empty deck tallies to nothing", empty_tally.size(), 0)
 	var def_panel := UITheme.deficit_panel(2, "cuts energy every fight.")
@@ -1569,6 +1711,7 @@ func _test_improvement_triggers() -> void:
 		laser_def.base_value / 2)
 	_eq("odd shop price floors", RewardPool.shop_price(shop_run, 55), 27)
 	_eq("strip cost is not a shop price", SalvageYard.credit_cost(shop_run), 40)
+	_eq("forge cost is not a shop price", SalvageYard.forge_cost(shop_run), 80)
 	var shop_meta := MetaState.new()
 	shop_meta.grant_starting_unlocks()
 	var stock: Array = RewardPool.shop_stock(shop_run, shop_meta, 1)
@@ -2963,6 +3106,7 @@ func _simulate_run(run_seed: int, verbose: bool = false,
 				_auto_repair(run)
 				_auto_reward(run, enemy_id, ntype)
 				_auto_strip(run)
+				_auto_forge(run)
 				if ntype == "boss":
 					run.advance_sector()
 			"shop":
@@ -3316,6 +3460,27 @@ func _auto_strip(run: RunState) -> void:
 			SalvageYard.strip(run, o["part"], o["index"])
 			return
 
+## Forge when flush so upgraded cards exist in the yardstick. Keep a strip
+## buffer (or twice the forge price) so shops still buy parts. Prefer weapons.
+func _auto_forge(run: RunState) -> void:
+	var cost := SalvageYard.forge_cost(run)
+	if run.credits < cost:
+		return
+	var buffer := SalvageYard.STRIP_CREDIT_BASE
+	if run.credits < cost + buffer and run.credits < cost * 2:
+		return
+	var pick: PartInstance = null
+	for inst in run.ship.parts:
+		if not inst.can_forge() or inst.is_wrecked():
+			continue
+		if inst.def.slot == ShipLoadout.SLOT_WEAPON:
+			pick = inst
+			break
+		if pick == null:
+			pick = inst
+	if pick != null:
+		SalvageYard.forge(run, pick)
+
 func _auto_repair(run: RunState) -> void:
 	for inst in run.ship.parts:
 		if inst.wear > 0 and run.credits >= 40:
@@ -3332,7 +3497,8 @@ func _auto_shop(run: RunState) -> void:
 		if o["can_install"] and run.credits >= int(o["price"]):
 			run.add_credits(-int(o["price"]))
 			RewardPool.claim(run, o)
-			return
+			break
+	_auto_forge(run)
 
 func _auto_chest(run: RunState) -> void:
 	var imp: ImprovementDef = RewardPool.chest_improvement(run)
