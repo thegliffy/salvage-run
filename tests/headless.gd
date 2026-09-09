@@ -1396,6 +1396,11 @@ func _test_card_fx() -> void:
 		_check("theme loads the card back", tex is Texture2D)
 	else:
 		_check("theme card back is optional", tex == null)
+	var wrench := UITheme.logo_wrench_texture()
+	if wrench != null:
+		_check("theme loads the wrench logo", wrench is Texture2D)
+	else:
+		_check("theme wrench logo is optional", wrench == null)
 	layer.free()
 
 func _fx_safe(fn: Callable) -> bool:
