@@ -51,16 +51,22 @@ kind colour. You lose that piece of art, not the game.
 `content/cards.json` `icon`, `content/enemies.json` `portrait`, and
 `content/parts.json` `icon` (or the `<part_id>.png` default) exactly.
 
-### Card icons — 31 PNGs in `assets/icons/`
+### Card icons — PNGs in `assets/icons/`
 
 Flat Game-icons glyphs, tinted by kind colour (red attack, blue tech, green
-manoeuvre, violet status):
+manoeuvre, violet status). Every card `icon` filename is unique.
 
 - Attack: `red_gr_01.png`, `red_gr_03.png`, `red_gr_04.png`, `red_gr_06.png`,
-  `red_gr_07.png`, `red_gr_08.png`, `red_gr_09.png`, `red_r_01.png`
-- Tech: `blue_b_01.png` through `blue_b_17.png`
+  `red_gr_07.png`, `red_gr_08.png`, `red_gr_09.png`, `red_gr_10.png`,
+  `red_r_01.png` through `red_r_07.png`
+- Tech: `blue_b_01.png` through `blue_b_24.png`
 - Manoeuvre: `green_g_01.png`, `green_g_02.png`
-- Status: `violet_p_01.png` through `violet_p_04.png`
+- Status: `violet_p_01.png` through `violet_p_06.png`
+
+Virus cards that used to share art now have their own files:
+`computer_spike` → `blue_b_22.png`, `firewall_bypass` → `blue_b_23.png`,
+`payload_dump` → `blue_b_24.png`, `infected_burst` → `red_r_07.png`.
+Older cards keep their original filenames.
 
 ### Enemy portraits — 4 PNGs in `assets/portraits/`
 

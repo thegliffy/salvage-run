@@ -117,6 +117,10 @@ func _test_content() -> void:
 		&"static_buildup": "red_r_06.png",
 		&"ion_haze": "violet_p_05.png",
 		&"thermal_vent": "violet_p_06.png",
+		&"computer_spike": "blue_b_22.png",
+		&"firewall_bypass": "blue_b_23.png",
+		&"payload_dump": "blue_b_24.png",
+		&"infected_burst": "red_r_07.png",
 	}
 	for cid in unique_icons:
 		var card: CardDef = Database.card(cid)
@@ -133,6 +137,15 @@ func _test_content() -> void:
 		_check("%s icon is unique" % String(cid), sharers.is_empty(), str(sharers))
 		_check("%s icon PNG exists" % String(cid),
 			FileAccess.file_exists("res://assets/icons/" + card.icon))
+	var icon_owners: Dictionary = {}
+	var shared: PackedStringArray = []
+	for cid2 in Database.cards:
+		var ic: String = Database.cards[cid2].icon
+		if icon_owners.has(ic):
+			shared.append("%s %s/%s" % [ic, icon_owners[ic], String(cid2)])
+		else:
+			icon_owners[ic] = String(cid2)
+	_check("every card icon is unique", shared.is_empty(), str(shared))
 
 	var hopper: ImprovementDef = Database.improvement(&"scrap_hopper")
 	_check("scrap hopper exists", hopper != null)
