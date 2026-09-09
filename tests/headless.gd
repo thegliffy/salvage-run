@@ -1369,13 +1369,13 @@ func _test_card_fx() -> void:
 	var back := CardFx._card_back()
 	_eq("back size", back.size, CardFx.CARD_BACK)
 	_eq("back ignores mouse", back.mouse_filter, Control.MOUSE_FILTER_IGNORE)
-	if back is TextureRect:
-		var tr := back as TextureRect
-		_eq("back keep-aspect", tr.stretch_mode,
+	var art_rect := _find_texture_rect(back)
+	if art_rect != null:
+		_eq("back keep-aspect", art_rect.stretch_mode,
 			TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
-		_check("back has artwork", tr.texture != null)
+		_check("back has artwork", art_rect.texture != null)
 	else:
-		_check("missing PNG still builds a framed back", back is PanelContainer)
+		_check("missing PNG still builds a framed back", back.get_child_count() >= 1)
 	back.free()
 
 	var tex := UITheme.card_back_texture()
@@ -1388,6 +1388,15 @@ func _test_card_fx() -> void:
 func _fx_safe(fn: Callable) -> bool:
 	fn.call()
 	return true
+
+func _find_texture_rect(n: Node) -> TextureRect:
+	if n is TextureRect:
+		return n
+	for ch in n.get_children():
+		var found := _find_texture_rect(ch)
+		if found != null:
+			return found
+	return null
 
 func _test_improvement_triggers() -> void:
 	print("improvement triggers")

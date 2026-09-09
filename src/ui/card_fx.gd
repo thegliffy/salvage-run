@@ -20,12 +20,12 @@ const DRAW_TIME := 0.40
 const DRAW_STAGGER := 0.08
 const SHUFFLE_TIME := 0.52
 const SHUFFLE_STAGGER := 0.055
-const SHUFFLE_CARDS := 8      # a suggestion of a deck, not one ghost per card
-const SHUFFLE_ARC := 128.0
+const SHUFFLE_CARDS := 7      # a suggestion of a deck, not one ghost per card
+const SHUFFLE_ARC := 168.0
 
 ## Resting size of a pile / shuffle / draw ghost. Same aspect as CardView
 ## (140×208) so backs never stretch. The old 30×42 chips read as blank pips.
-const CARD_BACK := Vector2(70, 104)
+const CARD_BACK := Vector2(70, 104) * 1.15
 
 ## Canonical drop path for AD art. Interim placeholder ships here until then.
 ## TODO(art): replace assets/ui/card_back.png in place (1152×1712, card ratio).
@@ -145,16 +145,16 @@ static func shuffle(layer: Control, discard_pos: Vector2, draw_pos: Vector2) -> 
 		layer.add_child(back)
 		# Peel off the discard in a thin stack so they do not spawn on one pixel.
 		var fan := 0.0 if n <= 1 else (float(i) / float(n - 1) - 0.5) * 2.0
-		var start_at := discard_pos + Vector2(fan * 4.0, -float(i) * 1.6)
+		var start_at := discard_pos + Vector2(fan * 14.0, fan * 10.0 - float(i) * 2.0)
 		_center_on(back, start_at, CARD_BACK)
-		back.rotation = fan * 0.10
+		back.rotation = fan * 0.14
 		back.z_index = i
 
 		# Leftward ribbon into the board (piles sit on the right), then settle.
 		# Deterministic spacing -- random mid-rotations read as a glitch.
-		var apex := discard_pos.lerp(draw_pos, 0.46)
-		apex.x -= SHUFFLE_ARC
-		apex.y += fan * 30.0
+		var apex := discard_pos.lerp(draw_pos, 0.42)
+		apex.x -= SHUFFLE_ARC + abs(fan) * 24.0
+		apex.y += fan * 72.0
 		var from := back.global_position
 		var to := draw_pos - CARD_BACK * 0.5
 		var mid := apex - CARD_BACK * 0.5
@@ -199,36 +199,46 @@ static func _expire(layer: Control, node: Node, seconds: float) -> void:
 
 # --- Ghost construction ------------------------------------------------------
 
-## Aspect-correct card back. TextureRect when AD (or the interim PNG) is
-## present; a tinted framed panel otherwise so FX never regresses to a chip.
+## Aspect-correct card back. A raised plate sits under the art so a dark PNG
+## still reads as a card on the combat UI. TextureRect when AD (or the interim
+## PNG) is present; plate-only otherwise.
 static func _card_back() -> Control:
+	var wrap := Control.new()
+	wrap.custom_minimum_size = CARD_BACK
+	wrap.size = CARD_BACK
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_child(_plate(CARD_BACK, UITheme.ACCENT_DIM))
 	var tex := UITheme.card_back_texture()
 	if tex != null:
 		var r := TextureRect.new()
 		r.texture = tex
 		r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		r.custom_minimum_size = CARD_BACK
-		r.size = CARD_BACK
+		r.set_anchors_preset(Control.PRESET_FULL_RECT)
+		r.offset_left = 0
+		r.offset_top = 0
+		r.offset_right = 0
+		r.offset_bottom = 0
 		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		return r
-	return _framed_back()
+		wrap.add_child(r)
+	return wrap
 
 
-## Interim / missing-art fallback: raised navy panel with an accent rail.
-static func _framed_back() -> Control:
-	var p := PanelContainer.new()
-	p.custom_minimum_size = CARD_BACK
-	p.size = CARD_BACK
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	p.add_theme_stylebox_override("panel",
-		UITheme.panel(Color("0b0f16"), UITheme.ACCENT, 2, 6, 3))
-	var inner := PanelContainer.new()
-	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	inner.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL_RAISED, UITheme.ACCENT_DIM, 1, 4, 0))
-	p.add_child(inner)
-	return p
+static func _plate(size: Vector2, border: Color,
+		fill: Color = Color("1a2836")) -> Panel:
+	var plate := Panel.new()
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.set_anchors_preset(Control.PRESET_FULL_RECT)
+	plate.offset_left = 0
+	plate.offset_top = 0
+	plate.offset_right = 0
+	plate.offset_bottom = 0
+	plate.custom_minimum_size = size
+	plate.add_theme_stylebox_override("panel",
+		UITheme.panel(fill, border, 1, 6, 0))
+	return plate
+
+
 
 
 static func _center_on(node: Control, center: Vector2, size: Vector2) -> void:
@@ -247,8 +257,37 @@ static func _quad_bezier(a: Vector2, b: Vector2, c: Vector2, t: float) -> Vector
 static func _card_ghost(card: CardInstance, size: Vector2) -> Control:
 	var colour: Color = UITheme.KIND_COLOUR.get(card.def.kind, UITheme.ACCENT)
 
-	# Use the real card frame so the ghost reads as the same object leaving
-	# the hand, not a generic placeholder.
+	# Opaque face + frame, same stack as CardView. The frames are outline-only;
+	# a TextureRect of just the PNG is a hollow neon chip in flight.
+	var wrap := Control.new()
+	wrap.custom_minimum_size = size
+	wrap.size = size
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_child(_plate(size, colour, colour.darkened(0.72)))
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	col.offset_left = size.x * 0.12
+	col.offset_top = size.y * 0.20
+	col.offset_right = -size.x * 0.12
+	col.offset_bottom = -size.y * 0.16
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_child(col)
+	var title := UITheme.label(card.display_name(), 13, UITheme.TEXT, "SemiBold")
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(title)
+	var art := UITheme.art("res://assets/icons/" + card.def.icon) if card.def.icon != "" else null
+	if art != null:
+		var tex := TextureRect.new()
+		tex.texture = art
+		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(tex)
+
 	var frame_path: String = String(CardView.FRAMES.get(card.def.kind, ""))
 	var frame_art := UITheme.art(frame_path) if frame_path != "" else null
 	if frame_art != null:
@@ -257,37 +296,11 @@ static func _card_ghost(card: CardInstance, size: Vector2) -> Control:
 		lit.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		# Size is CardView.CARD_SIZE, which matches the frame ratio.
 		lit.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		lit.custom_minimum_size = size
-		lit.size = size
+		lit.set_anchors_preset(Control.PRESET_FULL_RECT)
+		lit.offset_left = 0
+		lit.offset_top = 0
+		lit.offset_right = 0
+		lit.offset_bottom = 0
 		lit.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		return lit
-
-	var p := PanelContainer.new()
-	p.custom_minimum_size = size
-	p.size = size
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	p.add_theme_stylebox_override("panel",
-		UITheme.panel(UITheme.PANEL_RAISED, colour, 2, 4, 8))
-
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
-	p.add_child(col)
-	var title := UITheme.label(card.display_name(), 14, UITheme.TEXT, "SemiBold")
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(title)
-
-	var art := UITheme.art("res://assets/icons/" + card.def.icon) if card.def.icon != "" else null
-	if art != null:
-		var tex := TextureRect.new()
-		tex.texture = art
-		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		tex.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		col.add_child(tex)
-	else:
-		var block := PanelContainer.new()
-		block.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		block.add_theme_stylebox_override("panel",
-			UITheme.panel(colour.darkened(0.55), colour, 1, 3, 0))
-		col.add_child(block)
-	return p
+		wrap.add_child(lit)
+	return wrap

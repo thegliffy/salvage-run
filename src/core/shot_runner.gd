@@ -17,6 +17,8 @@ static func run(host: Node, out_dir: String, win_size: Vector2i = Vector2i.ZERO)
 		DisplayServer.window_set_size(win_size)
 	await host.get_tree().process_frame
 
+	var fx_only := OS.get_cmdline_user_args().has("--fx-only")
+
 	await _settle(host, 25)
 	await _capture(host, out_dir + "/01-title.png")
 
@@ -98,16 +100,29 @@ static func run(host: Node, out_dir: String, win_size: Vector2i = Vector2i.ZERO)
 				# Presentation-only: do not wait on a real empty-pile reshuffle.
 				CardFx.shuffle(screen._fx_layer, screen._discard_pile_pos(),
 					screen._draw_pile_pos())
-				await host.get_tree().create_timer(0.28).timeout
+				for i in 6:
+					await host.get_tree().create_timer(0.09).timeout
+					await _capture(host, "%s/FX-shuffle-%02d.png" % [out_dir, i])
+				await host.get_tree().create_timer(0.55).timeout
 				await _capture(host, "%s/FX-shuffle.png" % out_dir)
 				seen["shuffle_fx"] = true
-			screen._debug_autoplay_turn()
 			if not _fx_done:
-				await host.get_tree().create_timer(0.20).timeout
+				# One card, so the play ghost is not buried under autoplay spam.
+				_debug_play_one_hull(screen)
+				await host.get_tree().create_timer(0.16).timeout
 				await _capture(host, "%s/FX-midplay.png" % out_dir)
-				await host.get_tree().create_timer(0.45).timeout
+				for i in 5:
+					await host.get_tree().create_timer(0.10).timeout
+					await _capture(host, "%s/FX-play-%02d.png" % [out_dir, i])
+				await host.get_tree().create_timer(0.20).timeout
+				screen._debug_autoplay_turn()
+				await host.get_tree().create_timer(0.28).timeout
 				await _capture(host, "%s/FX-drawing.png" % out_dir)
 				_fx_done = true
+				if fx_only:
+					print("[shots] fx-only written to ", out_dir)
+					host.get_tree().quit()
+					return
 			await _settle(host, 6)
 		elif name == "reward_screen.gd":
 			if not seen.has("reward"):
@@ -152,6 +167,20 @@ static func run(host: Node, out_dir: String, win_size: Vector2i = Vector2i.ZERO)
 
 	print("[shots] written to ", out_dir)
 	host.get_tree().quit()
+
+static func _debug_play_one_hull(screen: Node) -> void:
+	if screen == null or screen.combat == null:
+		return
+	if screen.combat.phase != CombatController.Phase.PLAYER:
+		return
+	for card in screen.combat.deck.hand.duplicate():
+		if screen.combat.card_play_cost(card) > screen.combat.player.energy:
+			continue
+		if card.def.needs_target() and not card.def.can_target_hull():
+			continue
+		var t: StringName = &"hull" if card.def.needs_target() else &""
+		screen._play(card, t)
+		return
 
 static func _settle(host: Node, frames: int) -> void:
 	for i in frames:

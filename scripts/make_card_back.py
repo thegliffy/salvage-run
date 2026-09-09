@@ -29,9 +29,10 @@ def _lerp(a: tuple[int, ...], b: tuple[int, ...], t: float) -> tuple[int, ...]:
 
 def _body() -> Image.Image:
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    # Vertical dusk gradient so a small ghost still reads as a card, not a chip.
-    top = (8, 14, 22, 255)
-    bot = (14, 22, 32, 255)
+    # Raised navy — dark enough for the neon frame, light enough that a 70px
+    # ghost still reads as a card and not a hollow outline on the combat UI.
+    top = (22, 34, 48, 255)
+    bot = (32, 48, 64, 255)
     grad = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     gp = grad.load()
     for y in range(H):
@@ -65,8 +66,8 @@ def _body() -> Image.Image:
     # Quiet hatch. Dense enough to read at pile size, not busy in motion.
     hatch = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     hd = ImageDraw.Draw(hatch, "RGBA")
-    step = 28
-    colour = (28, 80, 110, 38)
+    step = 26
+    colour = (48, 110, 148, 70)
     for i in range(-H, W + H, step):
         hd.line([(i, 0), (i + H, H)], fill=colour, width=2)
         hd.line([(i, H), (i + H, 0)], fill=colour, width=1)
