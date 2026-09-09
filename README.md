@@ -1,6 +1,6 @@
 # Salvage Run
 
-**v0.23** · by **thegliffy**
+**v0.24** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
 across three sectors to the final boss, then sell what you built for salvage
@@ -40,13 +40,13 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.23-win64.zip` from the
-[v0.23 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.23),
+**Windows:** download `SalvageRun-v0.24-win64.zip` from the
+[v0.24 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.24),
 unzip, run `SalvageRun.exe`. Single self-contained executable — no installer,
 no separate data files.
 
-**Linux:** download `SalvageRun-v0.23-linux64.zip` from the same
-[v0.23 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.23),
+**Linux:** download `SalvageRun-v0.24-linux64.zip` from the same
+[v0.24 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.24),
 unzip, run `./salvage-run.x86_64`.
 
 **From source:**
@@ -98,22 +98,17 @@ improvements, jettison, card stripping, run-end appraisal, meta unlock shop
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-### What's new in v0.23
+### What's new in v0.24
 
-- **Virus propagation:** hull counters deal 1 damage each, then decay −1
-  (ticks at the infected combatant's turn start)
-- **Signal Injector** (uncommon weapon): 2× Computer Spike + Firewall Bypass
-- **Contagion Array** (rare weapon): Infected Burst, Payload Dump, Firewall Bypass
-- **Persistent Strain** (uncommon): virus no longer decays
-- **Pure Payload** (rare): damage becomes virus; no subsystem targeting for damage
-- **10 new common improvements:** Patch Weld, Trim Ballast, Coolant Loop,
-  Jury Battery, Salvage Magnet, Hot Swap, Spare Clip, Bleed Valve, Probe Tip,
-  Signal Noise
-- **Scrap Hopper** (common): exhaust a card, draw a card
-- **Freeburn Relays** (rare): 0-cost cards grant 1 energy
-- **Paradox Engine** (uncommon): empty hand draws a card
-- **Super Capacitor** (rare): overshield no longer expires
-- **Discount Codes** (uncommon): shop prices are 50% off
+- **Card back:** dark scrap plating with a flat cyan wrench, used on draw /
+  shuffle ghosts and the DRAW / DISCARD pile thumbs (`assets/ui/card_back.png`)
+- **Smoother card FX:** play, draw, shuffle, and hand-fan animations take a
+  longer, easier curve (slight arc on play / draw; shuffle as a leftward
+  ribbon that fades after landing)
+- **Unique virus icons:** Computer Spike, Firewall Bypass, Payload Dump, and
+  Infected Burst each have their own glyph — every card icon in the game is
+  unique
+- **Game logo:** `assets/ui/logo_wrench.png` — the flat cyan wrench mark
 
 ---
 
@@ -267,6 +262,7 @@ xvfb-run -a godot --path . -- --shots /tmp/shots
 | `assets/portraits/` | Redistributable enemy portraits (`enemies.json` `portrait`) |
 | `assets/modules/` | Part / module icons (`parts.json` `icon`, default `<part_id>.png`) |
 | `assets/ui/card_back.png` | Shared card back for draw / shuffle ghosts and pile thumbs |
+| `assets/ui/logo_wrench.png` | Flat cyan wrench game logo |
 | `docs/ui-shots/` | README screenshots |
 | `tests/` | Headless test suite and balance simulator |
 
