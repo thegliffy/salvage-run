@@ -30,6 +30,8 @@ var _energy: Label
 var _piles: Label
 var _draw_count: Label
 var _discard_count: Label
+var _draw_pile: Control
+var _discard_pile: Control
 var _hand: HandView
 var _log: VBoxContainer
 var _log_scroll: ScrollContainer
@@ -349,9 +351,11 @@ func _build_hand_row() -> Control:
 
 	var draw_box := _pile_box("DRAW PILE", UITheme.ACCENT)
 	_draw_count = draw_box.get_meta("count")
+	_draw_pile = draw_box
 	side.add_child(draw_box)
 	var disc_box := _pile_box("DISCARD", UITheme.ACCENT_DIM)
 	_discard_count = disc_box.get_meta("count")
+	_discard_pile = disc_box
 	side.add_child(disc_box)
 	# Tiny FX fallback; live counts live on DRAW PILE / DISCARD.
 	_piles = UITheme.label("", 1, Color(0, 0, 0, 0))
@@ -399,10 +403,26 @@ func _pile_box(caption: String, border: Color = UITheme.ACCENT_DIM) -> PanelCont
 	box.add_theme_stylebox_override("panel",
 		UITheme.panel(UITheme.PANEL, border, 1, 4, 8))
 	UITheme.touch(box, 64)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(row)
+	var thumb := TextureRect.new()
+	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	thumb.custom_minimum_size = Vector2(36, 54)
+	thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var back := UITheme.card_back_texture()
+	if back != null:
+		thumb.texture = back
+	else:
+		thumb.visible = false
+	row.add_child(thumb)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 0)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(col)
+	row.add_child(col)
 	var cap := UITheme.label(caption, 11, UITheme.ACCENT, "Bold")
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(cap)
@@ -410,6 +430,7 @@ func _pile_box(caption: String, border: Color = UITheme.ACCENT_DIM) -> PanelCont
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(count)
 	box.set_meta("count", count)
+	box.set_meta("thumb", thumb)
 	return box
 
 func _build_system_rows() -> void:
@@ -498,12 +519,23 @@ func _refresh_piles() -> void:
 	var disc_n := combat.deck.discard_pile.size()
 	if _draw_count != null:
 		_draw_count.text = str(draw_n)
-		UITheme.tip(_draw_count.get_parent().get_parent(),
+		UITheme.tip(_draw_pile if _draw_pile != null else _draw_count.get_parent().get_parent(),
 			"Draw pile\n%d cards remaining\n---\nDrawn at the start of your turn. Empty pile reshuffles discard." % draw_n)
 	if _discard_count != null:
 		_discard_count.text = str(disc_n)
-		UITheme.tip(_discard_count.get_parent().get_parent(),
+		UITheme.tip(_discard_pile if _discard_pile != null else _discard_count.get_parent().get_parent(),
 			"Discard pile\n%d cards\n---\nPlayed and leftover cards land here until reshuffle." % disc_n)
+	_dim_pile_thumb(_draw_pile, draw_n)
+	_dim_pile_thumb(_discard_pile, disc_n)
+
+
+func _dim_pile_thumb(box: Control, n: int) -> void:
+	if box == null or not box.has_meta("thumb"):
+		return
+	var thumb: TextureRect = box.get_meta("thumb")
+	if thumb == null:
+		return
+	thumb.modulate.a = 1.0 if n > 0 else 0.35
 
 func _refresh_drone_bay() -> void:
 	if _drone_bay == null:
@@ -804,23 +836,30 @@ func _target_pos(target: StringName) -> Vector2:
 		return _enemy_systems.get_global_rect().get_center()
 	return get_global_rect().get_center()
 
-## The pile counters double as the piles themselves: two lines, draw over
-## discard, so the top and bottom halves of that label are the anchors.
+## Pile thumbs are the visual stack; ghosts take off from / land on their
+## centre so draw and shuffle stay continuous with the chrome.
 func _draw_pile_pos() -> Vector2:
-	if _draw_count != null:
-		return _draw_count.get_global_rect().get_center()
-	if _piles == null:
-		return get_global_rect().get_center()
-	var r := _piles.get_global_rect()
-	return r.position + Vector2(r.size.x * 0.35, r.size.y * 0.25)
+	return _pile_anchor(_draw_pile, _draw_count, true)
 
 func _discard_pile_pos() -> Vector2:
-	if _discard_count != null:
-		return _discard_count.get_global_rect().get_center()
+	return _pile_anchor(_discard_pile, _discard_count, false)
+
+func _pile_anchor(box: Control, count: Control, is_draw: bool) -> Vector2:
+	if box != null and box.has_meta("thumb"):
+		var thumb: Control = box.get_meta("thumb")
+		if thumb != null and thumb.visible and thumb.is_inside_tree():
+			var tr := thumb.get_global_rect()
+			if tr.size.x > 2.0 and tr.size.y > 2.0:
+				return tr.get_center()
+	if box != null and box.is_inside_tree():
+		return box.get_global_rect().get_center()
+	if count != null and count.is_inside_tree():
+		return count.get_global_rect().get_center()
 	if _piles == null:
 		return get_global_rect().get_center()
 	var r := _piles.get_global_rect()
-	return r.position + Vector2(r.size.x * 0.35, r.size.y * 0.75)
+	var y := 0.25 if is_draw else 0.75
+	return r.position + Vector2(r.size.x * 0.35, r.size.y * y)
 
 func _on_cards_drawn(cards: Array) -> void:
 	_pending_draw += cards.size()

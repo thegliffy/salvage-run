@@ -18,7 +18,7 @@ const MAX_TILT := 0.13        # radians of fan at the edges
 const HOVER_SCALE := 1.42
 const HOVER_LIFT := 62.0
 const SELECT_LIFT := 26.0
-const TWEEN_TIME := 0.12
+const TWEEN_TIME := 0.20
 const HOVER_Z := 100
 
 var _views: Array[CardView] = []
@@ -124,11 +124,14 @@ func _layout(animated: bool = true) -> void:
 		if animated and v.is_inside_tree():
 			var tw := v.create_tween()
 			tw.set_parallel(true)
+			# CUBIC only -- TRANS_BACK on hover fought the play ghosts and
+			# snapped the fan after a card left.
 			tw.tween_property(v, "position", target, TWEEN_TIME) \
 				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-			tw.tween_property(v, "rotation", tilt, TWEEN_TIME)
+			tw.tween_property(v, "rotation", tilt, TWEEN_TIME) \
+				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			tw.tween_property(v, "scale", card_scale, TWEEN_TIME) \
-				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		else:
 			v.position = target
 			v.rotation = tilt

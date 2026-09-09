@@ -15,9 +15,11 @@ What `assets/` needs, what ships with this repository, and what does not.
 | `assets/portraits/*.png` | Enemy portraits (`UITheme.art()` via `content/enemies.json` `portrait`) | Redistributable painted industrial ships — ships with the repo |
 | `assets/modules/*.png` | Part / module icons (`UITheme.art()` via `content/parts.json` `icon`, default `<part_id>.png`) | Project art — unified painted 3D isometric hardware; ships with the repo |
 | `assets/ui/drone_slots/*.png` | Combat drone bay chips (empty ring, attack red, shield blue) | Project art — ships with the repo |
+| `assets/ui/card_back.png` | Shared card back (draw / shuffle ghosts, pile thumbs) | Interim placeholder until AD art — ships with the repo |
 
 Attribution: **Exo** designed by Natanael Gama. Card icons derived from
 [Game-icons.net](https://game-icons.net) (CC-BY 3.0), tinted per card kind.
+Card frames and the interim card back are **thegliffy** / project art.
 
 `ShipView` bolts installed modules onto hardpoints on that hull (weapons dorsal,
 hull plating belly, utilities aft). If the PNG is missing, it falls back to a
@@ -117,6 +119,26 @@ loads them; combat falls back to StyleBox circles if a file is absent.
 
 Do not commit `contact_sheet.png` (gitignored); it is source reference, not a
 game asset.
+
+### Card back — `assets/ui/card_back.png`
+
+**This is the one drop path.** Do not also put a copy in `assets/frames/` —
+that folder is kind-coloured *faces* (attack / tech / manoeuvre / status).
+The back is shared chrome, same family as the drone-bay chips.
+
+| File | Used by |
+|---|---|
+| `card_back.png` | `UITheme.card_back_texture()` → `CardFx` draw/shuffle ghosts, combat DRAW / DISCARD thumbs |
+
+**TODO(art):** replace this file in place with Art Director artwork. Keep
+**1152×1712** (or any size with that exact ratio — `140 / 208`, same as
+`CardView.CARD_SIZE` and `assets/frames/*.png`) so `TextureRect` keep-aspect
+never stretches the glow. Interim file is a tinted framed back (navy hatch +
+tech-frame lightning + chevron). `scripts/make_card_back.py` rebuilds the
+placeholder only; do not run it over AD art.
+
+Missing file: `UITheme.art()` returns null and `CardFx` falls back to a tinted
+`PanelContainer` rail. Combat pile thumbs hide. The game still runs.
 
 Godot 4 writes a sibling `.import` sidecar the first time the editor (or
 `godot --headless --import`) sees a new PNG. Commit those sidecars with the

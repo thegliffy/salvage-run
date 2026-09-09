@@ -79,6 +79,7 @@ func _run_tests() -> int:
 	_test_static_coil()
 	_test_virus()
 	_test_ui_fit()
+	_test_card_fx()
 	_test_improvement_triggers()
 	_test_common_improvements()
 	print("\n%d passed, %d failed\n" % [_passed, _failed])
@@ -1320,6 +1321,73 @@ func _test_ui_fit() -> void:
 	var m_tiny := MapScreen.layout_metrics(layers, 4, Vector2(640, 360))
 	_check("tiny window still packs every column",
 		float(m_tiny["col_w"]) * float(layers) + float(m_tiny["pad_x"]) * 2.0 <= 640.01)
+
+func _test_card_fx() -> void:
+	print("card fx")
+	_eq("card back path", CardFx.CARD_BACK_PATH, UITheme.CARD_BACK_ART)
+	_eq("card back path is assets/ui", CardFx.CARD_BACK_PATH,
+		"res://assets/ui/card_back.png")
+	_check("card back aspect matches face",
+		is_equal_approx(CardFx.CARD_BACK.x / CardFx.CARD_BACK.y,
+			CardView.CARD_SIZE.x / CardView.CARD_SIZE.y))
+	_check("card back is larger than the old chips", CardFx.CARD_BACK.x >= 56.0)
+	_check("play travel is unsnappy", CardFx.PLAY_TO_TARGET >= 0.36)
+	_check("play scale punch is soft", CardFx.PLAY_SCALE <= 1.08)
+	_check("hand fan tween is unsnappy", HandView.TWEEN_TIME >= 0.18)
+	_eq("play with a null layer is a no-op",
+		_fx_safe(func(): CardFx.play(null, Rect2(), Vector2.ZERO, Vector2.ZERO,
+			CardInstance.create(Database.card(&"laser_burst")))), true)
+	_eq("draw with a null layer is a no-op",
+		_fx_safe(func(): CardFx.draw_to(null, Vector2.ZERO, [])), true)
+	_eq("shuffle with a null layer is a no-op",
+		_fx_safe(func(): CardFx.shuffle(null, Vector2.ZERO, Vector2.ZERO)), true)
+
+	var layer := Control.new()
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(layer)
+	var card := CardInstance.create(Database.card(&"laser_burst"))
+	CardFx.play(layer, Rect2(Vector2(80, 420), CardView.CARD_SIZE),
+		Vector2(420, 160), Vector2(1100, 580), card)
+	_check("play ghost spawned", layer.get_child_count() >= 1)
+	for child in layer.get_children():
+		if child is Control:
+			_eq("play ghost ignores mouse",
+				(child as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE)
+
+	var dest := Control.new()
+	dest.size = CardView.CARD_SIZE
+	dest.position = Vector2(200, 480)
+	layer.add_child(dest)
+	var before_draw := layer.get_child_count()
+	CardFx.draw_to(layer, Vector2(1100, 500), [dest])
+	_check("draw ghost spawned", layer.get_child_count() > before_draw)
+	var before_shuffle := layer.get_child_count()
+	CardFx.shuffle(layer, Vector2(1100, 640), Vector2(1100, 500))
+	_eq("shuffle spawns the suggested deck",
+		layer.get_child_count() - before_shuffle, CardFx.SHUFFLE_CARDS)
+
+	var back := CardFx._card_back()
+	_eq("back size", back.size, CardFx.CARD_BACK)
+	_eq("back ignores mouse", back.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	if back is TextureRect:
+		var tr := back as TextureRect
+		_eq("back keep-aspect", tr.stretch_mode,
+			TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+		_check("back has artwork", tr.texture != null)
+	else:
+		_check("missing PNG still builds a framed back", back is PanelContainer)
+	back.free()
+
+	var tex := UITheme.card_back_texture()
+	if tex != null:
+		_check("theme loads the card back", tex is Texture2D)
+	else:
+		_check("theme card back is optional", tex == null)
+	layer.free()
+
+func _fx_safe(fn: Callable) -> bool:
+	fn.call()
+	return true
 
 func _test_improvement_triggers() -> void:
 	print("improvement triggers")

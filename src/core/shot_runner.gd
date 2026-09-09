@@ -94,11 +94,18 @@ static func run(host: Node, out_dir: String, win_size: Vector2i = Vector2i.ZERO)
 					await host.get_tree().create_timer(0.25).timeout
 				shot += 1
 				seen["combat"] = true
+			if not seen.has("shuffle_fx"):
+				# Presentation-only: do not wait on a real empty-pile reshuffle.
+				CardFx.shuffle(screen._fx_layer, screen._discard_pile_pos(),
+					screen._draw_pile_pos())
+				await host.get_tree().create_timer(0.28).timeout
+				await _capture(host, "%s/FX-shuffle.png" % out_dir)
+				seen["shuffle_fx"] = true
 			screen._debug_autoplay_turn()
 			if not _fx_done:
-				await host.get_tree().create_timer(0.13).timeout
+				await host.get_tree().create_timer(0.20).timeout
 				await _capture(host, "%s/FX-midplay.png" % out_dir)
-				await host.get_tree().create_timer(0.30).timeout
+				await host.get_tree().create_timer(0.45).timeout
 				await _capture(host, "%s/FX-drawing.png" % out_dir)
 				_fx_done = true
 			await _settle(host, 6)

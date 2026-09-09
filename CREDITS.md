@@ -8,6 +8,9 @@ Game design, direction, systems work, UI implementation, and the card frame
 artwork. All design decisions — the ship-as-deck concept, subsystem targeting,
 the typed-slot loadout, tiered rewards, and the run-end ship sale — are theirs.
 
+The interim `assets/ui/card_back.png` is a project placeholder (tinted tech
+frame + hatch + chevron) until Art Director artwork lands at that same path.
+
 Development assistance from Claude (Anthropic).
 
 ---
