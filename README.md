@@ -1,6 +1,6 @@
 # Salvage Run
 
-**v0.24** · by **thegliffy**
+**v0.25** · by **thegliffy**
 
 A roguelike deckbuilder where **your ship is your deck**. Steal a hull, fight
 across three sectors to the final boss, then sell what you built for salvage
@@ -13,7 +13,7 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 **Android**.
 
 ```
-951 tests passing · playable PC demo
+1146 tests passing · playable PC demo
 ```
 
 ---
@@ -40,13 +40,13 @@ Built with **Godot 4.7.2** / GDScript. Targets **Steam** (Windows/Linux) and
 
 ## Play it
 
-**Windows:** download `SalvageRun-v0.24-win64.zip` from the
-[v0.24 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.24),
+**Windows:** download `SalvageRun-v0.25-win64.zip` from the
+[v0.25 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.25),
 unzip, run `SalvageRun.exe`. Single self-contained executable — no installer,
 no separate data files.
 
-**Linux:** download `SalvageRun-v0.24-linux64.zip` from the same
-[v0.24 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.24),
+**Linux:** download `SalvageRun-v0.25-linux64.zip` from the same
+[v0.25 release](https://github.com/thegliffy/salvage-run/releases/tag/v0.25),
 unzip, run `./salvage-run.x86_64`.
 
 **From source:**
@@ -98,15 +98,12 @@ improvements, jettison, card stripping, run-end appraisal, meta unlock shop
 **Not built yet:** audio, run save/resume (Android launch blocker), Steam
 integration. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-### What's new in v0.24
+### What's new in v0.25
 
-- **Card back:** dark scrap plating with a flat cyan wrench logo on draw,
-  shuffle, and pile ghosts
-- **Smoother card FX:** play, draw, shuffle, and hand fan use longer easings,
-  a softer scale punch, and a leftward shuffle ribbon
-- **Unique virus card icons:** Computer Spike, Firewall Bypass, Payload Dump,
-  and Infected Burst each have their own art — every card icon is unique
-- Game logo asset at `assets/ui/logo_wrench.png`
+- **Calibrate:** every module's fourth card — cost **3**, keyword **Exhaust**,
+  a fight-long buff scoped to that part. Hardpoint Optimization, Deflector Tune,
+  Evasion Calibrate, Hull Reinforcement, Sensor Sweep, Drone Overclock, Reactor
+  Tune, Salvage Protocol
 
 ---
 
